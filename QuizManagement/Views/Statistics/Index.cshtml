@@ -1,0 +1,170 @@
+@model StatisticsViewModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Thống kê";
+    const int chartWidth = 760;
+    const int chartHeight = 260;
+    const int padding = 34;
+    var pointCount = Model.RecentScores.Count;
+    var points = pointCount > 1
+        ? string.Join(" ", Model.RecentScores.Select((score, index) =>
+        {
+            var x = padding + (double)index / Math.Max(1, pointCount - 1) * (chartWidth - padding * 2);
+            var y = chartHeight - padding - score.Percentage / 100 * (chartHeight - padding * 2);
+            return FormattableString.Invariant($"{x:0.##},{y:0.##}");
+        }))
+        : string.Empty;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Thống kê</h1>
+        <p class="text-muted mb-0">Tiến trình học tập và hiệu suất theo môn/bộ đề</p>
+    </div>
+    <a asp-controller="History" asp-action="Index" class="btn btn-outline-secondary">Lịch sử</a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card stat-card--purple">
+            <div class="stat-card__label">Số bài đã làm</div>
+            <div class="stat-card__value">@Model.TotalAttempts</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card stat-card--cyan">
+            <div class="stat-card__label">Điểm trung bình</div>
+            <div class="stat-card__value">@Model.AveragePercentage.ToString("0.#")%</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card stat-card--green">
+            <div class="stat-card__label">Tốt nhất</div>
+            <div class="stat-card__value">@Model.BestPercentage.ToString("0.#")%</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card @(Model.PassRate >= 50 ? "stat-card--green" : "stat-card--red")">
+            <div class="stat-card__label">Tỷ lệ đạt</div>
+            <div class="stat-card__value">@Model.PassRate.ToString("0.#")%</div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h2 class="h5 mb-0">Biểu đồ 12 lần làm gần nhất</h2>
+    </div>
+    <div class="card-body">
+        @if (Model.RecentScores.Count < 2)
+        {
+            <p class="text-muted mb-0">Cần ít nhất 2 lần làm bài để vẽ biểu đồ.</p>
+        }
+        else
+        {
+            <svg class="w-100 progress-chart" viewBox="0 0 @chartWidth @chartHeight" role="img" aria-label="Biểu đồ điểm gần đây">
+                <line x1="@padding" y1="@(chartHeight - padding)" x2="@(chartWidth - padding)" y2="@(chartHeight - padding)" class="chart-axis" />
+                <line x1="@padding" y1="@padding" x2="@padding" y2="@(chartHeight - padding)" class="chart-axis" />
+                @for (var pct = 0; pct <= 100; pct += 25)
+                {
+                    var y = chartHeight - padding - pct / 100.0 * (chartHeight - padding * 2);
+                    <line x1="@padding" y1="@FormattableString.Invariant($"{y:0.##}")" x2="@(chartWidth - padding)" y2="@FormattableString.Invariant($"{y:0.##}")" class="chart-grid" />
+                    var labelY = FormattableString.Invariant($"{y + 4:0.##}");
+                    @Html.Raw($"<text x=\"4\" y=\"{labelY}\" class=\"chart-label\">{pct}%</text>")
+                }
+                <polyline points="@points" class="chart-line" />
+                @for (var i = 0; i < Model.RecentScores.Count; i++)
+                {
+                    var score = Model.RecentScores[i];
+                    var x = padding + (double)i / Math.Max(1, pointCount - 1) * (chartWidth - padding * 2);
+                    var y = chartHeight - padding - score.Percentage / 100 * (chartHeight - padding * 2);
+                    <circle cx="@FormattableString.Invariant($"{x:0.##}")" cy="@FormattableString.Invariant($"{y:0.##}")" r="5" class="chart-point">
+                        <title>@score.Label: @score.Percentage.ToString("0.#")%</title>
+                    </circle>
+                }
+            </svg>
+        }
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Theo môn học</h2>
+            </div>
+            <div class="card-body">
+                @if (!Model.SubjectStats.Any())
+                {
+                    <p class="text-muted mb-0">Chưa có dữ liệu.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Môn học</th>
+                                    <th class="text-center">Lượt</th>
+                                    <th class="text-center">TB</th>
+                                    <th class="text-center">Tốt nhất</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.SubjectStats)
+                                {
+                                    <tr>
+                                        <td>@item.Name</td>
+                                        <td class="text-center">@item.Attempts</td>
+                                        <td class="text-center">@item.AveragePercentage.ToString("0.#")%</td>
+                                        <td class="text-center">@item.BestPercentage.ToString("0.#")%</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Theo bộ đề</h2>
+            </div>
+            <div class="card-body">
+                @if (!Model.DeckStats.Any())
+                {
+                    <p class="text-muted mb-0">Chưa có dữ liệu.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Bộ đề</th>
+                                    <th class="text-center">Lượt</th>
+                                    <th class="text-center">TB</th>
+                                    <th class="text-center">Gần nhất</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.DeckStats)
+                                {
+                                    <tr>
+                                        <td>@item.Name</td>
+                                        <td class="text-center">@item.Attempts</td>
+                                        <td class="text-center">@item.AveragePercentage.ToString("0.#")%</td>
+                                        <td class="text-center">@VietnamTime.FromUtc(item.LastAttemptAt).ToString("dd/MM HH:mm")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

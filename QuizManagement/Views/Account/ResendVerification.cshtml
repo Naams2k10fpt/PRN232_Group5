@@ -1,0 +1,28 @@
+@model QuizManagement.ViewModels.Account.EmailRequestViewModel
+@{
+    ViewData["Title"] = "Gửi lại email xác minh";
+}
+
+<div class="auth-page">
+    <div class="auth-container">
+        <div class="auth-brand">
+            <div class="auth-brand-logo">Q</div>
+            <h1>Xác minh email</h1>
+            <p>Nhận lại liên kết xác minh tài khoản</p>
+        </div>
+        <div class="auth-card">
+            <form asp-action="ResendVerification" method="post">
+                <div asp-validation-summary="ModelOnly" class="validation-summary-errors mb-3"></div>
+                <div class="mb-4">
+                    <label asp-for="Email" class="form-label">Email</label>
+                    <input asp-for="Email" class="form-control" autocomplete="email" />
+                    <span asp-validation-for="Email" class="field-validation-error"></span>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Gửi lại email</button>
+            </form>
+        </div>
+        <p class="auth-footer"><a asp-action="Login">Quay lại đăng nhập</a></p>
+    </div>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

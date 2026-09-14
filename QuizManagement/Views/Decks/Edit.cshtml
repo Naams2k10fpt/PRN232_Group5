@@ -1,0 +1,46 @@
+@model QuizManagement.ViewModels.Decks.DeckFormViewModel
+
+@{
+    ViewData["Title"] = "Sửa bộ đề";
+}
+
+<h1 class="h3 mb-1">Sửa bộ đề</h1>
+<p class="text-muted mb-4">@Model.SubjectName</p>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="col-md-6">
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="SubjectId" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label">Tên bộ đề</label>
+        <input asp-for="Name" class="form-control" autofocus />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+
+    <div class="mb-4">
+        <label asp-for="TimeLimitMinutes" class="form-label">Giới hạn thời gian làm bài</label>
+        <select asp-for="TimeLimitMinutes" class="form-select">
+            <option value="0">Không giới hạn</option>
+            <option value="5">5 phút</option>
+            <option value="10">10 phút</option>
+            <option value="15">15 phút</option>
+            <option value="20">20 phút</option>
+            <option value="30">30 phút</option>
+            <option value="45">45 phút</option>
+            <option value="60">60 phút</option>
+            <option value="90">90 phút</option>
+        </select>
+        <div class="form-text">Học viên sẽ bị giới hạn thời gian này khi làm bài. Khi hết giờ bài sẽ tự nộp.</div>
+        <span asp-validation-for="TimeLimitMinutes" class="text-danger"></span>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Cập nhật</button>
+        <a asp-action="Index" asp-route-subjectId="@Model.SubjectId" class="btn btn-outline-secondary">Hủy</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

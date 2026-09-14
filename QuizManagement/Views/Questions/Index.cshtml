@@ -1,0 +1,87 @@
+@model IEnumerable<BusinessObjects.Question>
+@{
+    var deck = (BusinessObjects.Deck)ViewBag.Deck;
+    var currentUserId = (string)ViewBag.CurrentUserId;
+    var canManage = User.IsInRole(AppRoles.Admin) ||
+        (User.IsInRole(AppRoles.Mentor) && deck.Subject.UserId == currentUserId);
+    ViewData["Title"] = "Câu hỏi";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Câu hỏi</h1>
+        <p class="text-muted mb-0">@deck.Subject.Name / @deck.Name</p>
+    </div>
+    <div class="d-flex flex-wrap justify-content-end gap-2">
+        <a asp-controller="Decks" asp-action="Index" asp-route-subjectId="@deck.SubjectId" class="btn btn-outline-secondary">Bộ đề</a>
+        <a asp-controller="Flashcards" asp-action="Study" asp-route-deckId="@deck.Id" class="btn btn-outline-info">Flashcard</a>
+        @if (canManage)
+        {
+            <a asp-controller="QuestionImport" asp-action="Import" asp-route-deckId="@deck.Id" class="btn btn-outline-primary">Import</a>
+            <a asp-controller="DeckExport" asp-action="Word" asp-route-deckId="@deck.Id" class="btn btn-outline-secondary">Word</a>
+            <a asp-controller="DeckExport" asp-action="Pdf" asp-route-deckId="@deck.Id" class="btn btn-outline-secondary">PDF</a>
+            <a asp-action="Create" asp-route-deckId="@deck.Id" class="btn btn-primary">Tạo câu hỏi</a>
+        }
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">Chưa có câu hỏi nào trong bộ đề này.</div>
+}
+else
+{
+    <div class="vstack gap-3">
+        @foreach (var question in Model)
+        {
+            <div class="border rounded p-3">
+                <div class="d-flex justify-content-between gap-3">
+                    <div>
+                        <div class="fw-semibold markdown-content">@SafeMarkdown.ToHtml(question.Content)</div>
+                        <div class="small text-muted">
+                            @(question.QuestionType == 1 ? "Một đáp án đúng" : "Nhiều đáp án đúng")
+                            · @question.Answers.Count đáp án
+                        </div>
+                    </div>
+                    @if (canManage)
+                    {
+                        <div class="text-end flex-shrink-0">
+                            <a asp-action="Edit" asp-route-id="@question.Id" class="btn btn-sm btn-outline-secondary">Sửa</a>
+                            <form asp-action="Delete" asp-route-id="@question.Id" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa câu hỏi này?');">Xóa</button>
+                            </form>
+                        </div>
+                    }
+                </div>
+
+                <ul class="mt-3 mb-0">
+                    @foreach (var answer in question.Answers.OrderBy(a => a.Id))
+                    {
+                        <li class="@(answer.IsCorrect ? "text-success fw-semibold" : "")">
+                            @SafeMarkdown.ToInlineHtml(answer.Content)
+                            @if (answer.IsCorrect)
+                            {
+                                <span class="badge bg-success ms-2">Đúng</span>
+                            }
+                        </li>
+                    }
+                </ul>
+
+                @if (!string.IsNullOrWhiteSpace(question.Explanation))
+                {
+                    <div class="small text-muted mt-2 markdown-content">@SafeMarkdown.ToHtml(question.Explanation)</div>
+                }
+            </div>
+        }
+    </div>
+}

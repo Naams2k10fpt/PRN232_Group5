@@ -1,0 +1,74 @@
+@model QuizConfigViewModel
+@{
+    ViewData["Title"] = "Cấu hình bài quiz";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Làm bài quiz</h1>
+        <p class="text-muted mb-0">@Model.SubjectName / @Model.DeckName</p>
+    </div>
+    <a asp-controller="Questions" asp-action="Index" asp-route-deckId="@Model.DeckId" class="btn btn-outline-secondary">Quay lại</a>
+</div>
+
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Cấu hình bài quiz</h5>
+
+                <div class="alert alert-info mb-3">
+                    <strong>Số câu hỏi có sẵn:</strong> @Model.AvailableQuestionCount câu
+                </div>
+
+                <form asp-action="Take" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="DeckId" />
+                    <input type="hidden" asp-for="DeckName" />
+                    <input type="hidden" asp-for="SubjectName" />
+                    <input type="hidden" asp-for="AvailableQuestionCount" />
+
+                    <div class="mb-3">
+                        <label asp-for="QuestionCount" class="form-label">Số câu hỏi</label>
+                        <input asp-for="QuestionCount" class="form-control" type="number"
+                               min="1" max="@Model.AvailableQuestionCount" />
+                        <span asp-validation-for="QuestionCount" class="text-danger"></span>
+                        <div class="form-text">Tối đa @Model.AvailableQuestionCount câu. Câu hỏi và đáp án sẽ được xáo trộn.</div>
+                    </div>
+
+                    <input type="hidden" asp-for="TimeLimitMinutes" />
+
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="form-label mb-0">Thời gian làm bài</span>
+                            @if (Model.TimeLimitMinutes > 0)
+                            {
+                                <span class="badge bg-warning text-dark" style="font-size:.85rem;">
+                                    @Model.TimeLimitMinutes phút
+                                </span>
+                                <span class="form-text mb-0">Khi hết giờ bài sẽ tự động nộp.</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary" style="font-size:.85rem;">Không giới hạn</span>
+                            }
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-play-fill"></i> Bắt đầu làm bài
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

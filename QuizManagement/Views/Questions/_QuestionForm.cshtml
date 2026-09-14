@@ -1,0 +1,88 @@
+@model QuizManagement.ViewModels.Questions.QuestionFormViewModel
+@{
+    var isEdit = Model.Id > 0;
+    var title = isEdit ? "Sửa câu hỏi" : "Tạo câu hỏi";
+    var submitText = isEdit ? "Cập nhật" : "Lưu câu hỏi";
+    var actionName = isEdit ? "Edit" : "Create";
+}
+
+<div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <h1 class="h3 mb-1">@title</h1>
+        <p class="text-muted mb-0">@Model.SubjectName / @Model.DeckName</p>
+    </div>
+    <a asp-action="Index" asp-route-deckId="@Model.DeckId" class="btn btn-outline-secondary">Quay lại</a>
+</div>
+
+<form asp-action="@actionName" asp-route-id="@(isEdit ? Model.Id : null)" method="post" id="questionForm" class="quizlet-editor">
+    @if (isEdit)
+    {
+        <input asp-for="Id" type="hidden" />
+        <input asp-for="RowVersion" type="hidden" />
+    }
+    <input asp-for="DeckId" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+    <section class="quizlet-panel mb-3">
+        <div class="quizlet-panel-header">
+            <div>
+                <div class="small text-uppercase text-muted fw-semibold">Câu hỏi</div>
+                <div class="fw-semibold">Nội dung thẻ</div>
+            </div>
+            <div class="btn-group" role="group" aria-label="Loại câu hỏi">
+                <input class="btn-check question-type-input" type="radio" name="QuestionType" id="questionTypeSingle" value="1" @(Model.QuestionType == 1 ? "checked" : "") />
+                <label class="btn btn-outline-primary" for="questionTypeSingle">Một đáp án</label>
+                <input class="btn-check question-type-input" type="radio" name="QuestionType" id="questionTypeMultiple" value="2" @(Model.QuestionType == 2 ? "checked" : "") />
+                <label class="btn btn-outline-primary" for="questionTypeMultiple">Nhiều đáp án</label>
+            </div>
+        </div>
+
+        <textarea asp-for="Content" class="form-control quizlet-main-input" rows="5" autofocus placeholder="Nhập câu hỏi, công thức hoặc tình huống cần ôn"></textarea>
+        <span asp-validation-for="Content" class="text-danger"></span>
+
+        <div class="mt-3">
+            <label asp-for="Explanation" class="form-label">Giải thích sau khi làm bài</label>
+            <textarea asp-for="Explanation" class="form-control" rows="3" placeholder="Có thể bỏ trống"></textarea>
+        </div>
+    </section>
+
+    <section class="quizlet-panel">
+        <div class="quizlet-panel-header">
+            <div>
+                <div class="small text-uppercase text-muted fw-semibold">Đáp án</div>
+                <div class="fw-semibold">Đánh dấu đáp án đúng như Quizlet card editor</div>
+            </div>
+            <button type="button" id="addAnswerButton" class="btn btn-outline-primary">Thêm đáp án</button>
+        </div>
+
+        <span asp-validation-for="Answers" class="text-danger"></span>
+
+        <div id="answersList" class="quizlet-answer-list">
+            @for (var i = 0; i < Model.Answers.Count; i++)
+            {
+                <div class="quizlet-answer-row" data-answer-row>
+                    <div class="quizlet-answer-number" data-answer-number>@(i + 1)</div>
+                    <input type="hidden" name="Answers[@i].Id" value="@Model.Answers[i].Id" data-answer-id />
+<div class="quizlet-answer-content">
+                        <label class="form-label small text-muted mb-1" for="Answers_@(i)__Content">Nội dung đáp án</label>
+                        <textarea class="form-control" rows="2" id="Answers_@(i)__Content" name="Answers[@i].Content" data-answer-content placeholder="Nhập đáp án">@Model.Answers[i].Content</textarea>
+                        <span class="text-danger field-validation-valid" data-valmsg-for="Answers[@i].Content" data-valmsg-replace="true"></span>
+                    </div>
+
+                    <div class="quizlet-answer-actions">
+                        <label class="correct-toggle">
+                            <input type="checkbox" name="Answers[@i].IsCorrect" value="true" data-answer-correct @(Model.Answers[i].IsCorrect ? "checked" : "") />
+                            <span>Đúng</span>
+                        </label>
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-remove-answer>Xóa</button>
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+
+    <div class="sticky-action-bar mt-4">
+        <button type="submit" class="btn btn-primary px-4">@submitText</button>
+        <a asp-action="Index" asp-route-deckId="@Model.DeckId" class="btn btn-outline-secondary">Hủy</a>
+    </div>
+</form>

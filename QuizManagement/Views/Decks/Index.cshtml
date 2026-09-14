@@ -1,0 +1,98 @@
+@model IEnumerable<BusinessObjects.Deck>
+@{
+    var subject = (BusinessObjects.Subject)ViewBag.Subject;
+    var currentUserId = (string)ViewBag.CurrentUserId;
+    var canManage = User.IsInRole(AppRoles.Admin) ||
+        (User.IsInRole(AppRoles.Mentor) && subject.UserId == currentUserId);
+    ViewData["Title"] = "Bộ đề";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">Bộ đề</h1>
+        <p style="color:var(--text-muted);margin:0;">
+            <a asp-controller="Subjects" asp-action="Index" style="color:var(--accent);">Môn học</a>
+            <span style="color:var(--text-dim);margin:0 .4rem;">›</span>
+            @subject.Name
+        </p>
+    </div>
+    @if (canManage)
+    {
+        <a asp-action="Create" asp-route-subjectId="@subject.Id" class="btn btn-primary">+ Tạo bộ đề</a>
+    }
+</div>
+
+<div class="mb-4">
+    <input id="deckSearch" type="search" class="form-control" placeholder="Tìm bộ đề..." autocomplete="off" />
+</div>
+<div id="emptySearch" class="alert alert-info d-none">Không tìm thấy bộ đề nào khớp.</div>
+
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">Chưa có bộ đề nào trong môn học này.</div>
+}
+else
+{
+    <div class="item-grid">
+        @foreach (var deck in Model)
+        {
+            <div class="item-card" style="animation: fadeUp .35s ease both;">
+                <div class="item-card__body">
+                    <a asp-controller="Questions" asp-action="Index" asp-route-deckId="@deck.Id"
+                       class="item-card__title">@deck.Name</a>
+                    <p class="item-card__meta">Tạo lúc @VietnamTime.FromUtc(deck.CreatedAt).ToString("dd/MM/yyyy")</p>
+                </div>
+                <div class="item-card__actions" style="flex-wrap:wrap;gap:.4rem;">
+                    <a asp-controller="Quiz" asp-action="Config" asp-route-deckId="@deck.Id"
+                       class="btn btn-sm btn-primary">Làm bài</a>
+                    <a asp-controller="Flashcards" asp-action="Study" asp-route-deckId="@deck.Id"
+                       class="btn btn-sm btn-outline-secondary">Flashcard</a>
+                    <a asp-controller="Questions" asp-action="Index" asp-route-deckId="@deck.Id"
+                       class="btn btn-sm btn-outline-secondary">Câu hỏi</a>
+                    <a asp-controller="Statistics" asp-action="Leaderboard" asp-route-deckId="@deck.Id"
+                       class="btn btn-sm btn-outline-secondary">Bảng XH</a>
+                    @if (canManage)
+                    {
+                        <a asp-controller="DeckExport" asp-action="Word" asp-route-deckId="@deck.Id"
+                           class="btn btn-sm btn-outline-secondary">Word</a>
+                        <a asp-controller="DeckExport" asp-action="Pdf" asp-route-deckId="@deck.Id"
+                           class="btn btn-sm btn-outline-secondary">PDF</a>
+                        <a asp-action="Edit" asp-route-id="@deck.Id"
+                           class="btn btn-sm btn-outline-secondary">Sửa</a>
+                        <form asp-action="Delete" asp-route-id="@deck.Id" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Xóa bộ đề này và ẩn các câu hỏi liên quan?');">Xóa</button>
+                        </form>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            var input = document.getElementById('deckSearch');
+            var empty = document.getElementById('emptySearch');
+            if (!input) return;
+            input.addEventListener('input', function () {
+                var q = this.value.trim().toLowerCase();
+                var cards = document.querySelectorAll('.item-grid .item-card');
+                var visible = 0;
+                cards.forEach(function (card) {
+                    var title = card.querySelector('.item-card__title');
+                    var match = !q || (title && title.textContent.toLowerCase().includes(q));
+                    card.style.display = match ? '' : 'none';
+                    if (match) visible++;
+                });
+                empty.classList.toggle('d-none', visible > 0 || !q);
+            });
+        })();
+    </script>
+}

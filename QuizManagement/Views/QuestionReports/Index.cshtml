@@ -1,0 +1,147 @@
+@model List<QuizManagement.ViewModels.QuestionReports.QuestionReportListItemViewModel>
+@{
+    ViewData["Title"] = "Báo cáo câu hỏi";
+    var pending = Model.Where(r => !r.IsResolved).ToList();
+    var resolved = Model.Where(r => r.IsResolved).ToList();
+    var page = (int)(ViewBag.Page ?? 1);
+    var pageSize = (int)(ViewBag.PageSize ?? 50);
+    var totalCount = (int)(ViewBag.TotalCount ?? Model.Count);
+    var totalPages = Math.Max(1, (int)Math.Ceiling((double)totalCount / pageSize));
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Báo cáo câu hỏi</h1>
+        <p class="text-muted mb-0">
+            @pending.Count chờ xử lý
+            @if (resolved.Count > 0) { <span> · @resolved.Count đã xử lý</span> }
+        </p>
+    </div>
+    <a asp-controller="Subjects" asp-action="Index" class="btn btn-outline-secondary">Môn học</a>
+</div>
+
+@if (TempData["SuccessMessage"] is string msg)
+{
+    <div class="alert alert-success">@msg</div>
+}
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">Chưa có báo cáo nào.</div>
+}
+else
+{
+    @if (pending.Any())
+    {
+        <h5 class="mb-3">Chờ xử lý (@pending.Count)</h5>
+        <div class="card mb-4">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Câu hỏi</th>
+                                <th>Bộ đề / Môn</th>
+                                <th>Người báo cáo</th>
+                                <th>Lý do</th>
+                                <th>Ghi chú</th>
+                                <th class="text-center">Ngày</th>
+                                <th class="text-center">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in pending)
+                            {
+                                <tr>
+                                    <td class="ps-3" style="max-width:220px;">
+                                        <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9rem;">
+                                            @item.QuestionContent
+                                        </div>
+                                    </td>
+                                    <td style="font-size:.85rem;">
+                                        <div>@item.DeckName</div>
+                                        <div style="color:var(--text-muted);">@item.SubjectName</div>
+                                    </td>
+                                    <td style="font-size:.85rem;">@item.ReporterUsername</td>
+                                    <td>
+                                        <span class="badge bg-warning text-dark">@item.Reason</span>
+                                    </td>
+                                    <td style="font-size:.85rem;max-width:180px;">
+                                        <span style="white-space:pre-wrap;">@item.Note</span>
+                                    </td>
+                                    <td class="text-center" style="font-size:.8rem;color:var(--text-muted);">
+                                        @VietnamTime.FromUtc(item.CreatedAt).ToString("dd/MM/yyyy")
+                                    </td>
+                                    <td class="text-center">
+                                        <form asp-action="Resolve" asp-route-id="@item.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-success"
+                                                    onclick="return confirm('Đánh dấu báo cáo này là đã xử lý?');">
+                                                Đã xử lý
+                                            </button>
+                                        </form>
+                                        <a asp-controller="Questions" asp-action="Edit" asp-route-id="@item.QuestionId"
+                                           class="btn btn-sm btn-outline-secondary">Sửa câu hỏi</a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (resolved.Any())
+    {
+        <details>
+            <summary class="mb-3" style="cursor:pointer;color:var(--text-muted);font-size:.9rem;">
+                Đã xử lý (@resolved.Count)
+            </summary>
+            <div class="card mt-2">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0" style="opacity:.7;">
+                            <thead>
+                                <tr>
+                                    <th class="ps-3">Câu hỏi</th>
+                                    <th>Bộ đề / Môn</th>
+                                    <th>Lý do</th>
+                                    <th class="text-center">Ngày</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in resolved)
+                                {
+                                    <tr>
+                                        <td class="ps-3" style="max-width:260px;font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                            @item.QuestionContent
+                                        </td>
+                                        <td style="font-size:.8rem;">@item.DeckName / @item.SubjectName</td>
+                                        <td><span class="badge bg-success">@item.Reason</span></td>
+                                        <td class="text-center" style="font-size:.8rem;">@VietnamTime.FromUtc(item.CreatedAt).ToString("dd/MM/yyyy")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </details>
+    }
+
+    @if (totalPages > 1)
+    {
+        <nav aria-label="Phân trang báo cáo" class="mt-4">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(page <= 1 ? "disabled" : null)">
+                    <a class="page-link" asp-action="Index" asp-route-page="@(page - 1)">Trước</a>
+                </li>
+                <li class="page-item disabled"><span class="page-link">Trang @(page) / @totalPages</span></li>
+                <li class="page-item @(page >= totalPages ? "disabled" : null)">
+                    <a class="page-link" asp-action="Index" asp-route-page="@(page + 1)">Sau</a>
+                </li>
+            </ul>
+        </nav>
+    }
+}

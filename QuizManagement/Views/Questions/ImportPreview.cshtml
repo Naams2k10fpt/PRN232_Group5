@@ -1,0 +1,109 @@
+@model QuestionImportPreviewViewModel
+@{
+    ViewData["Title"] = "Preview import";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Preview import</h1>
+        <p class="text-muted mb-0">@Model.SubjectName / @Model.DeckName · @Model.SourceName</p>
+    </div>
+    <a asp-controller="QuestionImport" asp-action="Import" asp-route-deckId="@Model.DeckId" class="btn btn-outline-secondary">Quay lại import</a>
+</div>
+
+<div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="card-subtitle text-muted mb-2">Hợp lệ</h6>
+                <h2 class="card-title text-success mb-0">@Model.ValidRows.Count</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="card-subtitle text-muted mb-2">Lỗi</h6>
+                <h2 class="card-title text-danger mb-0">@Model.Errors.Count</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.Errors.Any())
+{
+    <h2 class="h5">Dòng lỗi</h2>
+    <div class="table-responsive mb-4">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th>Dòng</th>
+                    <th>Lỗi</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var error in Model.Errors)
+                {
+                    <tr>
+                        <td>@error.RowNumber</td>
+                        <td>@error.Message</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (Model.ValidRows.Any())
+{
+    <form asp-controller="QuestionImport" asp-action="Commit" method="post">
+        <input asp-for="DeckId" type="hidden" />
+        <input asp-for="DeckName" type="hidden" />
+        <input asp-for="SubjectName" type="hidden" />
+        <input asp-for="SourceName" type="hidden" />
+
+        <h2 class="h5">Câu hỏi sẽ import</h2>
+        <div class="vstack gap-3">
+            @for (var i = 0; i < Model.ValidRows.Count; i++)
+            {
+                var row = Model.ValidRows[i];
+                <div class="border rounded p-3">
+                    <input asp-for="ValidRows[i].RowNumber" type="hidden" />
+                    <input asp-for="ValidRows[i].Content" type="hidden" />
+                    <input asp-for="ValidRows[i].QuestionType" type="hidden" />
+                    <input asp-for="ValidRows[i].Explanation" type="hidden" />
+
+                    <div class="fw-semibold markdown-content">@SafeMarkdown.ToHtml(row.Content)</div>
+                    <div class="small text-muted mb-2">
+                        Dòng @row.RowNumber · @(row.QuestionType == 1 ? "Một đáp án đúng" : "Nhiều đáp án đúng")
+                    </div>
+                    <ul class="mb-0">
+                        @for (var j = 0; j < row.Answers.Count; j++)
+                        {
+                            <li class="@(row.Answers[j].IsCorrect ? "text-success fw-semibold" : "")">
+                                <input asp-for="ValidRows[i].Answers[j].Content" type="hidden" />
+                                <input asp-for="ValidRows[i].Answers[j].IsCorrect" type="hidden" />
+                                @SafeMarkdown.ToInlineHtml(row.Answers[j].Content)
+                                @if (row.Answers[j].IsCorrect)
+                                {
+                                    <span class="badge bg-success ms-2">Đúng</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Import @Model.ValidRows.Count câu hợp lệ</button>
+            <a asp-controller="Questions" asp-action="Index" asp-route-deckId="@Model.DeckId" class="btn btn-outline-secondary">Hủy</a>
+        </div>
+    </form>
+}
+else
+{
+    <div class="alert alert-warning">Không có câu hỏi hợp lệ để import.</div>
+}

@@ -1,0 +1,14 @@
+﻿
+@model QuizManagement.ViewModels.Home.ErrorViewModel
+@{
+    ViewData["Title"] = "Đã xảy ra lỗi";
+}
+
+<div class="alert alert-danger" role="alert">
+    <h1 class="h4">Đã xảy ra lỗi</h1>
+    <p class="mb-0">Hệ thống không thể hoàn tất yêu cầu. Vui lòng thử lại.</p>
+    @if (Model.ShowRequestId)
+    {
+        <p class="mb-0 mt-2"><strong>Mã yêu cầu:</strong> <code>@Model.RequestId</code></p>
+    }
+</div>

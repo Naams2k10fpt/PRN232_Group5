@@ -1,0 +1,85 @@
+@model IEnumerable<BusinessObjects.Subject>
+
+@{
+    ViewData["Title"] = "Môn học";
+    var currentUserId = (string)ViewBag.CurrentUserId;
+    var canCreate = User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Mentor);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">Môn học</h1>
+        <p style="color:var(--text-muted);margin:0;">Quản lý các nhóm kiến thức và bộ đề của bạn.</p>
+    </div>
+    @if (canCreate)
+    {
+        <a asp-action="Create" class="btn btn-primary">+ Tạo môn học</a>
+    }
+</div>
+
+<div class="mb-4">
+    <input id="subjectSearch" type="search" class="form-control" placeholder="Tìm môn học..." autocomplete="off" />
+</div>
+<div id="emptySearch" class="alert alert-info d-none">Không tìm thấy môn học nào khớp.</div>
+
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">Chưa có môn học nào.</div>
+}
+else
+{
+    <div class="item-grid">
+        @foreach (var subject in Model)
+        {
+            var canManage = User.IsInRole(AppRoles.Admin) ||
+                (User.IsInRole(AppRoles.Mentor) && subject.UserId == currentUserId);
+            <div class="item-card" style="animation: fadeUp .35s ease both;">
+                <div class="item-card__body">
+                    <a asp-controller="Decks" asp-action="Index" asp-route-subjectId="@subject.Id"
+                       class="item-card__title">@subject.Name</a>
+                    <p class="item-card__meta">Tạo lúc @VietnamTime.FromUtc(subject.CreatedAt).ToString("dd/MM/yyyy")</p>
+                </div>
+                <div class="item-card__actions">
+                    <a asp-controller="Decks" asp-action="Index" asp-route-subjectId="@subject.Id"
+                       class="btn btn-sm btn-primary">Bộ đề</a>
+                    @if (canManage)
+                    {
+                        <a asp-action="Edit" asp-route-id="@subject.Id"
+                           class="btn btn-sm btn-outline-secondary">Sửa</a>
+                        <form asp-action="Delete" asp-route-id="@subject.Id" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Xóa môn học này và ẩn các bộ đề liên quan?');">Xóa</button>
+                        </form>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            var input = document.getElementById('subjectSearch');
+            var empty = document.getElementById('emptySearch');
+            if (!input) return;
+            input.addEventListener('input', function () {
+                var q = this.value.trim().toLowerCase();
+                var cards = document.querySelectorAll('.item-grid .item-card');
+                var visible = 0;
+                cards.forEach(function (card) {
+                    var title = card.querySelector('.item-card__title');
+                    var match = !q || (title && title.textContent.toLowerCase().includes(q));
+                    card.style.display = match ? '' : 'none';
+                    if (match) visible++;
+                });
+                empty.classList.toggle('d-none', visible > 0 || !q);
+            });
+        })();
+    </script>
+}

@@ -1,0 +1,37 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider / JetBrains
+.idea/
+
+# VS Code
+.vscode/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# Local configuration overrides
+appsettings.Local.json
+appsettings.*.Local.json
+
+# Local ASP.NET Core Data Protection keys
+App_Data/DataProtectionKeys/
+**/App_Data/DataProtectionKeys/
+
+# Local planning/debug notes for Codex collaboration
+Error.md
+PRN222.md

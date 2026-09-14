@@ -1,0 +1,161 @@
+@model QuizTakeViewModel
+@{
+    ViewData["Title"] = "Làm bài quiz";
+}
+
+<div class="quiz-sticky-header">
+    <div class="d-flex align-items-center gap-3 flex-grow-1" style="min-width:0;">
+        <div style="min-width:0;flex:1;">
+            <div class="fw-semibold" style="font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                @Model.SubjectName / @Model.DeckName
+            </div>
+        </div>
+        <span id="answeredBadge" class="badge bg-primary" style="font-size:.82rem;padding:.35rem .7rem;flex-shrink:0;">
+            0 / @Model.Questions.Count đã trả lời
+        </span>
+        @if (Model.TimeRemainingSeconds.HasValue)
+        {
+            <span id="quizTimer" class="badge bg-warning text-dark"
+                  style="font-size:.9rem;padding:.35rem .8rem;flex-shrink:0;font-variant-numeric:tabular-nums;min-width:4.5rem;text-align:center;">
+                --:--
+            </span>
+        }
+    </div>
+</div>
+
+<div class="quiz-progress-track mt-0 mb-4">
+    <div id="quizProgressBar" class="quiz-progress-bar" style="width:0%"></div>
+</div>
+
+<form asp-action="Submit" method="post" id="quizForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="DeckId" />
+    <input type="hidden" asp-for="AttemptToken" />
+
+    <div class="vstack gap-4">
+        @for (int i = 0; i < Model.Questions.Count; i++)
+        {
+            var question = Model.Questions[i];
+            <div class="question-card" id="question-@i">
+                <div class="question-label">
+                    <span class="question-num">Câu @(i + 1)</span>
+                    @if (question.QuestionType == 2)
+                    {
+                        <span class="badge" style="background:var(--accent-light);color:var(--accent);font-size:.7rem;">Nhiều đáp án</span>
+                    }
+                </div>
+
+                <div class="fs-5 mb-3 markdown-content">@SafeMarkdown.ToHtml(question.Content)</div>
+
+                <input type="hidden" name="Questions[@i].QuestionId" value="@question.QuestionId" />
+
+                <div class="vstack gap-2">
+                    @for (int j = 0; j < question.Answers.Count; j++)
+                    {
+                        var answer = question.Answers[j];
+                        @if (question.QuestionType == 1)
+                        {
+                            <div class="answer-option">
+                                <input class="form-check-input" type="radio"
+                                       name="Questions[@i].SelectedAnswerId"
+                                       value="@answer.AnswerId"
+                                       id="q@(i)_a@(j)"
+                                       onchange="updateProgress()" />
+                                <label class="form-check-label w-100" for="q@(i)_a@(j)">
+                                    @SafeMarkdown.ToInlineHtml(answer.Content)
+                                </label>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="answer-option">
+                                <input class="form-check-input" type="checkbox"
+                                       name="Questions[@i].SelectedAnswerIds"
+                                       value="@answer.AnswerId"
+                                       id="q@(i)_a@(j)"
+                                       onchange="updateProgress()" />
+                                <label class="form-check-label w-100" for="q@(i)_a@(j)">
+                                    @SafeMarkdown.ToInlineHtml(answer.Content)
+                                </label>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="sticky-action-bar">
+        <button type="button" class="btn btn-primary btn-lg px-5" onclick="submitQuiz()">
+            Nộp bài
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        var totalQuestions = @Model.Questions.Count;
+
+        function updateProgress() {
+            var answered = 0;
+            for (var i = 0; i < totalQuestions; i++) {
+                var card = document.getElementById('question-' + i);
+                if (card.querySelectorAll('input:checked').length > 0) {
+                    answered++;
+                    card.classList.add('border-success');
+                } else {
+                    card.classList.remove('border-success');
+                }
+            }
+            document.getElementById('answeredBadge').textContent = answered + ' / ' + totalQuestions + ' đã trả lời';
+            document.getElementById('quizProgressBar').style.width = (answered / totalQuestions * 100) + '%';
+        }
+
+        function submitQuiz() {
+            var answered = 0;
+            for (var i = 0; i < totalQuestions; i++) {
+                if (document.getElementById('question-' + i).querySelectorAll('input:checked').length > 0) answered++;
+            }
+            var unanswered = totalQuestions - answered;
+            var msg = unanswered > 0
+                ? 'Bạn còn ' + unanswered + ' câu chưa trả lời. Bạn có chắc muốn nộp bài?'
+                : 'Bạn có chắc muốn nộp bài?';
+            if (confirm(msg)) document.getElementById('quizForm').submit();
+        }
+
+        // ── Timer ──────────────────────────────────────────────
+        var hasTimeLimit = @(Model.TimeRemainingSeconds.HasValue ? "true" : "false");
+        if (hasTimeLimit) {
+            var initialRemainingSeconds = @(Model.TimeRemainingSeconds ?? 0);
+            var deadline = performance.now() + initialRemainingSeconds * 1000;
+            var timerEl = document.getElementById('quizTimer');
+
+            function formatTime(s) {
+                var m = Math.floor(s / 60);
+                var sec = s % 60;
+                return (m < 10 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
+            }
+
+            function tickTimer() {
+                var remaining = Math.max(0, Math.ceil((deadline - performance.now()) / 1000));
+                timerEl.textContent = formatTime(remaining);
+                if (remaining <= 60) {
+                    timerEl.classList.remove('bg-warning', 'text-dark');
+                    timerEl.classList.add('bg-danger', 'text-white');
+                }
+                if (remaining <= 0) {
+                    timerEl.textContent = '00:00';
+                    alert('Hết thời gian! Bài làm sẽ được nộp tự động.');
+                    document.getElementById('quizForm').submit();
+                    return;
+                }
+                setTimeout(tickTimer, 250);
+            }
+
+            tickTimer();
+        }
+        // ───────────────────────────────────────────────────────
+
+        updateProgress();
+    </script>
+}

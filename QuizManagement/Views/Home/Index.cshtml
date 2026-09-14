@@ -1,0 +1,143 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+    var canManageContent = User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Mentor);
+}
+
+<div class="mb-5" style="animation: pageFadeIn .4s ease both;">
+    <h1 class="h3 mb-1">Dashboard</h1>
+    <p style="color:var(--text-muted);">Xin chào, <strong style="color:var(--text);">@User.Identity?.Name</strong>! Tiếp tục học nào.</p>
+</div>
+
+<div class="row g-3 mb-5">
+    <div class="col-sm-4">
+        <div class="stat-card stat-card--purple">
+            <div class="stat-card__label">Bài đã làm</div>
+            <div class="stat-card__value">@Model.TotalQuizzesTaken</div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="stat-card stat-card--cyan">
+            <div class="stat-card__label">Điểm trung bình</div>
+            <div class="stat-card__value">
+                @if (Model.TotalQuizzesTaken > 0)
+                {
+                    @Model.AveragePercentage.ToString("0.#")<text>%</text>
+                }
+                else
+                {
+                    <text>—</text>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="stat-card stat-card--green">
+            <div class="stat-card__label">Lần làm gần nhất</div>
+            <div class="stat-card__value">
+                @if (Model.LastQuizDate.HasValue)
+                {
+                    @VietnamTime.FromUtc(Model.LastQuizDate.Value).ToString("dd/MM HH:mm")
+                }
+                else
+                {
+                    <text>—</text>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Bài quiz gần đây</span>
+                @if (Model.RecentHistories.Any())
+                {
+                    <a asp-controller="History" asp-action="Index" class="btn btn-sm btn-outline-secondary">Xem tất cả</a>
+                }
+            </div>
+            <div class="card-body p-0">
+                @if (!Model.RecentHistories.Any())
+                {
+                    <div class="p-4" style="color:var(--text-muted);">
+                        Bạn chưa làm bài quiz nào. Hãy chọn một bộ đề để bắt đầu!
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Bộ đề</th>
+                                    <th class="text-center">Điểm</th>
+                                    <th>Ngày</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var h in Model.RecentHistories)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">@h.Deck.Name</div>
+                                            <small style="color:var(--text-muted);">@h.Deck.Subject.Name</small>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge @(h.Percentage >= 50 ? "bg-success" : "bg-danger")">
+                                                @h.Score.ToString("0.##")/10
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small style="color:var(--text-muted);">@VietnamTime.FromUtc(h.CreatedAt).ToString("dd/MM HH:mm")</small>
+                                        </td>
+                                        <td class="text-end">
+                                            <a asp-controller="History" asp-action="Details" asp-route-id="@h.Id"
+                                               class="btn btn-sm btn-outline-secondary">Chi tiết</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Học liệu</span>
+                <a asp-controller="Subjects" asp-action="Index" class="btn btn-sm btn-outline-secondary">Khám phá</a>
+            </div>
+            <div class="card-body p-0">
+                @if (!Model.Subjects.Any())
+                {
+                    <div class="p-4" style="color:var(--text-muted);">
+                        Chưa có môn học nào.
+                        @if (canManageContent)
+                        {
+                            <a asp-controller="Subjects" asp-action="Create" style="color:var(--accent);">Tạo mới</a><text>.</text>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var subject in Model.Subjects)
+                        {
+                            <a asp-controller="Decks" asp-action="Index" asp-route-subjectId="@subject.Id"
+                               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <span>@subject.Name</span>
+                                <span style="color:var(--text-dim);font-size:.75rem;">→</span>
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

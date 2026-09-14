@@ -1,0 +1,79 @@
+@model IEnumerable<TestHistory>
+@{
+    ViewData["Title"] = "Lịch sử làm bài";
+    var page = (int)(ViewBag.Page ?? 1);
+    var pageSize = (int)(ViewBag.PageSize ?? 50);
+    var totalCount = (int)(ViewBag.TotalCount ?? Model.Count());
+    var totalPages = Math.Max(1, (int)Math.Ceiling((double)totalCount / pageSize));
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Lịch sử làm bài</h1>
+        <p class="text-muted mb-0">Danh sách các bài quiz đã làm</p>
+    </div>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">Dashboard</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        Bạn chưa làm bài quiz nào. Hãy vào <a asp-controller="Subjects" asp-action="Index">Môn học</a> để chọn bộ đề và bắt đầu làm bài.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Bộ đề</th>
+                    <th>Môn học</th>
+                    <th class="text-center">Điểm</th>
+                    <th class="text-center">Tỷ lệ đúng</th>
+                    <th>Ngày làm</th>
+                    <th class="text-end">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{ int stt = (page - 1) * pageSize + 1; }
+                @foreach (var history in Model)
+                {
+                    <tr>
+                        <td>@(stt++)</td>
+                        <td class="fw-semibold">@history.Deck.Name</td>
+                        <td>@history.Deck.Subject.Name</td>
+                        <td class="text-center">
+                            <span class="badge @(history.Percentage >= 50 ? "bg-success" : "bg-danger") fs-6">
+                                @history.Score.ToString("0.##")/10
+                            </span>
+                        </td>
+                        <td class="text-center">@history.Percentage.ToString("0.#")%</td>
+                        <td>@VietnamTime.FromUtc(history.CreatedAt).ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="text-end">
+                            <a asp-action="Details" asp-route-id="@history.Id" class="btn btn-sm btn-outline-primary">
+                                Xem chi tiết
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (totalPages > 1)
+    {
+        <nav aria-label="Phân trang lịch sử làm bài">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(page <= 1 ? "disabled" : null)">
+                    <a class="page-link" asp-action="Index" asp-route-page="@(page - 1)">Trước</a>
+                </li>
+                <li class="page-item disabled"><span class="page-link">Trang @(page) / @totalPages</span></li>
+                <li class="page-item @(page >= totalPages ? "disabled" : null)">
+                    <a class="page-link" asp-action="Index" asp-route-page="@(page + 1)">Sau</a>
+                </li>
+            </ul>
+        </nav>
+    }
+}

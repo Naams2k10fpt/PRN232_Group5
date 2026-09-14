@@ -1,0 +1,118 @@
+<script>
+    (() => {
+        const answersList = document.getElementById('answersList');
+        const addAnswerButton = document.getElementById('addAnswerButton');
+        const typeInputs = document.querySelectorAll('.question-type-input');
+
+        function currentType() {
+            return document.querySelector('.question-type-input:checked')?.value || '1';
+        }
+
+        function createAnswerRow() {
+            const row = document.createElement('div');
+            row.className = 'quizlet-answer-row';
+            row.dataset.answerRow = '';
+            row.innerHTML = `
+                <div class="quizlet-answer-number" data-answer-number></div>
+                <input type="hidden" data-answer-id value="0" />
+                <div class="quizlet-answer-content">
+                    <label class="form-label small text-muted mb-1">Nội dung đáp án</label>
+                    <textarea class="form-control" rows="2" data-answer-content placeholder="Nhập đáp án"></textarea>
+                    <span class="text-danger field-validation-valid" data-valmsg-replace="true"></span>
+                </div>
+                <div class="quizlet-answer-actions">
+                    <label class="correct-toggle">
+                        <input type="checkbox" value="true" data-answer-correct />
+                        <span>Đúng</span>
+                    </label>
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-remove-answer>Xóa</button>
+                </div>`;
+            return row;
+        }
+
+        function reindexAnswers() {
+            const rows = [...answersList.querySelectorAll('[data-answer-row]')];
+            rows.forEach((row, index) => {
+                const number = row.querySelector('[data-answer-number]');
+                const idInput = row.querySelector('[data-answer-id]');
+                const contentInput = row.querySelector('[data-answer-content]');
+const correctInput = row.querySelector('[data-answer-correct]');
+                const validation = row.querySelector('[data-valmsg-replace]');
+                const label = row.querySelector('label.form-label');
+                const contentId = `Answers_${index}__Content`;
+
+                number.textContent = index + 1;
+                idInput.name = `Answers[${index}].Id`;
+                contentInput.name = `Answers[${index}].Content`;
+                contentInput.id = contentId;
+correctInput.name = `Answers[${index}].IsCorrect`;
+                validation.setAttribute('data-valmsg-for', `Answers[${index}].Content`);
+                label.setAttribute('for', contentId);
+                row.querySelector('[data-remove-answer]').disabled = rows.length <= 2;
+            });
+        }
+
+        function enforceSingleCorrect(changedInput) {
+            if (currentType() !== '1' || !changedInput?.checked) {
+                return;
+            }
+
+            answersList.querySelectorAll('[data-answer-correct]').forEach(input => {
+                if (input !== changedInput) {
+                    input.checked = false;
+                }
+            });
+        }
+
+        function trimSingleCorrect() {
+            if (currentType() !== '1') {
+                return;
+            }
+
+            let found = false;
+            answersList.querySelectorAll('[data-answer-correct]').forEach(input => {
+                if (input.checked && !found) {
+                    found = true;
+                    return;
+                }
+                input.checked = false;
+            });
+        }
+
+        addAnswerButton.addEventListener('click', () => {
+            const row = createAnswerRow();
+            answersList.appendChild(row);
+            reindexAnswers();
+            row.querySelector('[data-answer-content]').focus();
+        });
+
+        answersList.addEventListener('click', event => {
+            const removeButton = event.target.closest('[data-remove-answer]');
+            if (!removeButton) {
+                return;
+            }
+
+            const rows = answersList.querySelectorAll('[data-answer-row]');
+            if (rows.length <= 2) {
+                return;
+            }
+
+            removeButton.closest('[data-answer-row]').remove();
+            reindexAnswers();
+            trimSingleCorrect();
+        });
+
+        answersList.addEventListener('change', event => {
+            if (event.target.matches('[data-answer-correct]')) {
+                enforceSingleCorrect(event.target);
+            }
+        });
+
+        typeInputs.forEach(input => {
+            input.addEventListener('change', trimSingleCorrect);
+        });
+
+        reindexAnswers();
+        trimSingleCorrect();
+    })();
+</script>

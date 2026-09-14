@@ -1,0 +1,49 @@
+@model QuestionImportInputViewModel
+@using Services
+@{
+    ViewData["Title"] = "Import câu hỏi";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Import câu hỏi</h1>
+        <p class="text-muted mb-0">@Model.SubjectName / @Model.DeckName</p>
+    </div>
+    <a asp-controller="Questions" asp-action="Index" asp-route-deckId="@Model.DeckId" class="btn btn-outline-secondary">Quay lại</a>
+</div>
+
+<form asp-controller="QuestionImport" asp-action="Preview" method="post" enctype="multipart/form-data">
+    <input asp-for="DeckId" type="hidden" />
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="border rounded p-3 h-100">
+                <h2 class="h5 mb-3">Excel (.xlsx)</h2>
+                <input asp-for="ExcelFile" class="form-control" type="file" accept=".xlsx" />
+                <div class="small text-muted mt-3">
+                    Tối đa @(QuestionImportLimits.MaxUploadBytes / 1024 / 1024) MB và @QuestionImportLimits.MaxRows.ToString("N0") dòng.<br />
+                    Header hỗ trợ: Question, Type, Answer1, Correct1, Answer2, Correct2, Explanation.
+                    Correct nhận true/false, 1/0, yes/no, x.
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="border rounded p-3 h-100">
+                <h2 class="h5 mb-3">Text</h2>
+                <textarea asp-for="RawText" class="form-control" rows="14" placeholder="Dán câu hỏi theo mẫu bên dưới"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary">Xem trước import</button>
+        <a asp-controller="Questions" asp-action="Index" asp-route-deckId="@Model.DeckId" class="btn btn-outline-secondary">Hủy</a>
+    </div>
+</form>
+
+<div class="mt-4">
+    <h2 class="h5">Mẫu text</h2>
+    <pre class="border rounded p-3 text-wrap" style="background:var(--bg-surface);color:var(--text);">@Model.TextTemplate</pre>
+</div>

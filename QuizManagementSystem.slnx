@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="BusinessObjects/BusinessObjects.csproj" Id="8695701c-e390-4dde-b991-4a4a5b315f79" />
+  <Project Path="DataAccessObjects/DataAccessObjects.csproj" Id="76171565-acbb-4e69-bb9b-f7393acc7f1e" />
+  <Project Path="QuizManagement/QuizManagement.csproj" />
+  <Project Path="QuizManagement.Tests/QuizManagement.Tests.csproj" />
+  <Project Path="Repositories/Repositories.csproj" Id="33684d0b-5285-4a3d-a115-28e7cb599f8e" />
+  <Project Path="Services/Services.csproj" Id="d51ca0e3-e000-40b3-93cb-49100d81db79" />
+</Solution>

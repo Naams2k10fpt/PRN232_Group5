@@ -1,0 +1,63 @@
+@model SubmitReportViewModel
+@{
+    ViewData["Title"] = "Báo cáo câu hỏi";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Báo cáo câu hỏi</h1>
+        <p class="text-muted mb-0">Giúp chúng tôi cải thiện chất lượng nội dung</p>
+    </div>
+    @if (Model.TestHistoryId.HasValue)
+    {
+        <a asp-controller="Quiz" asp-action="Result" asp-route-id="@Model.TestHistoryId" class="btn btn-outline-secondary">Quay lại kết quả</a>
+    }
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card mb-3">
+            <div class="card-header">
+                <span class="text-muted" style="font-size:.85rem;">Câu hỏi được báo cáo</span>
+            </div>
+            <div class="card-body markdown-content">
+                @SafeMarkdown.ToHtml(Model.QuestionContent)
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="QuestionId" />
+                    <input type="hidden" asp-for="TestHistoryId" />
+
+                    <div class="mb-3">
+                        <label asp-for="Reason" class="form-label">Lý do báo cáo <span class="text-danger">*</span></label>
+                        <select asp-for="Reason" class="form-select">
+                            <option value="">— Chọn lý do —</option>
+                            <option value="WrongAnswer">Đáp án được đánh dấu sai</option>
+                            <option value="UnclearQuestion">Câu hỏi không rõ ràng / mơ hồ</option>
+                            <option value="DuplicateQuestion">Câu hỏi trùng lặp</option>
+                            <option value="Other">Lý do khác</option>
+                        </select>
+                        <span asp-validation-for="Reason" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Note" class="form-label">Ghi chú thêm</label>
+                        <textarea asp-for="Note" class="form-control" rows="3"
+                                  placeholder="Mô tả chi tiết vấn đề bạn gặp phải..."></textarea>
+                        <span asp-validation-for="Note" class="text-danger"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">Gửi báo cáo</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,118 @@
+@model QuizResultViewModel
+@{
+    ViewData["Title"] = "Chi tiết lịch sử";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Chi tiết lịch sử</h1>
+        <p class="text-muted mb-0">@Model.SubjectName / @Model.DeckName</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Index" class="btn btn-outline-secondary">Quay lại</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body d-flex flex-column justify-content-center">
+                <h6 class="card-subtitle text-muted mb-2">Điểm số</h6>
+                <h2 class="card-title mb-0 @(Model.Percentage >= 50 ? "text-success" : "text-danger")">
+                    @Model.Score.ToString("0.##")/10
+                </h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body d-flex flex-column justify-content-center">
+                <h6 class="card-subtitle text-muted mb-2">Tỷ lệ đúng</h6>
+                <h2 class="card-title mb-0 @(Model.Percentage >= 50 ? "text-success" : "text-danger")">
+                    @Model.Percentage.ToString("0.#")%
+                </h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body d-flex flex-column justify-content-center">
+                <h6 class="card-subtitle text-muted mb-2">Số câu đúng</h6>
+                <h2 class="card-title mb-0">@Model.CorrectCount/@Model.TotalCount</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body d-flex flex-column justify-content-center">
+                <h6 class="card-subtitle text-muted mb-2">Thời gian</h6>
+                <h6 class="card-title mb-0">@VietnamTime.FromUtc(Model.CreatedAt).ToString("dd/MM/yyyy HH:mm")</h6>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h4 class="mb-3">Chi tiết câu hỏi</h4>
+
+<div class="vstack gap-3">
+    @for (int i = 0; i < Model.Questions.Count; i++)
+    {
+        var question = Model.Questions[i];
+        <div class="card @(question.IsCorrect ? "border-success" : "border-danger")">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h5 class="card-title mb-0">
+                        <span class="badge @(question.IsCorrect ? "bg-success" : "bg-danger") me-2">
+                            Câu @(i + 1) - @(question.IsCorrect ? "Đúng" : "Sai")
+                        </span>
+                        @if (question.QuestionType == 2)
+                        {
+                            <span class="badge bg-info">Nhiều đáp án</span>
+                        }
+                    </h5>
+                </div>
+
+                <div class="card-text fs-5 mb-3 markdown-content">@SafeMarkdown.ToHtml(question.Content)</div>
+
+                <div class="vstack gap-2">
+                    @foreach (var answer in question.Answers)
+                    {
+                        var bgClass = "";
+                        if (answer.WasSelected && answer.IsCorrectAnswer)
+                        {
+                            bgClass = "bg-success bg-opacity-10 border-success";
+                        }
+                        else if (answer.WasSelected && !answer.IsCorrectAnswer)
+                        {
+                            bgClass = "bg-danger bg-opacity-10 border-danger";
+                        }
+                        else if (!answer.WasSelected && answer.IsCorrectAnswer)
+                        {
+                            bgClass = "bg-warning bg-opacity-10 border-warning";
+                        }
+
+                        <div class="p-3 border rounded @bgClass">
+                            <span>@SafeMarkdown.ToInlineHtml(answer.Content)</span>
+                            @if (answer.IsCorrectAnswer)
+                            {
+                                <span class="badge bg-success ms-2">Đáp án đúng</span>
+                            }
+                            @if (answer.WasSelected)
+                            {
+                                <span class="badge bg-primary ms-1">Đã chọn</span>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(question.Explanation))
+                {
+                    <div class="alert alert-info mt-3 mb-0 markdown-content">
+                        <strong>Giải thích:</strong>
+                        @SafeMarkdown.ToHtml(question.Explanation)
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

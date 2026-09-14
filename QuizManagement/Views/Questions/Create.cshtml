@@ -1,0 +1,12 @@
+@model QuizManagement.ViewModels.Questions.QuestionFormViewModel
+
+@{
+    ViewData["Title"] = "Tạo câu hỏi";
+}
+
+<partial name="_QuestionForm" model="Model" />
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="_QuestionFormScripts" />
+}

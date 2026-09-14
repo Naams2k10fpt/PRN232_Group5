@@ -1,0 +1,134 @@
+@model MentorStatsViewModel
+@{
+    ViewData["Title"] = "Thống kê nội dung";
+    var isAdmin = User.IsInRole(AppRoles.Admin);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Thống kê nội dung</h1>
+        <p class="text-muted mb-0">
+            @(isAdmin ? "Tổng hợp lượt làm bài trên toàn hệ thống" : "Lượt làm bài trên các môn/đề bạn tạo")
+        </p>
+    </div>
+    <a asp-controller="Subjects" asp-action="Index" class="btn btn-outline-secondary">Môn học</a>
+</div>
+
+@if (!Model.DeckStats.Any())
+{
+    <div class="alert alert-info">Chưa có dữ liệu. Học viên chưa làm bài nào trên nội dung của bạn.</div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card stat-card--purple">
+                <div class="stat-card__label">Tổng lượt làm</div>
+                <div class="stat-card__value">@Model.TotalAttempts</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card stat-card--cyan">
+                <div class="stat-card__label">Người dùng khác nhau</div>
+                <div class="stat-card__value">@Model.UniqueUsers</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card stat-card--green">
+                <div class="stat-card__label">Điểm TB toàn bộ</div>
+                <div class="stat-card__value">@Model.OverallAvgPercentage.ToString("0.#")%</div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card stat-card--green">
+                <div class="stat-card__label">Điểm cao nhất</div>
+                <div class="stat-card__value">@Model.OverallBestPercentage.ToString("0.#")%</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-5 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Theo môn học</h2>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="ps-3">Môn học</th>
+                                    <th class="text-center">Lượt</th>
+                                    <th class="text-center">Người</th>
+                                    <th class="text-center">TB</th>
+                                    <th class="text-center">Tốt nhất</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.SubjectStats)
+                                {
+                                    <tr>
+                                        <td class="ps-3">@item.SubjectName</td>
+                                        <td class="text-center">@item.TotalAttempts</td>
+                                        <td class="text-center">@item.UniqueUsers</td>
+                                        <td class="text-center">@item.AvgPercentage.ToString("0.#")%</td>
+                                        <td class="text-center">@item.BestPercentage.ToString("0.#")%</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Theo bộ đề</h2>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="ps-3">Bộ đề</th>
+                                    <th class="text-center">Lượt</th>
+                                    <th class="text-center">Người</th>
+                                    <th class="text-center">TB</th>
+                                    <th class="text-center">Tốt nhất</th>
+                                    <th class="text-center">Bảng XH</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.DeckStats)
+                                {
+                                    var avgClass = item.AvgPercentage >= 80 ? "text-success"
+                                                 : item.AvgPercentage >= 50 ? ""
+                                                 : "text-danger";
+                                    <tr>
+                                        <td class="ps-3">
+                                            <div style="font-weight:500;">@item.DeckName</div>
+                                            <div style="font-size:.8rem;color:var(--text-muted);">@item.SubjectName</div>
+                                        </td>
+                                        <td class="text-center">@item.TotalAttempts</td>
+                                        <td class="text-center">@item.UniqueUsers</td>
+                                        <td class="text-center @avgClass">@item.AvgPercentage.ToString("0.#")%</td>
+                                        <td class="text-center">@item.BestPercentage.ToString("0.#")%</td>
+                                        <td class="text-center">
+                                            <a asp-controller="Statistics" asp-action="Leaderboard"
+                                               asp-route-deckId="@item.DeckId"
+                                               class="btn btn-xs btn-outline-secondary"
+                                               style="font-size:.75rem;padding:.2rem .5rem;">Xem</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}

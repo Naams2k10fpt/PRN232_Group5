@@ -1,0 +1,67 @@
+@model List<BusinessObjects.LoginAttempt>
+@{
+    ViewData["Title"] = "Lịch sử đăng nhập";
+    bool? successFilter = ViewBag.SuccessFilter as bool?;
+    var failCount = Model.Count(a => !a.IsSuccess);
+    var successCount = Model.Count(a => a.IsSuccess);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Lịch sử đăng nhập</h1>
+        <p class="text-muted mb-0">@successCount thành công · @failCount thất bại (300 lần gần nhất)</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">Dashboard</a>
+</div>
+
+<div class="d-flex gap-2 mb-4">
+    <a asp-action="LoginAttempts" class="btn btn-sm @(successFilter == null ? "btn-primary" : "btn-outline-secondary")">Tất cả</a>
+    <a asp-action="LoginAttempts" asp-route-success="false" class="btn btn-sm @(successFilter == false ? "btn-danger" : "btn-outline-danger")">Thất bại (@failCount)</a>
+    <a asp-action="LoginAttempts" asp-route-success="true" class="btn btn-sm @(successFilter == true ? "btn-success" : "btn-outline-success")">Thành công (@successCount)</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">Chưa có lần đăng nhập nào được ghi lại.</div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Email</th>
+                            <th>IP</th>
+                            <th class="text-center">Kết quả</th>
+                            <th class="text-center">Thời gian</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-3">@item.Email</td>
+                                <td style="font-family:monospace;font-size:.85rem;">@item.IpAddress</td>
+                                <td class="text-center">
+                                    @if (item.IsSuccess)
+                                    {
+                                        <span class="badge bg-success">Thành công</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Thất bại</span>
+                                    }
+                                </td>
+                                <td class="text-center" style="font-size:.85rem;color:var(--text-muted);">
+                                    @VietnamTime.FromUtc(item.CreatedAt).ToString("dd/MM/yyyy HH:mm:ss")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
