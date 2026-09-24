@@ -5,19 +5,19 @@ using Xunit;
 
 namespace QuizManagement.Tests.IntegrationTests;
 
-public class QuestionConcurrencySqlServerTests
+public class QuestionConcurrencyPostgresTests
 {
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public void StaleQuestionEdit_CannotOverwriteTheWinningEdit()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
         var options = new DbContextOptionsBuilder<QuizManagementDbContext>()
-            .UseSqlServer(SqlServerTestConnection.ForDatabase(databaseName))
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName))
             .Options;
         int questionId;
         int[] answerIds;
-        byte[] staleVersion;
+        uint staleVersion;
 
         using (var setup = new QuizManagementDbContext(options))
         {
@@ -51,12 +51,12 @@ public class QuestionConcurrencySqlServerTests
             setup.SaveChanges();
             questionId = question.Id;
             answerIds = question.Answers.OrderBy(answer => answer.Id).Select(answer => answer.Id).ToArray();
-            staleVersion = question.RowVersion.ToArray();
+            staleVersion = question.RowVersion;
         }
 
         try
         {
-            QuestionUpdateResult Update(string content, byte[] rowVersion)
+            QuestionUpdateResult Update(string content, uint rowVersion)
             {
                 using var context = new QuizManagementDbContext(options);
                 return QuestionDAO.Instance.TryUpdateQuestion(context, new Question

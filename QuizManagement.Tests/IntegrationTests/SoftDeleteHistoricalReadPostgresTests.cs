@@ -5,15 +5,15 @@ using Xunit;
 
 namespace QuizManagement.Tests.IntegrationTests;
 
-public class SoftDeleteHistoricalReadSqlServerTests
+public class SoftDeleteHistoricalReadPostgresTests
 {
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public void HistoryAndReports_RemainVisibleToAuthorizedActorsAfterAggregateSoftDelete()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
         var options = new DbContextOptionsBuilder<QuizManagementDbContext>()
-            .UseSqlServer(SqlServerTestConnection.ForDatabase(databaseName))
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName))
             .Options;
 
         using var context = new QuizManagementDbContext(options);

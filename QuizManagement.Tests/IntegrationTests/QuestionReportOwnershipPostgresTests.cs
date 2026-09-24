@@ -5,15 +5,15 @@ using Xunit;
 
 namespace QuizManagement.Tests.IntegrationTests;
 
-public class QuestionReportOwnershipSqlServerTests
+public class QuestionReportOwnershipPostgresTests
 {
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public void GetForResolution_ScopesMentorToOwnedContent_AndAllowsAdmin()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
         var options = new DbContextOptionsBuilder<QuizManagementDbContext>()
-            .UseSqlServer(SqlServerTestConnection.ForDatabase(databaseName))
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName))
             .Options;
 
         using var context = new QuizManagementDbContext(options);

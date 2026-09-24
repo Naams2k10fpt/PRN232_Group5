@@ -1,5 +1,5 @@
 using BusinessObjects;
-using Microsoft.Data.SqlClient;
+using DataAccessObjects;
 using Microsoft.EntityFrameworkCore;
 using Repositories;
 
@@ -33,7 +33,7 @@ namespace Services
                 return true;
             }
             catch (DbUpdateException exception)
-                when (exception.InnerException is SqlException { Number: 2601 or 2627 })
+                when (DbExceptionClassifier.IsUniqueViolation(exception))
             {
                 return false;
             }
@@ -47,7 +47,7 @@ namespace Services
                 return true;
             }
             catch (DbUpdateException exception)
-                when (exception.InnerException is SqlException { Number: 2601 or 2627 })
+                when (DbExceptionClassifier.IsUniqueViolation(exception))
             {
                 return false;
             }

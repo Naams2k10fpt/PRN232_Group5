@@ -111,7 +111,7 @@ namespace DataAccessObjects
                 return QuestionUpdateResult.ReferencedAnswer;
             }
 
-            if (question.RowVersion.Length != 8)
+            if (question.RowVersion == 0)
             {
                 context.ChangeTracker.Clear();
                 return QuestionUpdateResult.ConcurrencyConflict;

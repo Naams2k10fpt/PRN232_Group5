@@ -6,15 +6,15 @@ using Xunit;
 
 namespace QuizManagement.Tests.IntegrationTests;
 
-public class HotReadQueriesSqlServerTests
+public class HotReadQueriesPostgresTests
 {
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public async Task HotReads_AggregateAndPageInSqlWithoutTrackingEntityGraphs()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
         var options = new DbContextOptionsBuilder<QuizManagementDbContext>()
-            .UseSqlServer(SqlServerTestConnection.ForDatabase(databaseName))
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName))
             .Options;
 
         using (var setup = new QuizManagementDbContext(options))

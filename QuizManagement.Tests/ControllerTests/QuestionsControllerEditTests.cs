@@ -20,7 +20,7 @@ public class QuestionsControllerEditTests
         var result = controller.Edit(10, new QuestionFormViewModel
         {
             Id = 10,
-            RowVersion = Convert.ToBase64String(questionService.Question!.RowVersion),
+            RowVersion = questionService.Question!.RowVersion.ToString(),
             Content = "Updated",
             QuestionType = 1,
             Answers =
@@ -59,7 +59,7 @@ public class QuestionsControllerEditTests
         Id = 10,
         Content = "Original",
         QuestionType = 1,
-        RowVersion = [1, 2, 3, 4, 5, 6, 7, 8],
+        RowVersion = 12345,
         Deck = new Deck
         {
             Id = 7,

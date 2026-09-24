@@ -9,10 +9,10 @@ using Xunit;
 
 namespace QuizManagement.Tests.IntegrationTests;
 
-public class QuestionReportDedupSqlServerTests
+public class QuestionReportDedupPostgresTests
 {
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public async Task ConcurrentPendingSubmissions_CreateOneReportAndOneFriendlyConflict()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
@@ -55,7 +55,7 @@ public class QuestionReportDedupSqlServerTests
     }
 
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public void ResolvedReport_DoesNotBlockANewPendingReport()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
@@ -122,7 +122,7 @@ public class QuestionReportDedupSqlServerTests
         DbCommandInterceptor? interceptor = null)
     {
         var builder = new DbContextOptionsBuilder<QuizManagementDbContext>()
-            .UseSqlServer(SqlServerTestConnection.ForDatabase(databaseName));
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName));
         if (interceptor is not null)
             builder.AddInterceptors(interceptor);
         return builder.Options;
@@ -139,7 +139,7 @@ public class QuestionReportDedupSqlServerTests
             CommandEventData eventData,
             InterceptionResult<DbDataReader> result)
         {
-            if (command.CommandText.Contains("INSERT INTO [QuestionReports]", StringComparison.OrdinalIgnoreCase))
+            if (command.CommandText.Contains("INSERT INTO \"QuestionReports\"", StringComparison.OrdinalIgnoreCase))
             {
                 Interlocked.Increment(ref _insertCount);
                 if (!barrier.SignalAndWait(TimeSpan.FromSeconds(15)))

@@ -6,7 +6,7 @@ Tài liệu này dùng để chuẩn bị và trình diễn project PRN222 theo 
 
 Sau buổi demo, người xem cần thấy được:
 
-- Kiến trúc ASP.NET Core MVC theo luồng `View → Controller → Service → Repository → DAO → SQL Server`.
+- Kiến trúc ASP.NET Core MVC theo luồng `View → Controller → Service → Repository → DAO → PostgreSQL`.
 - Ba vai trò `User`, `Mentor`, `Admin` và phạm vi quyền khác nhau.
 - Học flashcard có lịch ôn lưu trong database.
 - Làm quiz, chấm điểm, xem lời giải, lịch sử và thống kê.
@@ -29,44 +29,15 @@ Sau buổi demo, người xem cần thấy được:
 ### 3.1. Yêu cầu
 
 - .NET SDK 9.0.313.
-- SQL Server 2019+, SQL Server Express hoặc LocalDB.
-- SQL Server Management Studio.
+- PostgreSQL 16+ (cần cho cú pháp `IS JSON` và collation ICU `und-x-icu`). Chọn một trong hai:
+  - PostgreSQL cài trên máy (hoặc `docker run -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17`).
+  - Database online miễn phí trên [Neon](https://neon.tech), region `ap-southeast-1` (Singapore).
+- `psql` (đi kèm PostgreSQL) hoặc SQL Editor của Neon để chạy dữ liệu demo.
 - Repository đã được clone về máy.
 
 Mở PowerShell tại thư mục gốc repository.
 
-### 3.2. Tạo database mới
-
-Nếu `QuizManagementDB` đang tồn tại, chạy đoạn sau trong SSMS để xóa database demo cũ:
-
-```sql
-USE [master];
-ALTER DATABASE [QuizManagementDB] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-DROP DATABASE [QuizManagementDB];
-```
-
-Lưu ý: thao tác trên xóa toàn bộ dữ liệu hiện có. Sau đó mở `CreateDB.sql` và chạy toàn bộ script.
-
-Kết quả mong đợi:
-
-- Database `QuizManagementDB` được tạo.
-- Các bảng, khóa ngoại, index và constraint được tạo đầy đủ.
-- Ba tài khoản `Admin`, `Mentor`, `User` được tạo.
-- Có 2 môn học, 3 bộ đề, 21 câu hỏi và dữ liệu mẫu về lượt làm quiz, báo cáo câu hỏi, lịch sử đăng nhập.
-
-`CreateDB.sql` đã chứa schema mới nhất và dữ liệu demo; không cần chạy file upgrade hoặc seed riêng.
-
-### 3.3. Xác nhận dữ liệu demo
-
-Kết quả cuối `CreateDB.sql` hiển thị ba tài khoản demo:
-
-| Role | Email | Password |
-| --- | --- | --- |
-| Admin | `admin.demo@quiz.local` | `Test@123456` |
-| Mentor | `mentor.demo@quiz.local` | `Test@123456` |
-| User | `user.demo@quiz.local` | `Test@123456` |
-
-### 3.4. Cấu hình ứng dụng
+### 3.2. Cấu hình connection string
 
 Tạo file local nếu chưa có:
 
@@ -77,17 +48,57 @@ Copy-Item .\QuizManagement\appsettings.Local.example.json `
 
 Cập nhật `ConnectionStrings:DefaultConnection` trong `appsettings.Local.json`.
 
-Ví dụ Windows Authentication:
+PostgreSQL trên máy:
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost\\SQLEXPRESS;Database=QuizManagementDB;Trusted_Connection=True;TrustServerCertificate=True;"
+    "DefaultConnection": "Host=localhost;Port=5432;Database=quizmanagement;Username=postgres;Password=postgres"
+  }
+}
+```
+
+Neon: dùng endpoint **direct** (không có `-pooler` trong tên host). Neon hiển thị connection string dạng URI `postgresql://user:pass@host/db`, nhưng Npgsql **không** đọc được dạng này; hãy chuyển sang dạng key/value:
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=ep-xxx.ap-southeast-1.aws.neon.tech;Database=neondb;Username=neondb_owner;Password=...;SSL Mode=Require"
   }
 }
 ```
 
 Nếu muốn demo email qua log thay vì SMTP thật, bỏ section `Email` hoặc đặt `Email:Host` thành chuỗi rỗng. Khi đó phải chạy ứng dụng trong môi trường Development và giữ terminal mở để lấy liên kết xác minh/reset.
+
+### 3.3. Tạo schema bằng EF Core migrations
+
+```powershell
+dotnet tool restore
+dotnet ef database update --project DataAccessObjects --startup-project QuizManagement
+```
+
+Lệnh trên tạo database (nếu chưa có) cùng toàn bộ bảng, khóa ngoại, index và constraint. Schema được quản lý hoàn toàn bằng migration trong `DataAccessObjects/Migrations`; không còn script tạo schema viết tay.
+
+### 3.4. Nạp dữ liệu demo
+
+```powershell
+psql "host=localhost dbname=quizmanagement user=postgres password=postgres" -f db/seed-demo.sql
+```
+
+Với Neon: mở **SQL Editor**, dán toàn bộ nội dung `db/seed-demo.sql` rồi chạy.
+
+Kết quả mong đợi:
+
+- Ba tài khoản `Admin`, `Mentor`, `User` được tạo.
+- Có 2 môn học, 3 bộ đề, 21 câu hỏi và dữ liệu mẫu về lượt làm quiz, báo cáo câu hỏi, lịch sử đăng nhập.
+
+Script có thể chạy lại nhiều lần: dữ liệu thuộc tài khoản demo được xóa và tạo lại, dữ liệu khác được giữ nguyên. Nếu có lỗi, toàn bộ script được rollback.
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | `admin.demo@quiz.local` | `Test@123456` |
+| Mentor | `mentor.demo@quiz.local` | `Test@123456` |
+| User | `user.demo@quiz.local` | `Test@123456` |
 
 ### 3.5. Build và chạy
 
@@ -112,7 +123,7 @@ Kiểm tra nhanh trước khi bắt đầu:
 
 Tại trang Home, giới thiệu ngắn:
 
-> Quiz Management là hệ thống quản lý học liệu và luyện tập trắc nghiệm. Nội dung được tổ chức theo Môn học → Bộ đề → Câu hỏi → Đáp án. Hệ thống có ba vai trò User, Mentor và Admin, sử dụng ASP.NET Core MVC, Entity Framework Core và SQL Server.
+> Quiz Management là hệ thống quản lý học liệu và luyện tập trắc nghiệm. Nội dung được tổ chức theo Môn học → Bộ đề → Câu hỏi → Đáp án. Hệ thống có ba vai trò User, Mentor và Admin, sử dụng ASP.NET Core MVC, Entity Framework Core và PostgreSQL.
 
 Nêu nhanh các điểm kỹ thuật:
 
@@ -162,7 +173,7 @@ Giới thiệu bốn hướng sử dụng trên bộ đề:
 
 Nội dung cần nói:
 
-> Mỗi đánh giá được gửi về server và lưu trong bảng tiến độ flashcard. Thẻ đã nhớ được giãn lịch ôn; thẻ cần học lại quay về sau 10 phút. Vì dữ liệu nằm trong SQL Server nên tiến độ vẫn còn sau khi đăng xuất hoặc restart ứng dụng.
+> Mỗi đánh giá được gửi về server và lưu trong bảng tiến độ flashcard. Thẻ đã nhớ được giãn lịch ôn; thẻ cần học lại quay về sau 10 phút. Vì dữ liệu nằm trong PostgreSQL nên tiến độ vẫn còn sau khi đăng xuất hoặc restart ứng dụng.
 
 Nếu màn hình báo đã hoàn thành toàn bộ thẻ đến hạn, chọn `Học lại tất cả` để tiếp tục demo.
 
@@ -370,13 +381,13 @@ Do câu hỏi và đáp án được xáo trộn, chọn theo nội dung thay v�
 
 ### Không kết nối được database
 
-- Kiểm tra SQL Server service đang chạy.
-- Kiểm tra `DefaultConnection` trong `appsettings.Local.json`.
-- Kiểm tra database `QuizManagementDB` tồn tại.
+- Kiểm tra PostgreSQL đang chạy (hoặc project Neon không bị tạm dừng; lần truy vấn đầu sau khi idle có thể chậm vài giây).
+- Kiểm tra `DefaultConnection` trong `appsettings.Local.json` ở dạng key/value, không phải URI `postgresql://`.
+- Với Neon, connection string phải có `SSL Mode=Require`.
 
-### `CreateDB.sql` báo lỗi `51020` hoặc `51021`
+### `db/seed-demo.sql` báo "schema not found"
 
-Database đang có schema cũ, thiếu hoặc không nhận diện được. Nếu đây là database demo có thể tạo lại, xóa database theo phần 3.2 rồi chạy lại `CreateDB.sql`.
+Database chưa có schema. Chạy `dotnet ef database update` theo phần 3.3 rồi chạy lại script seed.
 
 ### Không nhận được email
 
@@ -394,32 +405,34 @@ Chọn `Học lại tất cả`.
 - Đáp án sai bắt đầu bằng `-`.
 - `single` phải có đúng một đáp án đúng; `multiple` có thể có nhiều đáp án đúng.
 
-### Integration test không chạy bằng LocalDB
+### Chạy integration test
+
+Integration test cần một PostgreSQL mà tài khoản có quyền tạo và xóa database tạm. Mặc định test dùng `Host=localhost;Port=5432;Username=postgres;Password=postgres`. Để dùng server khác:
 
 ```powershell
-$env:QUIZ_TEST_SQLSERVER_CONNECTION = `
-    (Get-Content .\QuizManagement\appsettings.Local.json | ConvertFrom-Json).ConnectionStrings.DefaultConnection
+$env:QUIZ_TEST_POSTGRES_CONNECTION = "Host=localhost;Port=5432;Username=postgres;Password=..."
 dotnet test QuizManagementSystem.slnx -c Release
 ```
 
-Connection string dùng cho test phải có quyền tạo và xóa database tạm.
+Không trỏ biến này vào database Neon đang dùng cho demo. Chỉ chạy unit test (không cần PostgreSQL): `dotnet test --filter "Category!=PostgresIntegration"`.
 
 ## 8. Reset dữ liệu sau buổi demo
 
-Để đưa database demo về đúng trạng thái mẫu, xóa và tạo lại database. Thao tác sau **xóa toàn bộ dữ liệu**:
+Để đưa dữ liệu demo về đúng trạng thái mẫu, chỉ cần chạy lại `db/seed-demo.sql` (phần 3.4). Dữ liệu không thuộc tài khoản demo được giữ nguyên.
 
-```sql
-USE [master];
-ALTER DATABASE [QuizManagementDB] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-DROP DATABASE [QuizManagementDB];
+Để xóa sạch và tạo lại toàn bộ database (**xóa toàn bộ dữ liệu**):
+
+```powershell
+dotnet ef database drop --force --project DataAccessObjects --startup-project QuizManagement
+dotnet ef database update --project DataAccessObjects --startup-project QuizManagement
 ```
 
-Sau đó chỉ cần chạy lại `CreateDB.sql`.
+Sau đó chạy lại `db/seed-demo.sql`.
 
 ## 9. Checklist ngay trước khi trình bày
 
-- [ ] SQL Server đang chạy.
-- [ ] `CreateDB.sql` đã tạo schema và dữ liệu demo thành công.
+- [ ] PostgreSQL đang chạy (hoặc database Neon truy cập được).
+- [ ] `dotnet ef database update` và `db/seed-demo.sql` đã chạy thành công.
 - [ ] Ba tài khoản demo đăng nhập được.
 - [ ] Build Release không có warning/error.
 - [ ] Trang `http://localhost:5039` mở được.
@@ -430,4 +443,4 @@ Sau đó chỉ cần chạy lại `CreateDB.sql`.
 
 ## 10. Câu kết đề xuất
 
-> Quiz Management không chỉ quản lý câu hỏi mà còn khép kín quy trình học tập: tạo học liệu, ôn tập theo lịch, làm bài, lưu lịch sử, thống kê, phản hồi chất lượng và quản trị bảo mật. Dữ liệu quan trọng đều được lưu bền vững trong SQL Server và quyền truy cập được kiểm soát theo vai trò lẫn quyền sở hữu nội dung.
+> Quiz Management không chỉ quản lý câu hỏi mà còn khép kín quy trình học tập: tạo học liệu, ôn tập theo lịch, làm bài, lưu lịch sử, thống kê, phản hồi chất lượng và quản trị bảo mật. Dữ liệu quan trọng đều được lưu bền vững trong PostgreSQL và quyền truy cập được kiểm soát theo vai trò lẫn quyền sở hữu nội dung.

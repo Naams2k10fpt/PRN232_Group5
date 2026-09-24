@@ -5,15 +5,15 @@ using Xunit;
 
 namespace QuizManagement.Tests.IntegrationTests;
 
-public class UtcDateTimeSqlServerTests
+public class UtcDateTimePostgresTests
 {
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public void DateTimeConverter_MaterializesRequiredAndNullableValuesAsUtc()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
         var options = new DbContextOptionsBuilder<QuizManagementDbContext>()
-            .UseSqlServer(SqlServerTestConnection.ForDatabase(databaseName))
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName))
             .Options;
         var clockValue = new DateTime(2026, 7, 16, 9, 30, 0, DateTimeKind.Unspecified);
 

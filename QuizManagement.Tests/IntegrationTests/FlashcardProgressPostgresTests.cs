@@ -7,15 +7,15 @@ using Xunit;
 
 namespace QuizManagement.Tests.IntegrationTests;
 
-public class FlashcardProgressSqlServerTests
+public class FlashcardProgressPostgresTests
 {
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public void ReviewFlashcard_PersistsScheduleAcrossContexts()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
         var options = new DbContextOptionsBuilder<QuizManagementDbContext>()
-            .UseSqlServer(SqlServerTestConnection.ForDatabase(databaseName))
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName))
             .Options;
         var now = new DateTime(2026, 7, 22, 12, 0, 0, DateTimeKind.Utc);
         int questionId;

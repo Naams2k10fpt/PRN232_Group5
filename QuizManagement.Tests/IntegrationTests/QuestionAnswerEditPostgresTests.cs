@@ -5,15 +5,15 @@ using Xunit;
 
 namespace QuizManagement.Tests.IntegrationTests;
 
-public class QuestionAnswerEditSqlServerTests
+public class QuestionAnswerEditPostgresTests
 {
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public void TryUpdateQuestion_RejectsReferencedRemovalAndAllowsUnreferencedRemoval()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
         var options = new DbContextOptionsBuilder<QuizManagementDbContext>()
-            .UseSqlServer(SqlServerTestConnection.ForDatabase(databaseName))
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName))
             .Options;
 
         using var context = new QuizManagementDbContext(options);

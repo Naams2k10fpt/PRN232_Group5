@@ -44,7 +44,8 @@ public class UniqueConflictControllerTests
             controller.ModelState.SelectMany(entry => entry.Value!.Errors),
             error => error.ErrorMessage.Contains("SQL", StringComparison.OrdinalIgnoreCase)
                 || error.ErrorMessage.Contains("2601", StringComparison.OrdinalIgnoreCase)
-                || error.ErrorMessage.Contains("2627", StringComparison.OrdinalIgnoreCase));
+                || error.ErrorMessage.Contains("2627", StringComparison.OrdinalIgnoreCase)
+                || error.ErrorMessage.Contains("23505", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(1, userService.TryCreateCalls);
     }
 

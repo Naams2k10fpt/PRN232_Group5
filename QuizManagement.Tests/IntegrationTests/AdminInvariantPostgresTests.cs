@@ -9,15 +9,15 @@ using Xunit;
 
 namespace QuizManagement.Tests.IntegrationTests;
 
-public class AdminInvariantSqlServerTests
+public class AdminInvariantPostgresTests
 {
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public void AdminMutation_RejectsLastActiveAdminAndAllowsMutationWhenAnotherRemains()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
         var options = new DbContextOptionsBuilder<QuizManagementDbContext>()
-            .UseSqlServer(SqlServerTestConnection.ForDatabase(databaseName))
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName))
             .Options;
 
         using var context = new QuizManagementDbContext(options);
@@ -63,7 +63,7 @@ public class AdminInvariantSqlServerTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public async Task ConcurrentDestructiveMutations_PreserveOneActiveAdmin(bool disableSecond)
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
@@ -118,7 +118,7 @@ public class AdminInvariantSqlServerTests
         DbCommandInterceptor? interceptor = null)
     {
         var builder = new DbContextOptionsBuilder<QuizManagementDbContext>()
-            .UseSqlServer(SqlServerTestConnection.ForDatabase(databaseName));
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName));
         if (interceptor is not null)
             builder.AddInterceptors(interceptor);
         return builder.Options;
@@ -145,7 +145,7 @@ public class AdminInvariantSqlServerTests
             CommandEventData eventData,
             InterceptionResult<DbDataReader> result)
         {
-            if (command.CommandText.Contains("UPDLOCK", StringComparison.OrdinalIgnoreCase))
+            if (command.CommandText.Contains("FOR UPDATE", StringComparison.OrdinalIgnoreCase))
             {
                 Interlocked.Increment(ref _lockQueryCount);
                 if (!barrier.SignalAndWait(TimeSpan.FromSeconds(15)))

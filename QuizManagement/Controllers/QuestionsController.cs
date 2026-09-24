@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using QuizManagement.ViewModels.Questions;
 using Services;
+using System.Globalization;
 using System.Security.Claims;
 
 namespace QuizManagement.Controllers
@@ -99,18 +100,9 @@ namespace QuizManagement.Controllers
             }
 
             model.DeckId = question.DeckId;
-            byte[]? rowVersion = null;
-            try
-            {
-                rowVersion = string.IsNullOrWhiteSpace(model.RowVersion)
-                    ? null
-                    : Convert.FromBase64String(model.RowVersion);
-            }
-            catch (FormatException)
-            {
-                // The generic validation error below avoids exposing concurrency internals.
-            }
-            if (rowVersion is not { Length: 8 })
+            // The generic validation error below avoids exposing concurrency internals.
+            if (!uint.TryParse(model.RowVersion, NumberStyles.None, CultureInfo.InvariantCulture, out var rowVersion)
+                || rowVersion == 0)
             {
                 ModelState.AddModelError(string.Empty,
                     "Phiên bản câu hỏi không hợp lệ. Vui lòng tải lại trang.");
@@ -125,7 +117,7 @@ namespace QuizManagement.Controllers
 
             var updatedQuestion = ToQuestion(model, User.Identity?.Name);
             updatedQuestion.Id = id;
-            updatedQuestion.RowVersion = rowVersion!;
+            updatedQuestion.RowVersion = rowVersion;
             var updateResult = _questionService.TryUpdateQuestion(updatedQuestion);
             if (updateResult != QuestionUpdateResult.Updated)
             {
@@ -189,7 +181,7 @@ namespace QuizManagement.Controllers
             var model = new QuestionFormViewModel
             {
                 Id = question.Id,
-                RowVersion = Convert.ToBase64String(question.RowVersion),
+                RowVersion = question.RowVersion.ToString(CultureInfo.InvariantCulture),
                 DeckId = question.DeckId,
                 DeckName = question.Deck.Name,
                 SubjectId = question.Deck.SubjectId,

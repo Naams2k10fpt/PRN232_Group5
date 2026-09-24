@@ -21,7 +21,7 @@ builder.Logging.AddDebug();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection chưa được cấu hình.");
 builder.Services.AddDbContext<QuizManagementDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseNpgsql(connectionString));
 
 // 2. Repositories
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
@@ -131,6 +131,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
+
+// Chỉ tự áp dụng migration khi được bật rõ ràng (một instance duy nhất, ví dụ bản deploy free tier).
+if (builder.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+{
+    using var scope = app.Services.CreateScope();
+    scope.ServiceProvider.GetRequiredService<QuizManagementDbContext>().Database.Migrate();
+}
 
 // Chỉ seed Admin khi được bật rõ ràng trong appsettings.Local.json/environment.
 if (builder.Configuration.GetValue<bool>("AdminSeed:Enabled"))
