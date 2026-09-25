@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+.git/
+.github/
+.vs/
+.vscode/
+.idea/
+.config/
+docs/
+db/
+QuizManagement.Tests/
+**/App_Data/
+**/appsettings.Local.json
+**/appsettings.*.Local.json
+.env*
+.neon
+*.md

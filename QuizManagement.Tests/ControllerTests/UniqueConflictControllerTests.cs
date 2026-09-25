@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BusinessObjects;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using QuizManagement.Controllers;
 using QuizManagement.Infrastructure;
 using QuizManagement.Tests.TestDoubles;
@@ -25,7 +26,8 @@ public class UniqueConflictControllerTests
             new LoginAttemptServiceFake(),
             new LoginAttemptLogServiceFake(),
             AccountSecurityFakes.Tokens(),
-            new EmailSenderFake());
+            new EmailSenderFake(),
+            Options.Create(new AppOptions()));
 
         var result = await controller.Register(new RegisterViewModel
         {
@@ -58,7 +60,8 @@ public class UniqueConflictControllerTests
             new LoginAttemptServiceFake(),
             new LoginAttemptLogServiceFake(),
             AccountSecurityFakes.Tokens(),
-            new EmailSenderFake());
+            new EmailSenderFake(),
+            Options.Create(new AppOptions()));
 
         var result = await controller.Register(new RegisterViewModel
         {

@@ -8,18 +8,33 @@ using Microsoft.AspNetCore.DataProtection;
 using QuizManagement.Infrastructure;
 using System.Security.Claims;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Cấu hình file config local (nếu có) và logging
+// Cấu hình file config local (nếu có) và logging.
+// Biến môi trường/tham số dòng lệnh được nạp lại sau file local để luôn được ưu tiên (Render, docker compose).
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+builder.Configuration.AddEnvironmentVariables();
+builder.Configuration.AddCommandLine(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
+// Dừng ngay khi cấu hình triển khai thiếu/sai, thay vì chạy nửa vời.
+var configErrors = StartupConfigValidator.Validate(builder.Configuration, builder.Environment.IsDevelopment());
+if (configErrors.Count > 0)
+    throw new InvalidOperationException("Cấu hình không hợp lệ:\n- " + string.Join("\n- ", configErrors));
+
+// Render (và các PaaS tương tự) chỉ định cổng qua biến PORT; local vẫn dùng launchSettings.json.
+var port = builder.Configuration["PORT"];
+if (!string.IsNullOrWhiteSpace(port))
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
+var hosting = builder.Configuration.GetSection(HostingOptions.SectionName).Get<HostingOptions>() ?? new HostingOptions();
+
 // 1. DbContext
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection chưa được cấu hình.");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")!;
 builder.Services.AddDbContext<QuizManagementDbContext>(options =>
     options.UseNpgsql(connectionString));
 
@@ -49,8 +64,22 @@ builder.Services.AddSingleton<IDeckExportService, DeckExportService>();
 // 4. Infrastructure (web-tier)
 builder.Services.AddScoped<ILoginAttemptService, LoginAttemptService>();
 builder.Services.AddSingleton<AccountTokenService>();
+builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.SectionName));
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
-builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
+var emailProvider = (builder.Configuration.GetSection("Email").Get<EmailOptions>() ?? new EmailOptions()).ResolveProvider();
+switch (emailProvider)
+{
+    case EmailProvider.BrevoApi:
+        builder.Services.AddHttpClient<IEmailSender, BrevoApiEmailSender>(client =>
+            client.Timeout = TimeSpan.FromSeconds(10));
+        break;
+    case EmailProvider.Smtp:
+        builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
+        break;
+    default:
+        builder.Services.AddSingleton<IEmailSender, LoggingEmailSender>();
+        break;
+}
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -62,9 +91,26 @@ builder.Services.AddRateLimiter(options =>
         AuthenticationRateLimitPolicies.CreateRegisterPartition);
 });
 
-// 5. Data Protection (tránh mất session khi restart app)
+// 5. Data Protection: khóa lưu trong PostgreSQL để cookie đăng nhập và link xác minh/đặt lại mật khẩu
+// vẫn hợp lệ sau restart, redeploy hoặc khi container free tier bị ngủ/đánh thức (đĩa bị xóa).
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtectionKeys")));
+    .SetApplicationName("QuizManagement")
+    .PersistKeysToDbContext<QuizManagementDbContext>();
+
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<QuizManagementDbContext>();
+
+if (hosting.BehindProxy)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.ForwardLimit = 1;
+        // Render không có dải IP proxy cố định; chỉ an toàn vì container chỉ nhận request qua proxy.
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+}
 
 // 6. Authorization Policies
 builder.Services.AddAuthorization(options =>
@@ -163,7 +209,10 @@ if (builder.Configuration.GetValue<bool>("AdminSeed:Enabled"))
         var context = scope.ServiceProvider.GetRequiredService<QuizManagementDbContext>();
         if (!context.Users.Any(u => u.Role == AppRoles.Admin))
         {
-            if (context.Users.Any(u => u.Email == email || u.Username == username))
+            var normalizedEmail = TextNormalization.Normalize(email);
+            var normalizedUsername = TextNormalization.Normalize(username);
+            if (context.Users.Any(u => EF.Property<string>(u, "NormalizedEmail") == normalizedEmail
+                || EF.Property<string>(u, "NormalizedUsername") == normalizedUsername))
             {
                 throw new InvalidOperationException(
                     "Không thể seed Admin vì Username hoặc Email đã được sử dụng.");
@@ -194,13 +243,19 @@ if (builder.Configuration.GetValue<bool>("AdminSeed:Enabled"))
     }
 }
 
+// Phải chạy đầu tiên để IP client, scheme HTTPS và HSTS phản ánh request gốc qua proxy.
+if (hosting.BehindProxy)
+    app.UseForwardedHeaders();
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Sau proxy, TLS kết thúc tại Render và Render tự chuyển HTTP → HTTPS.
+if (!hosting.BehindProxy)
+    app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseRateLimiter();
@@ -208,6 +263,7 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHealthChecks("/healthz");
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

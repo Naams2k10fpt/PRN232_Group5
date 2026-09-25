@@ -1,0 +1,32 @@
+# Render Blueprint: Dashboard -> New -> Blueprint -> pick this repo.
+# Values marked `sync: false` are secrets or per-deployment values: Render asks for them when
+# the Blueprint is first applied, and they are never stored in this file. See docs/DEPLOY.md.
+services:
+  - type: web
+    name: quiz-management
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    # Deploy a new commit on main only after GitHub checks (CI) pass.
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: Hosting__BehindProxy
+        value: "true"
+      - key: Database__MigrateOnStartup
+        value: "true"
+      - key: Email__Provider
+        value: BrevoApi
+      - key: Email__FromName
+        value: Quiz Management
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: App__PublicBaseUrl
+        sync: false
+      - key: Email__ApiKey
+        sync: false
+      - key: Email__FromAddress
+        sync: false

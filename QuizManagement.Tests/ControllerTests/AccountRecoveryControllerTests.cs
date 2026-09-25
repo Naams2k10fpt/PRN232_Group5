@@ -2,6 +2,7 @@ using BusinessObjects;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using QuizManagement.Controllers;
 using QuizManagement.Infrastructure;
@@ -63,7 +64,8 @@ public class AccountRecoveryControllerTests
             new LoginAttemptServiceFake(),
             new LoginAttemptLogServiceFake(),
             tokens,
-            new EmailSenderFake());
+            new EmailSenderFake(),
+            Options.Create(new AppOptions()));
         controller.TempData = new TempDataDictionary(
             new DefaultHttpContext(),
             new TempDataProviderFake());
