@@ -22,7 +22,7 @@ Sau buổi demo, người xem cần thấy được:
 | Mentor | `mentor.demo@quiz.local` | `Test@123456` |
 | User | `user.demo@quiz.local` | `Test@123456` |
 
-> Chỉ dùng các tài khoản này trong database demo cô lập.
+> Các tài khoản này có sẵn trên database demo local và trên bản deploy (Neon `production`). Repository ở chế độ private nên mật khẩu chỉ thành viên nhóm xem được. Link bản deploy và cách dùng: [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## 3. Chuẩn bị trước buổi demo
 
@@ -68,7 +68,7 @@ Neon: dùng endpoint **direct** (không có `-pooler` trong tên host). Neon hi�
 }
 ```
 
-Nếu muốn demo email qua log thay vì SMTP thật, bỏ section `Email` hoặc đặt `Email:Host` thành chuỗi rỗng. Khi đó phải chạy ứng dụng trong môi trường Development và giữ terminal mở để lấy liên kết xác minh/reset.
+Nếu muốn demo email qua log thay vì gửi thật, đặt `Email:Provider` thành `Log` (mặc định trong `appsettings.Local.example.json`). Khi đó phải chạy ứng dụng trong môi trường Development và giữ terminal mở để lấy liên kết xác minh/reset. Bản deploy trên Render gửi email thật qua Brevo — xem [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ### 3.3. Tạo schema bằng EF Core migrations
 
@@ -320,7 +320,7 @@ Kết luận demo:
 
 ## 5. Demo tùy chọn: đăng ký → xác minh email → quên mật khẩu
 
-Chỉ thực hiện khi `Email:Host` để trống và terminal ứng dụng đang hiển thị log.
+Chạy local: đặt `Email:Provider=Log` và giữ terminal ứng dụng đang hiển thị log. Trên bản deploy (Render), email được gửi thật tới hộp thư.
 
 ### 5.1. Đăng ký và xác minh email
 
@@ -391,7 +391,8 @@ Database chưa có schema. Chạy `dotnet ef database update` theo phần 3.3 r�
 
 ### Không nhận được email
 
-- Với demo qua log: để `Email:Host` trống và chạy môi trường Development.
+- Với demo qua log: đặt `Email:Provider=Log` và chạy môi trường Development.
+- Trên Render: xem log dịch vụ, tìm dòng `Brevo rejected email` (sai API key hoặc sender chưa xác minh).
 - Với SMTP thật: kiểm tra host, port, SSL, username, password và from address.
 
 ### Không thấy thẻ flashcard đến hạn

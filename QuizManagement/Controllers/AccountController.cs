@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 using QuizManagement.Infrastructure;
 using QuizManagement.ViewModels.Account;
 using Services;
@@ -22,6 +23,7 @@ namespace QuizManagement.Controllers
         private readonly ILoginAttemptLogService _loginAttemptLogService;
         private readonly AccountTokenService _accountTokenService;
         private readonly IEmailSender _emailSender;
+        private readonly AppOptions _appOptions;
         private readonly PasswordHasher<User> _passwordHasher = new();
 
         public AccountController(
@@ -29,13 +31,15 @@ namespace QuizManagement.Controllers
             ILoginAttemptService loginAttemptService,
             ILoginAttemptLogService loginAttemptLogService,
             AccountTokenService accountTokenService,
-            IEmailSender emailSender)
+            IEmailSender emailSender,
+            IOptions<AppOptions> appOptions)
         {
             _userService = userService;
             _loginAttemptService = loginAttemptService;
             _loginAttemptLogService = loginAttemptLogService;
             _accountTokenService = accountTokenService;
             _emailSender = emailSender;
+            _appOptions = appOptions.Value;
         }
 
         [HttpGet]
@@ -310,7 +314,7 @@ namespace QuizManagement.Controllers
         private Task<bool> SendVerificationEmail(User user)
         {
             var token = _accountTokenService.CreateEmailVerificationToken(user);
-            var url = Url.Action(nameof(VerifyEmail), "Account", new { userId = user.Id, token }, Request.Scheme);
+            var url = AccountLink(nameof(VerifyEmail), new { userId = user.Id, token });
             return url is null
                 ? Task.FromResult(false)
                 : _emailSender.SendAsync(
@@ -322,13 +326,24 @@ namespace QuizManagement.Controllers
         private Task<bool> SendPasswordResetEmail(User user)
         {
             var token = _accountTokenService.CreatePasswordResetToken(user);
-            var url = Url.Action(nameof(ResetPassword), "Account", new { userId = user.Id, token }, Request.Scheme);
+            var url = AccountLink(nameof(ResetPassword), new { userId = user.Id, token });
             return url is null
                 ? Task.FromResult(false)
                 : _emailSender.SendAsync(
                     user.Email,
                     "Đặt lại mật khẩu Quiz Management",
                     $"<p>Nhấn vào liên kết sau để đặt lại mật khẩu trong 1 giờ:</p><p><a href=\"{WebUtility.HtmlEncode(url)}\">Đặt lại mật khẩu</a></p>");
+        }
+
+        // Link trong email dùng App:PublicBaseUrl khi có (sau proxy, và không tin Host header của request);
+        // local không cấu hình thì dựng từ request như trước.
+        private string? AccountLink(string action, object values)
+        {
+            if (string.IsNullOrWhiteSpace(_appOptions.PublicBaseUrl))
+                return Url.Action(action, "Account", values, Request.Scheme);
+
+            var baseUri = new Uri(_appOptions.PublicBaseUrl);
+            return Url.Action(action, "Account", values, baseUri.Scheme, baseUri.Authority);
         }
     }
 }

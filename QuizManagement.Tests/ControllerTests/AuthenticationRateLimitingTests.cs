@@ -3,6 +3,7 @@ using System.Reflection;
 using BusinessObjects;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.RateLimiting;
 using QuizManagement.Controllers;
 using QuizManagement.Infrastructure;
@@ -82,7 +83,8 @@ public class AuthenticationRateLimitingTests
             attempts,
             new ThrowingLoginAttemptLogService(),
             AccountSecurityFakes.Tokens(),
-            new EmailSenderFake())
+            new EmailSenderFake(),
+            Options.Create(new AppOptions()))
         {
             ControllerContext = new ControllerContext { HttpContext = context }
         };

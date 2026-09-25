@@ -41,3 +41,27 @@ jobs:
       - run: dotnet restore QuizManagementSystem.slnx
       - run: dotnet build QuizManagementSystem.slnx -c Release --no-restore
       - run: dotnet test QuizManagementSystem.slnx -c Release --no-build
+
+      # Build the production image and boot it the way Render does (env-var config only), so a
+      # broken Dockerfile or startup config fails the PR instead of the deploy.
+      - name: Build Docker image
+        run: docker build -t quiz-management:ci .
+
+      - name: Smoke-test the container
+        run: |
+          docker run -d --name quiz --network host \
+            -e PORT=8081 \
+            -e ConnectionStrings__DefaultConnection="Host=localhost;Port=5432;Database=quiz_smoke;Username=postgres;Password=postgres" \
+            -e Database__MigrateOnStartup=true \
+            -e Hosting__BehindProxy=true \
+            -e App__PublicBaseUrl=https://quiz.example.test \
+            -e Email__Provider=BrevoApi \
+            -e Email__ApiKey=ci-placeholder \
+            -e Email__FromAddress=ci@example.test \
+            quiz-management:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8081/healthz; then echo; exit 0; fi
+            sleep 2
+          done
+          docker logs quiz
+          exit 1

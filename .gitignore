@@ -38,3 +38,5 @@ PRN222.md
 
 # Local task tracking
 docs/tasks/
+.neon
+.env.local

@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using BusinessObjects;
 
 namespace DataAccessObjects;
 
-public partial class QuizManagementDbContext : DbContext
+public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyContext
 {
     public QuizManagementDbContext()
     {
@@ -37,6 +38,10 @@ public partial class QuizManagementDbContext : DbContext
     public virtual DbSet<QuizAttempt> QuizAttempts { get; set; }
 
     public virtual DbSet<FlashcardProgress> FlashcardProgresses { get; set; }
+
+    // ASP.NET Core Data Protection keys (auth cookies, email/reset tokens) must outlive the
+    // container: Render's free-tier disk is wiped on every deploy and idle sleep.
+    public virtual DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
     // The ICU collation makes upper() fold non-ASCII letters (e.g. Vietnamese "đ" → "Đ")
     // regardless of the database's default locale; under the "C" locale upper() is ASCII-only.

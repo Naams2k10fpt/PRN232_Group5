@@ -1,0 +1,38 @@
+# Local development only. Render builds the Dockerfile directly and does not use this file.
+#
+#   docker compose up db    -> just PostgreSQL on localhost:5432 (run the app from Visual Studio / dotnet run)
+#   docker compose up       -> PostgreSQL + the production image on http://localhost:8080
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: quizmanagement
+    ports:
+      - "5432:5432"
+    volumes:
+      - quiz-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=quizmanagement;Username=postgres;Password=postgres
+      Database__MigrateOnStartup: "true"
+      Email__Provider: Log
+      Hosting__BehindProxy: "false"
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+
+volumes:
+  quiz-db:

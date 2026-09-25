@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Routing;
@@ -43,7 +44,8 @@ public class PasswordCompatibilityTests
             new LoginAttemptServiceFake(),
             new LoginAttemptLogServiceFake(),
             AccountSecurityFakes.Tokens(),
-            new EmailSenderFake())
+            new EmailSenderFake(),
+            Options.Create(new AppOptions()))
         {
             ControllerContext = new ControllerContext
             {
