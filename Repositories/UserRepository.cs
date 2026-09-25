@@ -1,5 +1,6 @@
 using BusinessObjects;
 using DataAccessObjects;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
 
@@ -14,14 +15,17 @@ namespace Repositories
             _context = context;
         }
 
+        // PostgreSQL compares text case-sensitively, so match on the normalized unique columns.
         public User? GetByEmail(string email)
         {
-            return _context.Users.FirstOrDefault(u => u.Email == email);
+            var normalizedEmail = TextNormalization.Normalize(email);
+            return _context.Users.FirstOrDefault(u => EF.Property<string>(u, "NormalizedEmail") == normalizedEmail);
         }
 
         public User? GetByUsername(string username)
         {
-            return _context.Users.FirstOrDefault(u => u.Username == username);
+            var normalizedUsername = TextNormalization.Normalize(username);
+            return _context.Users.FirstOrDefault(u => EF.Property<string>(u, "NormalizedUsername") == normalizedUsername);
         }
 
         public User? GetById(string id)

@@ -9,10 +9,10 @@ using Xunit;
 
 namespace QuizManagement.Tests.IntegrationTests;
 
-public class UniqueWriteConcurrencySqlServerTests
+public class UniqueWriteConcurrencyPostgresTests
 {
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public async Task ConcurrentNormalizedUserWrites_ReturnOneConflict()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
@@ -23,7 +23,7 @@ public class UniqueWriteConcurrencySqlServerTests
         try
         {
             using var barrier = new Barrier(2);
-            var interceptor = new InsertBarrierInterceptor(barrier, "INSERT INTO [Users]");
+            var interceptor = new InsertBarrierInterceptor(barrier, "INSERT INTO \"Users\"");
             var workerOptions = CreateOptions(databaseName, interceptor);
 
             bool Create(User user)
@@ -50,7 +50,7 @@ public class UniqueWriteConcurrencySqlServerTests
     }
 
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public async Task ConcurrentNormalizedDeckWrites_ReturnOneConflict()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
@@ -73,7 +73,7 @@ public class UniqueWriteConcurrencySqlServerTests
         try
         {
             using var barrier = new Barrier(2);
-            var interceptor = new InsertBarrierInterceptor(barrier, "INSERT INTO [Decks]");
+            var interceptor = new InsertBarrierInterceptor(barrier, "INSERT INTO \"Decks\"");
             var workerOptions = CreateOptions(databaseName, interceptor);
 
             bool Create(string name)
@@ -108,7 +108,7 @@ public class UniqueWriteConcurrencySqlServerTests
         DbCommandInterceptor? interceptor = null)
     {
         var builder = new DbContextOptionsBuilder<QuizManagementDbContext>()
-            .UseSqlServer(SqlServerTestConnection.ForDatabase(databaseName));
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName));
         if (interceptor is not null)
             builder.AddInterceptors(interceptor);
         return builder.Options;

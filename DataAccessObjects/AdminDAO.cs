@@ -79,7 +79,9 @@ namespace DataAccessObjects
         {
             using var transaction = context.Database.BeginTransaction();
             var activeAdminCount = context.Users
-                .FromSqlRaw("SELECT * FROM dbo.Users WITH (UPDLOCK, HOLDLOCK) WHERE Role = {0} AND IsDisabled = 0", AppRoles.Admin)
+                // FOR UPDATE blocks a concurrent demotion; once unblocked, PostgreSQL re-checks the
+                // WHERE clause, so an admin demoted meanwhile is no longer counted.
+                .FromSqlRaw("SELECT * FROM \"Users\" WHERE \"Role\" = {0} AND NOT \"IsDisabled\" FOR UPDATE", AppRoles.Admin)
                 .Count();
             var user = context.Users.SingleOrDefault(item => item.Id == userId);
             if (user is null)

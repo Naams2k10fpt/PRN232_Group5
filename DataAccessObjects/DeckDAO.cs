@@ -54,9 +54,10 @@ namespace DataAccessObjects
 
         public bool NameExists(QuizManagementDbContext context, int subjectId, string name, int? excludedId = null)
         {
+            var normalizedName = TextNormalization.Normalize(name);
             return context.Decks.Any(d =>
                 d.SubjectId == subjectId &&
-                d.Name == name &&
+                EF.Property<string>(d, "NormalizedName") == normalizedName &&
                 (!excludedId.HasValue || d.Id != excludedId.Value));
         }
 

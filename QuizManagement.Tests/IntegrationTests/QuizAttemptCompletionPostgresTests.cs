@@ -10,12 +10,12 @@ using Xunit;
 
 namespace QuizManagement.Tests.IntegrationTests;
 
-public class QuizAttemptCompletionSqlServerTests
+public class QuizAttemptCompletionPostgresTests
 {
     private static readonly DateTimeOffset Now = new(2026, 7, 16, 10, 0, 0, TimeSpan.Zero);
 
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public void SubmitQuizAttempt_RetryReturnsSameSingleHistory()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
@@ -51,7 +51,7 @@ public class QuizAttemptCompletionSqlServerTests
     }
 
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public void QuizResultSnapshot_RemainsImmutableAfterLiveContentChangesAndSoftDelete()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
@@ -110,7 +110,7 @@ public class QuizAttemptCompletionSqlServerTests
     }
 
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public void CompleteQuizAttempt_RejectsForeignAndExpiredAndRollsBackFailedInsert()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
@@ -155,7 +155,7 @@ public class QuizAttemptCompletionSqlServerTests
     }
 
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public async Task SubmitQuizAttempt_TwoConcurrentConnectionsCreateOneHistory()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
@@ -220,7 +220,7 @@ public class QuizAttemptCompletionSqlServerTests
         DbCommandInterceptor? interceptor = null)
     {
         var builder = new DbContextOptionsBuilder<QuizManagementDbContext>()
-            .UseSqlServer(SqlServerTestConnection.ForDatabase(databaseName));
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName));
         if (interceptor is not null)
             builder.AddInterceptors(interceptor);
         return builder.Options;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using BusinessObjects;
@@ -38,6 +38,11 @@ public partial class QuizManagementDbContext : DbContext
 
     public virtual DbSet<FlashcardProgress> FlashcardProgresses { get; set; }
 
+    // The ICU collation makes upper() fold non-ASCII letters (e.g. Vietnamese "đ" → "Đ")
+    // regardless of the database's default locale; under the "C" locale upper() is ASCII-only.
+    private static string NormalizeSql(string column)
+        => $"upper(btrim(\"{column}\") COLLATE \"und-x-icu\")";
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<DateTime>()
@@ -48,7 +53,7 @@ public partial class QuizManagementDbContext : DbContext
     {
         modelBuilder.Entity<Answer>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Answers__3214EC0718E562F7");
+            entity.HasKey(e => e.Id);
 
             entity.HasOne(d => d.Question).WithMany(p => p.Answers)
                 .HasForeignKey(d => d.QuestionId)
@@ -57,27 +62,27 @@ public partial class QuizManagementDbContext : DbContext
 
         modelBuilder.Entity<Deck>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Decks__3214EC07F540EDFA");
+            entity.HasKey(e => e.Id);
             entity.ToTable(table => table.HasCheckConstraint(
                 "CK_Decks_TimeLimitMinutes",
-                "[TimeLimitMinutes] BETWEEN 0 AND 180"));
+                "\"TimeLimitMinutes\" BETWEEN 0 AND 180"));
 
             entity.HasQueryFilter(e => !e.IsDeleted);
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.CreatedBy).HasMaxLength(256);
             entity.Property(e => e.Name).HasMaxLength(255);
             entity.Property<string>("NormalizedName")
                 .HasMaxLength(255)
                 .IsRequired()
-                .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Name])))", stored: true);
+                .HasComputedColumnSql(NormalizeSql("Name"), stored: true);
             entity.Property(e => e.UpdatedBy).HasMaxLength(256);
             entity.Property(e => e.TimeLimitMinutes).HasDefaultValue(0);
 
             entity.HasIndex("SubjectId", "NormalizedName")
                 .IsUnique()
                 .HasDatabaseName("UX_Decks_SubjectId_NormalizedName_Active")
-                .HasFilter("[IsDeleted] = 0");
+                .HasFilter("\"IsDeleted\" = false");
 
             entity.HasOne(d => d.Subject).WithMany(p => p.Decks)
                 .HasForeignKey(d => d.SubjectId)
@@ -86,22 +91,23 @@ public partial class QuizManagementDbContext : DbContext
 
         modelBuilder.Entity<Question>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Question__3214EC079D8AB6B4");
+            entity.HasKey(e => e.Id);
             entity.ToTable(table => table.HasCheckConstraint(
                 "CK_Questions_QuestionType",
-                "[QuestionType] IN (1, 2)"));
+                "\"QuestionType\" IN (1, 2)"));
 
             entity.HasQueryFilter(e => !e.IsDeleted);
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.CreatedBy).HasMaxLength(256);
             entity.Property(e => e.QuestionType).HasDefaultValue(1);
             entity.Property(e => e.UpdatedBy).HasMaxLength(256);
+            // Maps to the PostgreSQL xmin system column, which changes on every row update.
             entity.Property(e => e.RowVersion).IsRowVersion();
 
             entity.HasIndex(e => new { e.DeckId, e.CreatedAt }, "IX_Questions_DeckId_CreatedAt")
                 .IsDescending(false, true)
-                .HasFilter("[IsDeleted] = 0");
+                .HasFilter("\"IsDeleted\" = false");
 
             entity.HasOne(d => d.Deck).WithMany(p => p.Questions)
                 .HasForeignKey(d => d.DeckId)
@@ -113,9 +119,9 @@ public partial class QuizManagementDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.ToTable(table =>
             {
-                table.HasCheckConstraint("CK_FlashcardProgresses_Repetition", "[Repetition] >= 0");
-                table.HasCheckConstraint("CK_FlashcardProgresses_IntervalMinutes", "[IntervalMinutes] >= 1");
-                table.HasCheckConstraint("CK_FlashcardProgresses_EaseFactor", "[EaseFactor] BETWEEN 1.3 AND 3.0");
+                table.HasCheckConstraint("CK_FlashcardProgresses_Repetition", "\"Repetition\" >= 0");
+                table.HasCheckConstraint("CK_FlashcardProgresses_IntervalMinutes", "\"IntervalMinutes\" >= 1");
+                table.HasCheckConstraint("CK_FlashcardProgresses_EaseFactor", "\"EaseFactor\" BETWEEN 1.3 AND 3.0");
             });
             entity.Property(e => e.UserId).HasMaxLength(450);
             entity.Property(e => e.IntervalMinutes).HasDefaultValue(10);
@@ -137,18 +143,23 @@ public partial class QuizManagementDbContext : DbContext
 
         modelBuilder.Entity<Subject>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Subjects__3214EC073667D612");
+            entity.HasKey(e => e.Id);
 
             entity.HasQueryFilter(e => !e.IsDeleted);
 
-            entity.HasIndex(e => new { e.Name, e.UserId }, "IX_Subjects_Name_UserId")
-                .IsUnique()
-                .HasFilter("([IsDeleted]=(0))");
-
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.CreatedBy).HasMaxLength(256);
             entity.Property(e => e.Name).HasMaxLength(255);
+            entity.Property<string>("NormalizedName")
+                .HasMaxLength(255)
+                .IsRequired()
+                .HasComputedColumnSql(NormalizeSql("Name"), stored: true);
             entity.Property(e => e.UpdatedBy).HasMaxLength(256);
+
+            entity.HasIndex("UserId", "NormalizedName")
+                .IsUnique()
+                .HasDatabaseName("UX_Subjects_UserId_NormalizedName_Active")
+                .HasFilter("\"IsDeleted\" = false");
 
             entity.HasOne(d => d.User).WithMany(p => p.Subjects)
                 .HasForeignKey(d => d.UserId)
@@ -158,23 +169,22 @@ public partial class QuizManagementDbContext : DbContext
 
         modelBuilder.Entity<TestHistory>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__TestHist__3214EC07D6370CED");
+            entity.HasKey(e => e.Id);
             entity.ToTable(table =>
             {
                 table.HasCheckConstraint(
                     "CK_TestHistories_ResultSnapshotJson",
-                    "[ResultSnapshotJson] IS NULL OR ISJSON([ResultSnapshotJson]) = 1");
-                table.HasCheckConstraint("CK_TestHistories_Score", "[Score] BETWEEN 0 AND 10");
-                table.HasCheckConstraint("CK_TestHistories_Percentage", "[Percentage] BETWEEN 0 AND 100");
+                    "\"ResultSnapshotJson\" IS NULL OR \"ResultSnapshotJson\" IS JSON");
+                table.HasCheckConstraint("CK_TestHistories_Score", "\"Score\" BETWEEN 0 AND 10");
+                table.HasCheckConstraint("CK_TestHistories_Percentage", "\"Percentage\" BETWEEN 0 AND 100");
             });
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.ResultSnapshotJson).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.UserId).HasMaxLength(450);
 
             entity.HasIndex(e => e.QuizAttemptId, "UX_TestHistories_QuizAttemptId")
                 .IsUnique()
-                .HasFilter("[QuizAttemptId] IS NOT NULL");
+                .HasFilter("\"QuizAttemptId\" IS NOT NULL");
             entity.HasIndex(e => new { e.UserId, e.CreatedAt }, "IX_TestHistories_UserId_CreatedAt")
                 .IsDescending(false, true);
             entity.HasIndex(
@@ -203,23 +213,20 @@ public partial class QuizManagementDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.ToTable(table =>
             {
-                table.HasCheckConstraint("CK_QuizAttempts_QuestionIdsJson", "ISJSON([QuestionIdsJson]) = 1");
-                table.HasCheckConstraint("CK_QuizAttempts_TimeLimit", "[TimeLimitMinutes] BETWEEN 0 AND 180");
+                table.HasCheckConstraint("CK_QuizAttempts_QuestionIdsJson", "\"QuestionIdsJson\" IS JSON");
+                table.HasCheckConstraint("CK_QuizAttempts_TimeLimit", "\"TimeLimitMinutes\" BETWEEN 0 AND 180");
                 table.HasCheckConstraint(
                     "CK_QuizAttempts_Expiry",
-                    "([TimeLimitMinutes] = 0 AND [ExpiresAtUtc] IS NULL) OR ([TimeLimitMinutes] > 0 AND [ExpiresAtUtc] > [StartedAtUtc])");
+                    "(\"TimeLimitMinutes\" = 0 AND \"ExpiresAtUtc\" IS NULL) OR (\"TimeLimitMinutes\" > 0 AND \"ExpiresAtUtc\" > \"StartedAtUtc\")");
                 table.HasCheckConstraint(
                     "CK_QuizAttempts_Completed",
-                    "[CompletedAtUtc] IS NULL OR [CompletedAtUtc] >= [StartedAtUtc]");
+                    "\"CompletedAtUtc\" IS NULL OR \"CompletedAtUtc\" >= \"StartedAtUtc\"");
             });
             entity.Property(e => e.UserId).HasMaxLength(450);
-            entity.Property(e => e.StartedAtUtc).HasColumnType("datetimeoffset(7)");
-            entity.Property(e => e.ExpiresAtUtc).HasColumnType("datetimeoffset(7)");
-            entity.Property(e => e.CompletedAtUtc).HasColumnType("datetimeoffset(7)");
 
             entity.HasIndex(e => new { e.UserId, e.StartedAtUtc }, "IX_QuizAttempts_UserId_StartedAtUtc");
             entity.HasIndex(e => e.CompletedAtUtc, "IX_QuizAttempts_Pending")
-                .HasFilter("[CompletedAtUtc] IS NULL");
+                .HasFilter("\"CompletedAtUtc\" IS NULL");
 
             entity.HasOne(e => e.User).WithMany()
                 .HasForeignKey(e => e.UserId)
@@ -234,7 +241,7 @@ public partial class QuizManagementDbContext : DbContext
 
         modelBuilder.Entity<TestResultDetail>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__TestResu__3214EC07BD567949");
+            entity.HasKey(e => e.Id);
 
             entity.HasOne(d => d.Question).WithMany(p => p.TestResultDetails)
                 .HasForeignKey(d => d.QuestionId)
@@ -252,21 +259,21 @@ public partial class QuizManagementDbContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Users__3214EC077068E03B");
+            entity.HasKey(e => e.Id);
             entity.ToTable(table => table.HasCheckConstraint(
                 "CK_Users_Role",
-                "[Role] IS NULL OR [Role] IN (N'Admin', N'Mentor', N'User')"));
+                "\"Role\" IS NULL OR \"Role\" IN ('Admin', 'Mentor', 'User')"));
 
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.Email).HasMaxLength(256);
             entity.Property<string>("NormalizedEmail")
                 .HasMaxLength(256)
                 .IsRequired()
-                .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Email])))", stored: true);
+                .HasComputedColumnSql(NormalizeSql("Email"), stored: true);
             entity.Property<string>("NormalizedUsername")
                 .HasMaxLength(256)
                 .IsRequired()
-                .HasComputedColumnSql("UPPER(LTRIM(RTRIM([Username])))", stored: true);
+                .HasComputedColumnSql(NormalizeSql("Username"), stored: true);
             entity.Property(e => e.Role).HasMaxLength(50);
             entity.Property(e => e.Username).HasMaxLength(256);
             entity.Property(e => e.AvatarUrl).HasMaxLength(500);
@@ -287,17 +294,17 @@ public partial class QuizManagementDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.ToTable(table => table.HasCheckConstraint(
                 "CK_QuestionReports_Reason",
-                "[Reason] IN (N'WrongAnswer', N'UnclearQuestion', N'DuplicateQuestion', N'Other')"));
+                "\"Reason\" IN ('WrongAnswer', 'UnclearQuestion', 'DuplicateQuestion', 'Other')"));
             entity.Property(e => e.Reason).HasMaxLength(100);
             entity.Property(e => e.Note).HasMaxLength(500);
             entity.Property(e => e.UserId).HasMaxLength(450);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.IsResolved).HasDefaultValue(false);
 
             entity.HasIndex(e => new { e.QuestionId, e.UserId },
                     "UX_QuestionReports_QuestionId_UserId_Pending")
                 .IsUnique()
-                .HasFilter("[IsResolved] = 0");
+                .HasFilter("\"IsResolved\" = false");
             entity.HasIndex(
                     e => new { e.IsResolved, e.CreatedAt },
                     "IX_QuestionReports_IsResolved_CreatedAt")
@@ -320,7 +327,7 @@ public partial class QuizManagementDbContext : DbContext
             entity.Property(e => e.Email).HasMaxLength(256);
             entity.Property(e => e.IpAddress).HasMaxLength(50);
             entity.Property(e => e.UserId).HasMaxLength(450);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.CountsTowardLockout).HasDefaultValue(false);
             entity.HasIndex(
                     e => new { e.IsSuccess, e.CreatedAt },

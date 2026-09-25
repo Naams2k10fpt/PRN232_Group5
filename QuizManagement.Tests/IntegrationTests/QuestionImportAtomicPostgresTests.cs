@@ -7,10 +7,10 @@ using Xunit;
 
 namespace QuizManagement.Tests.IntegrationTests;
 
-public class QuestionImportAtomicSqlServerTests
+public class QuestionImportAtomicPostgresTests
 {
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public void AddQuestions_WhenBatchIsValid_PersistsEveryQuestionAndAnswer()
     {
         WithDatabase((options, deckId) =>
@@ -32,7 +32,7 @@ public class QuestionImportAtomicSqlServerTests
     }
 
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public void AddQuestions_WhenLaterInsertFails_RollsBackTheWholeBatch()
     {
         WithDatabase((options, deckId) =>
@@ -58,7 +58,7 @@ public class QuestionImportAtomicSqlServerTests
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
         var options = new DbContextOptionsBuilder<QuizManagementDbContext>()
-            .UseSqlServer(SqlServerTestConnection.ForDatabase(databaseName))
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName))
             .Options;
 
         using (var setup = new QuizManagementDbContext(options))

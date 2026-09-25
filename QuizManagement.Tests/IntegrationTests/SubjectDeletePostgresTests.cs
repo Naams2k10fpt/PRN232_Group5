@@ -5,15 +5,15 @@ using Xunit;
 
 namespace QuizManagement.Tests.IntegrationTests;
 
-public class SubjectDeleteSqlServerTests
+public class SubjectDeletePostgresTests
 {
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public void DeleteSubject_SoftDeletesBufferedAggregate_WithoutChangingOtherSubject()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
         var options = new DbContextOptionsBuilder<QuizManagementDbContext>()
-            .UseSqlServer(SqlServerTestConnection.ForDatabase(databaseName))
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName))
             .Options;
 
         using var context = new QuizManagementDbContext(options);
@@ -58,19 +58,20 @@ public class SubjectDeleteSqlServerTests
     }
 
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
+    [Trait("Category", "PostgresIntegration")]
     public void DeleteSubject_HandlesEmptyAndPreviouslyDeletedChildren()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
         var options = new DbContextOptionsBuilder<QuizManagementDbContext>()
-            .UseSqlServer(SqlServerTestConnection.ForDatabase(databaseName))
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName))
             .Options;
 
         using var context = new QuizManagementDbContext(options);
         try
         {
             context.Database.EnsureCreated();
-            var oldTimestamp = DateTime.UtcNow.AddDays(-1);
+            // Fixed value: PostgreSQL stores microseconds, so a DateTime.UtcNow tick value would not round-trip.
+            var oldTimestamp = new DateTime(2026, 7, 15, 8, 30, 0, DateTimeKind.Utc);
             var owner = new User
             {
                 Id = "mentor",

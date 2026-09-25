@@ -7,15 +7,15 @@ using Xunit;
 
 namespace QuizManagement.Tests.IntegrationTests;
 
-public class QuizAttemptPersistenceSqlServerTests
+public class QuizAttemptPersistencePostgresTests
 {
     [Fact]
-    [Trait("Category", "SqlServerIntegration")]
-    public void StartQuizAttempt_PersistsSnapshotInSqlServer()
+    [Trait("Category", "PostgresIntegration")]
+    public void StartQuizAttempt_PersistsSnapshotInPostgres()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
         var options = new DbContextOptionsBuilder<QuizManagementDbContext>()
-            .UseSqlServer(SqlServerTestConnection.ForDatabase(databaseName))
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName))
             .Options;
 
         using var context = new QuizManagementDbContext(options);
