@@ -1,0 +1,327 @@
+@model BusinessObjects.KahootRoom
+@{
+    ViewData["Title"] = "Trình chiếu câu hỏi: " + Model.RoomCode;
+    Layout = "_Layout";
+}
+
+<style>
+    .kahoot-card {
+        min-height: 120px;
+        font-size: 1.35rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        padding: 1.5rem;
+        border-radius: 1rem;
+        color: white;
+        transition: transform 0.2s, opacity 0.2s;
+    }
+    .kahoot-red { background-color: #e21b3c; }
+    .kahoot-blue { background-color: #1368ce; }
+    .kahoot-yellow { background-color: #d89e00; }
+    .kahoot-green { background-color: #26890c; }
+
+    .podium-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        color: white;
+        font-weight: bold;
+        border-radius: 1rem 1rem 0 0;
+        transition: height 0.5s ease-out;
+    }
+</style>
+
+<div class="container-fluid py-3 min-vh-100 d-flex flex-column justify-content-between" style="background: #25076b; color: white;">
+    <!-- Top Bar -->
+    <div class="d-flex justify-content-between align-items-center px-4 py-2 border-bottom border-light border-opacity-10">
+        <div>
+            <span class="fs-4 fw-bold" id="questionCounter">Đang tải câu hỏi...</span>
+            <span class="badge bg-light text-dark ms-2">Mã PIN: @Model.RoomCode</span>
+        </div>
+
+        <!-- Timer Circle -->
+        <div class="d-flex align-items-center">
+            <div id="timerBox" class="bg-warning text-dark fw-bolder rounded-circle d-flex align-items-center justify-content-center shadow-lg"
+                 style="width: 70px; height: 70px; font-size: 2rem;">
+                20
+            </div>
+        </div>
+
+        <!-- Answers count & Next button -->
+        <div class="d-flex align-items-center gap-3">
+            <div class="text-end">
+                <span class="d-block text-white-50 small">Đã trả lời:</span>
+                <span id="answerCount" class="fs-4 fw-bold text-success">0</span>
+            </div>
+            <button id="btnSkip" class="btn btn-outline-light px-3 py-2 fw-bold rounded-pill">
+                Hết giờ / Xem điểm
+            </button>
+            <button id="btnNext" class="btn btn-warning px-4 py-2 fw-bold rounded-pill d-none shadow">
+                Câu tiếp theo <i class="bi bi-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Center: Question Container -->
+    <div class="container my-auto py-4" id="gameplaySection">
+        <!-- Question Text -->
+        <div class="bg-white text-dark p-4 rounded-4 shadow-lg mb-4 text-center">
+            <h2 id="questionText" class="fw-bold mb-0" style="min-height: 70px; display: flex; align-items: center; justify-content: center;">
+                Đang chuẩn bị câu hỏi...
+            </h2>
+        </div>
+
+        <!-- 4 Answer Options -->
+        <div class="row g-3" id="answersGrid">
+            <div class="col-md-6">
+                <div class="kahoot-card kahoot-red shadow" id="ans0">
+                    <span class="fs-2 me-3">▲</span> <span class="ans-text">Đang tải...</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="kahoot-card kahoot-blue shadow" id="ans1">
+                    <span class="fs-2 me-3">◆</span> <span class="ans-text">Đang tải...</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="kahoot-card kahoot-yellow shadow" id="ans2">
+                    <span class="fs-2 me-3">●</span> <span class="ans-text">Đang tải...</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="kahoot-card kahoot-green shadow" id="ans3">
+                    <span class="fs-2 me-3">■</span> <span class="ans-text">Đang tải...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaderboard Section (Hidden during answering) -->
+    <div class="container my-auto py-4 d-none" id="leaderboardSection">
+        <div class="text-center mb-4">
+            <h2 class="display-6 fw-bold text-warning"><i class="bi bi-trophy-fill me-2"></i>BẢNG XẾP HẠNG TOP 5</h2>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="list-group shadow-lg rounded-4 overflow-hidden" id="leaderboardList">
+                    <!-- Dynamic leaderboard entries -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Podium Section (Final Game Over) -->
+    <div class="container my-auto py-4 d-none" id="podiumSection">
+        <div class="text-center mb-4">
+            <h1 class="display-4 fw-bolder text-warning">🏆 BỤC VINH DANH CHUNG CUỘC 🏆</h1>
+            <p class="fs-5 text-white-50">Chúc mừng các thí sinh xuất sắc nhất trận đấu!</p>
+        </div>
+        <div class="row justify-content-center align-items-end g-3" style="min-height: 350px;">
+            <!-- 2nd Place -->
+            <div class="col-3 text-center">
+                <h4 id="podium2Name" class="fw-bold mb-1 text-light">---</h4>
+                <span id="podium2Score" class="badge bg-secondary mb-2">0 pts</span>
+                <div class="podium-step bg-secondary shadow-lg py-4" style="height: 180px;">
+                    <span class="display-5 fw-bold">2</span>
+                </div>
+            </div>
+            <!-- 1st Place -->
+            <div class="col-4 text-center">
+                <div class="fs-1 text-warning mb-1">👑</div>
+                <h3 id="podium1Name" class="fw-bold mb-1 text-warning">---</h3>
+                <span id="podium1Score" class="badge bg-warning text-dark mb-2 fs-6">0 pts</span>
+                <div class="podium-step bg-warning text-dark shadow-lg py-4" style="height: 250px;">
+                    <span class="display-4 fw-bold">1</span>
+                </div>
+            </div>
+            <!-- 3rd Place -->
+            <div class="col-3 text-center">
+                <h4 id="podium3Name" class="fw-bold mb-1 text-light">---</h4>
+                <span id="podium3Score" class="badge bg-secondary mb-2">0 pts</span>
+                <div class="podium-step shadow-lg py-4" style="background-color: #cd7f32; height: 130px;">
+                    <span class="display-5 fw-bold">3</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-5">
+            <a asp-action="Index" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow">
+                <i class="bi bi-arrow-counterclockwise me-1"></i> Tạo trận đấu mới
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="text-center py-2 text-white-50 small">
+        Quiz Management Live Host Screen
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+
+    <script>
+        const roomCode = "@Model.RoomCode";
+        let timerInterval = null;
+        let timeLeft = 20;
+        let currentQuestionData = null;
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/hubs/kahoot")
+            .withAutomaticReconnect()
+            .build();
+
+        const timerBox = document.getElementById("timerBox");
+        const answerCount = document.getElementById("answerCount");
+        const questionCounter = document.getElementById("questionCounter");
+        const questionText = document.getElementById("questionText");
+        const btnSkip = document.getElementById("btnSkip");
+        const btnNext = document.getElementById("btnNext");
+        const gameplaySection = document.getElementById("gameplaySection");
+        const leaderboardSection = document.getElementById("leaderboardSection");
+        const podiumSection = document.getElementById("podiumSection");
+        const leaderboardList = document.getElementById("leaderboardList");
+
+        connection.on("ReceiveQuestion", function(q) {
+            currentQuestionData = q;
+            leaderboardSection.classList.add("d-none");
+            podiumSection.classList.add("d-none");
+            gameplaySection.classList.remove("d-none");
+
+            btnSkip.classList.remove("d-none");
+            btnNext.classList.add("d-none");
+
+            questionCounter.innerText = `Câu ${q.questionIndex} / ${q.totalQuestions}`;
+            questionText.innerText = q.content;
+            answerCount.innerText = "0";
+
+            // Render 4 answers
+            for (let i = 0; i < 4; i++) {
+                const card = document.getElementById(`ans${i}`);
+                if (i < q.answers.length) {
+                    card.classList.remove("d-none");
+                    card.style.opacity = "1";
+                    card.style.border = "none";
+                    card.querySelector(".ans-text").innerText = q.answers[i].text;
+                    card.dataset.answerId = q.answers[i].id;
+                } else {
+                    card.classList.add("d-none");
+                }
+            }
+
+            // Start Timer
+            timeLeft = q.timeLimit || 20;
+            timerBox.innerText = timeLeft;
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerBox.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    connection.invoke("EndQuestion", roomCode);
+                }
+            }, 1000);
+        });
+
+        connection.on("AnswerSubmitted", function(data) {
+            answerCount.innerText = data.currentAnswerCount;
+        });
+
+        connection.on("QuestionEnded", function(data) {
+            clearInterval(timerInterval);
+            timerBox.innerText = "0";
+
+            // Highlight correct answer, dim wrong answers
+            for (let i = 0; i < 4; i++) {
+                const card = document.getElementById(`ans${i}`);
+                if (card && card.dataset.answerId == data.correctAnswerId) {
+                    card.style.opacity = "1";
+                    card.style.border = "5px solid #ffffff";
+                    card.style.transform = "scale(1.03)";
+                } else if (card) {
+                    card.style.opacity = "0.35";
+                    card.style.transform = "scale(1)";
+                }
+            }
+
+            // Show Next Button
+            btnSkip.classList.add("d-none");
+            btnNext.classList.remove("d-none");
+
+            // Update Leaderboard
+            renderLeaderboard(data.leaderboard);
+        });
+
+        connection.on("GameOver", function(data) {
+            clearInterval(timerInterval);
+            gameplaySection.classList.add("d-none");
+            leaderboardSection.classList.add("d-none");
+            podiumSection.classList.remove("d-none");
+
+            btnSkip.classList.add("d-none");
+            btnNext.classList.add("d-none");
+
+            const podium = data.podium || [];
+            if (podium.length > 0) {
+                document.getElementById("podium1Name").innerText = podium[0].nickname;
+                document.getElementById("podium1Score").innerText = podium[0].score + " pts";
+            }
+            if (podium.length > 1) {
+                document.getElementById("podium2Name").innerText = podium[1].nickname;
+                document.getElementById("podium2Score").innerText = podium[1].score + " pts";
+            }
+            if (podium.length > 2) {
+                document.getElementById("podium3Name").innerText = podium[2].nickname;
+                document.getElementById("podium3Score").innerText = podium[2].score + " pts";
+            }
+        });
+
+        function renderLeaderboard(leaderboard) {
+            leaderboardList.innerHTML = "";
+            leaderboard.forEach(p => {
+                const item = document.createElement("div");
+                item.className = "list-group-item d-flex justify-content-between align-items-center p-3 fs-5 fw-bold border-0 border-bottom";
+                item.innerHTML = `
+                    <div>
+                        <span class="badge bg-primary rounded-circle me-3 px-3 py-2">#${p.rank}</span>
+                        ${escapeHtml(p.nickname)}
+                    </div>
+                    <span class="badge bg-success rounded-pill px-3 py-2">${p.score} pts</span>
+                `;
+                leaderboardList.appendChild(item);
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        btnSkip.addEventListener("click", function() {
+            connection.invoke("EndQuestion", roomCode);
+        });
+
+        btnNext.addEventListener("click", function() {
+            btnNext.disabled = true;
+            // Show Leaderboard first, then Next Question
+            if (leaderboardSection.classList.contains("d-none")) {
+                gameplaySection.classList.add("d-none");
+                leaderboardSection.classList.remove("d-none");
+                btnNext.innerText = "Câu tiếp theo ❯";
+                btnNext.disabled = false;
+            } else {
+                connection.invoke("NextQuestion", roomCode).finally(() => {
+                    btnNext.disabled = false;
+                });
+            }
+        });
+
+        connection.start().then(function() {
+            console.log("Connected as Host to KahootHub");
+            connection.invoke("RegisterHost", roomCode);
+        }).catch(err => console.error("SignalR Connection Error: ", err));
+    </script>
+}

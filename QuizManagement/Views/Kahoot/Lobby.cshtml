@@ -1,0 +1,158 @@
+@model BusinessObjects.KahootRoom
+@{
+    ViewData["Title"] = "Phòng chờ Kahoot: " + Model.RoomCode;
+    Layout = "_Layout";
+}
+
+<div class="container-fluid py-4 min-vh-100 d-flex flex-column justify-content-between" style="background: linear-gradient(135deg, #46178f 0%, #eb1363 100%); color: white;">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center px-4">
+        <div>
+            <h2 class="fw-bold mb-0">@Model.Title</h2>
+            <span class="badge bg-warning text-dark fs-6 mt-1">@Model.TotalQuestions câu hỏi</span>
+        </div>
+        <div class="text-end">
+            <span class="fs-5 text-white-50">Bộ đề:</span>
+            <span class="fs-5 fw-bold ms-2">@(Model.Deck?.Name ?? "Chung")</span>
+        </div>
+    </div>
+
+    <!-- Main Content: PIN + QR + Players -->
+    <div class="container my-auto">
+        <div class="row align-items-center g-4">
+            <!-- Left: QR Code & PIN Code -->
+            <div class="col-md-5 text-center">
+                <div class="bg-white text-dark p-4 rounded-4 shadow-lg d-inline-block">
+                    <p class="text-muted fw-bold mb-2 text-uppercase letter-spacing-1">Quét mã QR để vào phòng</p>
+                    <div id="qrcode" class="d-flex justify-content-center p-2"></div>
+                    <hr class="my-3">
+                    <div class="mt-2">
+                        <small class="text-muted d-block">Hoặc nhập mã PIN tại web/app:</small>
+                        <div class="display-4 fw-bolder text-primary letter-spacing-2 mt-1" id="pinDisplay">@Model.RoomCode</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Realtime Players List -->
+            <div class="col-md-7">
+                <div class="card bg-dark bg-opacity-50 border-0 rounded-4 p-4 text-white shadow-lg">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0 fw-bold">
+                            <i class="bi bi-people-fill me-2 text-warning"></i>
+                            Người tham gia: <span id="playerCount" class="badge bg-warning text-dark fs-5 ms-2">0</span>
+                        </h4>
+                        <button id="btnStartGame" class="btn btn-success btn-lg px-5 py-3 fw-bold rounded-pill shadow">
+                            <i class="bi bi-play-fill me-1"></i> BẮT ĐẦU TRẬN ĐẤU
+                        </button>
+                    </div>
+
+                    <div id="playerList" class="d-flex flex-wrap gap-2 py-3" style="max-height: 350px; overflow-y: auto;">
+                        <!-- Players dynamic tags will be inserted here -->
+                        <div id="emptyHint" class="text-white-50 fst-italic py-5 text-center w-100">
+                            Đang chờ người chơi tham gia... Quét mã QR bên cạnh để vào ngay!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="text-center py-3 text-white-50">
+        Quiz Management • Realtime Live Kahoot Engine
+    </div>
+</div>
+
+@section Scripts {
+    <!-- QR Code Generator JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Microsoft SignalR JS Client -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+
+    <script>
+        const roomCode = "@Model.RoomCode";
+        // Đường dẫn tham gia để nhúng vào mã QR (Tự lấy origin hiện tại)
+        const joinUrl = `${window.location.origin}/Kahoot/Join?roomCode=${roomCode}`;
+
+        // 1. Render QR Code
+        new QRCode(document.getElementById("qrcode"), {
+            text: joinUrl,
+            width: 220,
+            height: 220,
+            colorDark: "#1368ce",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+
+        // 2. Kết nối SignalR Hub
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/hubs/kahoot")
+            .withAutomaticReconnect()
+            .build();
+
+        const playerList = document.getElementById("playerList");
+        const playerCount = document.getElementById("playerCount");
+        const emptyHint = document.getElementById("emptyHint");
+        const btnStart = document.getElementById("btnStartGame");
+        const activePlayers = new Set();
+
+        connection.on("HostRegistered", function(data) {
+            updatePlayers(data.players, data.totalPlayers);
+        });
+
+        connection.on("PlayerJoined", function(data) {
+            if (data.players) {
+                updatePlayers(data.players, data.totalPlayers);
+            } else {
+                addPlayer(data.nickname);
+                playerCount.innerText = data.totalPlayers;
+            }
+        });
+
+        connection.on("PlayerLeft", function(data) {
+            playerCount.innerText = data.totalPlayers;
+        });
+
+        connection.on("GameStarted", function() {
+            window.location.href = `/Kahoot/Host?roomCode=${roomCode}`;
+        });
+
+        function updatePlayers(players, total) {
+            playerCount.innerText = total;
+            if (total > 0 && emptyHint) {
+                emptyHint.remove();
+            }
+            playerList.innerHTML = "";
+            players.forEach(p => addPlayer(p.nickname));
+        }
+
+        function addPlayer(nickname) {
+            if (emptyHint) emptyHint.remove();
+            const badge = document.createElement("span");
+            badge.className = "badge bg-light text-dark fs-5 px-3 py-2 rounded-pill shadow-sm animate__animated animate__bounceIn";
+            badge.innerHTML = `<i class="bi bi-person-fill text-primary me-1"></i> ${escapeHtml(nickname)}`;
+            playerList.appendChild(badge);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        connection.start().then(function() {
+            console.log("Connected to KahootHub as Host");
+            connection.invoke("RegisterHost", roomCode);
+        }).catch(err => console.error("SignalR Connection Error: ", err));
+
+        btnStart.addEventListener("click", function() {
+            btnStart.disabled = true;
+            btnStart.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang khởi động...';
+            connection.invoke("StartGame", roomCode).catch(err => {
+                alert("Lỗi khởi động: " + err);
+                btnStart.disabled = false;
+                btnStart.innerText = "BẮT ĐẦU TRẬN ĐẤU";
+            });
+        });
+    </script>
+}

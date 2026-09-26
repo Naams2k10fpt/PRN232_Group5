@@ -1,0 +1,205 @@
+@model BusinessObjects.KahootRoom
+@{
+    ViewData["Title"] = "Kahoot Player: " + Model.RoomCode;
+    string nickname = ViewBag.Nickname as string ?? "Player";
+    Layout = null; // Fullscreen app layout for mobile and web
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Kahoot! - @nickname</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #46178f;
+            user-select: none;
+        }
+
+        .kahoot-btn {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 3.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        .kahoot-btn:active {
+            transform: scale(0.96);
+            opacity: 0.9;
+        }
+
+        .btn-red { background-color: #e21b3c; }
+        .btn-blue { background-color: #1368ce; }
+        .btn-yellow { background-color: #d89e00; }
+        .btn-green { background-color: #26890c; }
+
+        .fullscreen-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body>
+
+<div class="fullscreen-container text-white">
+    <!-- Top Player Bar -->
+    <div class="d-flex justify-content-between align-items-center px-3 py-2 bg-dark bg-opacity-25">
+        <div>
+            <span class="fw-bold fs-5">@nickname</span>
+            <small class="text-white-50 ms-2">PIN: @Model.RoomCode</small>
+        </div>
+        <div>
+            <span class="badge bg-warning text-dark fs-6" id="scoreBadge">0 pts</span>
+        </div>
+    </div>
+
+    <!-- 1. Lobby Waiting Screen -->
+    <div id="screenLobby" class="flex-grow-1 d-flex flex-column justify-content-center align-items-center text-center p-4">
+        <div class="spinner-grow text-warning mb-4" style="width: 4rem; height: 4rem;" role="status"></div>
+        <h2 class="fw-bold mb-2">Bạn đã vào phòng!</h2>
+        <p class="fs-5 text-white-50">Hãy nhìn lên màn hình chính và chờ chủ phòng bấm bắt đầu...</p>
+    </div>
+
+    <!-- 2. Gameplay 4 Buttons Screen -->
+    <div id="screenAnswering" class="flex-grow-1 p-2 d-none">
+        <div class="row g-2 h-100 m-0">
+            <div class="col-6 p-1">
+                <button class="kahoot-btn btn-red" onclick="submitChoice(0)">▲</button>
+            </div>
+            <div class="col-6 p-1">
+                <button class="kahoot-btn btn-blue" onclick="submitChoice(1)">◆</button>
+            </div>
+            <div class="col-6 p-1">
+                <button class="kahoot-btn btn-yellow" onclick="submitChoice(2)">●</button>
+            </div>
+            <div class="col-6 p-1">
+                <button class="kahoot-btn btn-green" onclick="submitChoice(3)">■</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Answer Submitted Waiting Screen -->
+    <div id="screenSubmitted" class="flex-grow-1 d-flex flex-column justify-content-center align-items-center text-center p-4 d-none">
+        <i class="bi bi-check-circle-fill text-success display-1 mb-3"></i>
+        <h2 class="fw-bold mb-2">Đã nhận câu trả lời!</h2>
+        <p class="fs-5 text-white-50">Đang chờ thời gian kết thúc...</p>
+    </div>
+
+    <!-- 4. Result Feedback Screen -->
+    <div id="screenResult" class="flex-grow-1 d-flex flex-column justify-content-center align-items-center text-center p-4 d-none">
+        <div id="resultIcon" class="display-1 mb-2"></div>
+        <h1 id="resultText" class="display-4 fw-bolder mb-2"></h1>
+        <h3 id="resultScore" class="fw-bold text-warning mb-4"></h3>
+        <p class="text-white-50 fs-5">Hãy nhìn lên màn hình chính để xem thứ hạng!</p>
+    </div>
+
+    <!-- 5. Game Over Screen -->
+    <div id="screenGameOver" class="flex-grow-1 d-flex flex-column justify-content-center align-items-center text-center p-4 d-none">
+        <div class="display-1 text-warning mb-3">🏁</div>
+        <h1 class="display-4 fw-bolder mb-2">HOÀN THÀNH TRẬN ĐẤU!</h1>
+        <h3 class="fw-bold text-light mb-4">Tổng điểm của bạn: <span id="finalScore" class="text-warning">0</span> pts</h3>
+        <a href="/Kahoot/Join" class="btn btn-light btn-lg rounded-pill px-5 fw-bold shadow">
+            Chơi ván khác
+        </a>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+<script>
+    const roomCode = "@Model.RoomCode";
+    const nickname = "@nickname";
+    let participantId = 0;
+    let currentQuestion = null;
+    let questionStartTime = 0;
+    let totalScore = 0;
+
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/hubs/kahoot")
+        .withAutomaticReconnect()
+        .build();
+
+    function showScreen(screenId) {
+        ["screenLobby", "screenAnswering", "screenSubmitted", "screenResult", "screenGameOver"].forEach(id => {
+            document.getElementById(id).classList.add("d-none");
+        });
+        document.getElementById(screenId).classList.remove("d-none");
+    }
+
+    connection.on("JoinedSuccess", function(data) {
+        participantId = data.participantId;
+        console.log("Joined as Participant ID:", participantId);
+    });
+
+    connection.on("ReceiveQuestion", function(q) {
+        currentQuestion = q;
+        questionStartTime = Date.now();
+        showScreen("screenAnswering");
+    });
+
+    connection.on("AnswerResult", function(res) {
+        totalScore = res.totalScore;
+        document.getElementById("scoreBadge").innerText = `${totalScore} pts`;
+
+        const resultIcon = document.getElementById("resultIcon");
+        const resultText = document.getElementById("resultText");
+        const resultScore = document.getElementById("resultScore");
+
+        if (res.isCorrect) {
+            resultIcon.innerHTML = "🎉";
+            resultText.innerText = "CHÍNH XÁC!";
+            resultText.className = "display-4 fw-bolder text-success mb-2";
+            resultScore.innerText = `+${res.scoreEarned} điểm`;
+        } else {
+            resultIcon.innerHTML = "❌";
+            resultText.innerText = "CHƯA ĐÚNG!";
+            resultText.className = "display-4 fw-bolder text-danger mb-2";
+            resultScore.innerText = "+0 điểm";
+        }
+
+        showScreen("screenResult");
+    });
+
+    connection.on("GameOver", function() {
+        document.getElementById("finalScore").innerText = totalScore;
+        showScreen("screenGameOver");
+    });
+
+    function submitChoice(colorIndex) {
+        if (!currentQuestion || !participantId) return;
+
+        const elapsedSeconds = ((Date.now() - questionStartTime) / 1000).toFixed(2);
+        const selectedAnswer = currentQuestion.answers.find(a => a.colorIndex === colorIndex);
+        const selectedAnswerId = selectedAnswer ? selectedAnswer.id : 0;
+
+        showScreen("screenSubmitted");
+
+        connection.invoke("SubmitAnswer",
+            roomCode,
+            participantId,
+            currentQuestion.questionId,
+            selectedAnswerId,
+            parseFloat(elapsedSeconds)
+        ).catch(err => console.error("Error submitting answer: ", err));
+    }
+
+    connection.start().then(function() {
+        console.log("Connected to KahootHub as Player");
+        connection.invoke("JoinRoom", roomCode, nickname);
+    }).catch(err => console.error("SignalR Error: ", err));
+</script>
+</body>
+</html>

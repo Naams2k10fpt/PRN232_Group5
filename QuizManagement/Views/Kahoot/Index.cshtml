@@ -1,0 +1,61 @@
+@using BusinessObjects
+@{
+    ViewData["Title"] = "Tạo phòng thi đấu Kahoot";
+    var subjects = ViewBag.Subjects as IEnumerable<Subject> ?? Enumerable.Empty<Subject>();
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-primary text-white py-3 rounded-top-4 d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0 fw-bold"><i class="bi bi-controller me-2"></i>Tạo phòng thi đấu Kahoot Live</h4>
+                    <span class="badge bg-light text-primary fs-6 px-3 py-2">Realtime Quiz</span>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted mb-4">
+                        Chọn một bộ đề từ các môn học của bạn để tạo phòng thi đấu thời gian thực.
+                        Hệ thống sẽ tự sinh <strong>mã PIN</strong> và <strong>mã QR</strong> để người chơi quét camera từ điện thoại và tham gia ngay lập tức.
+                    </p>
+
+                    <form asp-action="CreateRoom" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tên phòng thi đấu</label>
+                            <input type="text" name="title" class="form-control form-control-lg" placeholder="Ví dụ: Ôn tập PRN232 - Tuần 3" required />
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Chọn bộ đề (Deck)</label>
+                            <select name="deckId" class="form-select form-select-lg" required>
+                                <option value="">-- Chọn bộ đề --</option>
+                                @foreach (var subject in subjects)
+                                {
+                                    <optgroup label="Môn: @subject.Name">
+                                        @foreach (var deck in subject.Decks.Where(d => !d.IsDeleted))
+                                        {
+                                            <option value="@deck.Id">@deck.Name (@deck.Questions.Count(q => !q.IsDeleted) câu hỏi)</option>
+                                        }
+                                    </optgroup>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg fw-bold py-3">
+                                <i class="bi bi-play-circle-fill me-2"></i>Tạo phòng & Nhận mã QR
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="mt-4 text-center">
+                <a asp-action="Join" class="text-decoration-none text-muted">
+                    <i class="bi bi-box-arrow-in-right me-1"></i>Bạn là người chơi? Bấm vào đây để nhập mã PIN tham gia
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
