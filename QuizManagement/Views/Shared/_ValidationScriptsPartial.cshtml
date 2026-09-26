@@ -1,2 +1,21 @@
 ﻿<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
 <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
+<script>
+    // Email dán từ tài liệu/chat có thể dính ký tự vô hình ở đầu/cuối (NBSP, zero-width space).
+    // Trình duyệt chỉ tự bỏ khoảng trắng ASCII, nên regex email của jQuery Validation từ chối và
+    // form không được gửi. Làm sạch ngay khi dán/gõ để server cũng nhận địa chỉ đã làm sạch.
+    (function ($) {
+        var edgeJunk = /^[\s​-‍⁠﻿]+|[\s​-‍⁠﻿]+$/g;
+        var clean = function (value) { return String(value).replace(edgeJunk, ""); };
+
+        var validateEmail = $.validator.methods.email;
+        $.validator.methods.email = function (value, element) {
+            return validateEmail.call(this, clean(value), element);
+        };
+        $(document).on("input change", "input[type=email]", function () {
+            var cleaned = clean(this.value);
+            if (cleaned !== this.value)
+                this.value = cleaned;
+        });
+    })(jQuery);
+</script>
