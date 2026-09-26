@@ -31,8 +31,14 @@ namespace QuizManagement.Hubs
             _kahootService = kahootService;
         }
 
+        // Overload 2 tham số cho client gọi không kèm userId (Web & Mobile guest)
+        public async Task JoinRoom(string roomCode, string nickname)
+        {
+            await JoinRoom(roomCode, nickname, null);
+        }
+
         // Host hoặc Player tham gia nhóm SignalR theo RoomCode
-        public async Task JoinRoom(string roomCode, string nickname, string? userId = null)
+        public async Task JoinRoom(string roomCode, string nickname, string? userId)
         {
             roomCode = roomCode.Trim().ToUpperInvariant();
             await Groups.AddToGroupAsync(Context.ConnectionId, roomCode);
@@ -237,8 +243,8 @@ namespace QuizManagement.Hubs
             await Clients.Group(roomCode).SendAsync("ReceiveQuestion", questionPayload);
         }
 
-        // Thí sinh nộp câu trả lời
-        public async Task SubmitAnswer(string roomCode, int participantId, int questionId, int selectedAnswerId, decimal elapsedSeconds)
+        // Thí sinh nộp câu trả lời (nhận double elapsedSeconds để tương thích JSON float từ Flutter & Web)
+        public async Task SubmitAnswer(string roomCode, int participantId, int questionId, int selectedAnswerId, double elapsedSeconds)
         {
             roomCode = roomCode.Trim().ToUpperInvariant();
             var state = _roomStates.GetOrAdd(roomCode, _ => new RoomGameState { RoomCode = roomCode });
@@ -248,7 +254,7 @@ namespace QuizManagement.Hubs
                 participantId,
                 questionId,
                 selectedAnswerId,
-                elapsedSeconds,
+                (decimal)elapsedSeconds,
                 state.TimeLimitSeconds);
 
             state.CurrentAnswerCount++;
