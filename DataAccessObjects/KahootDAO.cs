@@ -106,5 +106,16 @@ namespace DataAccessObjects
                 .AsNoTracking()
                 .ToList();
         }
+
+        public List<Deck> GetAvailableDecks(QuizManagementDbContext context)
+        {
+            return context.Decks
+                .Include(d => d.Subject)
+                .Include(d => d.Questions)
+                .Where(d => !d.IsDeleted)
+                .OrderBy(d => d.Subject.Name)
+                .ThenBy(d => d.Name)
+                .ToList();
+        }
     }
 }

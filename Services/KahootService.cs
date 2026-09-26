@@ -173,4 +173,10 @@ public class KahootService : IKahootService
         var participants = _repository.GetParticipantsByRoom(roomCode.Trim());
         return Task.FromResult(participants);
     }
+
+    public Task<List<Deck>> GetAvailableDecksAsync()
+    {
+        var decks = _repository.GetAvailableDecks();
+        return Task.FromResult(decks);
+    }
 }

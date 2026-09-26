@@ -14,5 +14,6 @@ namespace Repositories
         void SaveAnswer(KahootAnswer answer);
         void UpdateRoomStatus(string roomCode, string status, int currentQuestionIndex);
         List<Question> GetQuestionsForDeck(int deckId);
+        List<Deck> GetAvailableDecks();
     }
 }

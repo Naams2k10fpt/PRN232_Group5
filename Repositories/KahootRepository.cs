@@ -39,5 +39,8 @@ namespace Repositories
 
         public List<Question> GetQuestionsForDeck(int deckId)
             => KahootDAO.Instance.GetQuestionsForDeck(_context, deckId);
+
+        public List<Deck> GetAvailableDecks()
+            => KahootDAO.Instance.GetAvailableDecks(_context);
     }
 }

@@ -29,11 +29,10 @@ namespace QuizManagement.Controllers
 
         [Authorize]
         [HttpGet]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var subjects = _subjectService.GetAllSubjects();
-            ViewBag.Subjects = subjects;
+            var decks = await _kahootService.GetAvailableDecksAsync();
+            ViewBag.Decks = decks;
             return View();
         }
 

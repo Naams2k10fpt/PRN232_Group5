@@ -30,4 +30,5 @@ public interface IKahootService
     Task<List<KahootLeaderboardEntry>> GetLeaderboardAsync(string roomCode);
     Task<bool> UpdateRoomStatusAsync(string roomCode, string status, int currentQuestionIndex);
     Task<List<KahootParticipant>> GetParticipantsAsync(string roomCode);
+    Task<List<Deck>> GetAvailableDecksAsync();
 }
