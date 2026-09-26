@@ -10,7 +10,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Kahoot! - @nickname</title>
+    <title>Quiz Arena - @nickname</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <style>
@@ -18,33 +18,56 @@
             height: 100%;
             margin: 0;
             overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #46178f;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 70%, #020617 100%);
             user-select: none;
+            color: white;
         }
 
-        .kahoot-btn {
+        .arena-btn {
             width: 100%;
             height: 100%;
-            border: none;
-            border-radius: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
             color: white;
-            font-size: 3.5rem;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: transform 0.1s, opacity 0.2s;
+            transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            padding: 12px;
+            text-align: center;
         }
-        .kahoot-btn:active {
-            transform: scale(0.96);
-            opacity: 0.9;
+        .arena-btn:active {
+            transform: scale(0.94);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
         }
 
-        .btn-red { background-color: #e21b3c; }
-        .btn-blue { background-color: #1368ce; }
-        .btn-yellow { background-color: #d89e00; }
-        .btn-green { background-color: #26890c; }
+        .btn-arena-a { background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%); }
+        .btn-arena-b { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+        .btn-arena-c { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); }
+        .btn-arena-d { background: linear-gradient(135deg, #10b981 0%, #047857 100%); }
+
+        .btn-letter {
+            font-size: 2.8rem;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 4px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn-snippet {
+            font-size: 1rem;
+            font-weight: 600;
+            opacity: 0.95;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            word-break: break-word;
+        }
 
         .fullscreen-container {
             height: 100vh;
@@ -55,48 +78,63 @@
 </head>
 <body>
 
-<div class="fullscreen-container text-white">
+<div class="fullscreen-container">
     <!-- Top Player Bar -->
-    <div class="d-flex justify-content-between align-items-center px-3 py-2 bg-dark bg-opacity-25">
-        <div>
-            <span class="fw-bold fs-5">@nickname</span>
-            <small class="text-white-50 ms-2">PIN: @Model.RoomCode</small>
+    <div class="d-flex justify-content-between align-items-center px-4 py-3 bg-dark bg-opacity-50 border-bottom border-light border-opacity-10">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-person-circle fs-4 text-info"></i>
+            <div>
+                <span class="fw-bold fs-5">@nickname</span>
+                <span class="badge bg-secondary ms-2 small">PIN: @Model.RoomCode</span>
+            </div>
         </div>
         <div>
-            <span class="badge bg-warning text-dark fs-6" id="scoreBadge">0 pts</span>
+            <span class="badge bg-warning text-dark fs-6 px-3 py-2 rounded-pill fw-bold" id="scoreBadge">0 pts</span>
         </div>
     </div>
 
     <!-- 1. Lobby Waiting Screen -->
     <div id="screenLobby" class="flex-grow-1 d-flex flex-column justify-content-center align-items-center text-center p-4">
-        <div class="spinner-grow text-warning mb-4" style="width: 4rem; height: 4rem;" role="status"></div>
-        <h2 class="fw-bold mb-2">Bạn đã vào phòng!</h2>
-        <p class="fs-5 text-white-50">Hãy nhìn lên màn hình chính và chờ chủ phòng bấm bắt đầu...</p>
+        <div class="spinner-grow text-info mb-4" style="width: 4.5rem; height: 4.5rem;" role="status"></div>
+        <h2 class="fw-bold mb-2">ĐÃ SẴN SÀNG CHIẾN ĐẤU!</h2>
+        <p class="fs-5 text-white-50">Bạn đã vào đấu trường. Đang chờ chủ phòng bắt đầu trận...</p>
     </div>
 
     <!-- 2. Gameplay 4 Buttons Screen -->
-    <div id="screenAnswering" class="flex-grow-1 p-2 d-none">
-        <div class="row g-2 h-100 m-0">
+    <div id="screenAnswering" class="flex-grow-1 p-3 d-none">
+        <div class="row g-3 h-100 m-0">
             <div class="col-6 p-1">
-                <button class="kahoot-btn btn-red" onclick="submitChoice(0)">▲</button>
+                <button class="arena-btn btn-arena-a" onclick="submitChoice(0)">
+                    <span class="btn-letter">A</span>
+                    <span class="btn-snippet" id="txtBtn0">Đáp án A</span>
+                </button>
             </div>
             <div class="col-6 p-1">
-                <button class="kahoot-btn btn-blue" onclick="submitChoice(1)">◆</button>
+                <button class="arena-btn btn-arena-b" onclick="submitChoice(1)">
+                    <span class="btn-letter">B</span>
+                    <span class="btn-snippet" id="txtBtn1">Đáp án B</span>
+                </button>
             </div>
             <div class="col-6 p-1">
-                <button class="kahoot-btn btn-yellow" onclick="submitChoice(2)">●</button>
+                <button class="arena-btn btn-arena-c" onclick="submitChoice(2)">
+                    <span class="btn-letter">C</span>
+                    <span class="btn-snippet" id="txtBtn2">Đáp án C</span>
+                </button>
             </div>
             <div class="col-6 p-1">
-                <button class="kahoot-btn btn-green" onclick="submitChoice(3)">■</button>
+                <button class="arena-btn btn-arena-d" onclick="submitChoice(3)">
+                    <span class="btn-letter">D</span>
+                    <span class="btn-snippet" id="txtBtn3">Đáp án D</span>
+                </button>
             </div>
         </div>
     </div>
 
     <!-- 3. Answer Submitted Waiting Screen -->
     <div id="screenSubmitted" class="flex-grow-1 d-flex flex-column justify-content-center align-items-center text-center p-4 d-none">
-        <i class="bi bi-check-circle-fill text-success display-1 mb-3"></i>
-        <h2 class="fw-bold mb-2">Đã nhận câu trả lời!</h2>
-        <p class="fs-5 text-white-50">Đang chờ thời gian kết thúc...</p>
+        <i class="bi bi-shield-check text-success display-1 mb-3"></i>
+        <h2 class="fw-bold mb-2">ĐÃ KHÓA LỰA CHỌN!</h2>
+        <p class="fs-5 text-white-50">Đang chờ thời gian kết thúc để chấm điểm...</p>
     </div>
 
     <!-- 4. Result Feedback Screen -->
@@ -109,11 +147,11 @@
 
     <!-- 5. Game Over Screen -->
     <div id="screenGameOver" class="flex-grow-1 d-flex flex-column justify-content-center align-items-center text-center p-4 d-none">
-        <div class="display-1 text-warning mb-3">🏁</div>
+        <div class="display-1 text-warning mb-3">🏆</div>
         <h1 class="display-4 fw-bolder mb-2">HOÀN THÀNH TRẬN ĐẤU!</h1>
-        <h3 class="fw-bold text-light mb-4">Tổng điểm của bạn: <span id="finalScore" class="text-warning">0</span> pts</h3>
-        <a href="/Kahoot/Join" class="btn btn-light btn-lg rounded-pill px-5 fw-bold shadow">
-            Chơi ván khác
+        <h3 class="fw-bold text-light mb-4">Tổng điểm chiến đấu: <span id="finalScore" class="text-warning">0</span> pts</h3>
+        <a href="/Kahoot/Join" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow">
+            Tham gia trận khác
         </a>
     </div>
 </div>
@@ -147,6 +185,19 @@
     connection.on("ReceiveQuestion", function(q) {
         currentQuestion = q;
         questionStartTime = Date.now();
+
+        // Cập nhật text hiển thị trên 4 nút A, B, C, D
+        for (let i = 0; i < 4; i++) {
+            const txtEl = document.getElementById(`txtBtn${i}`);
+            const btnEl = txtEl ? txtEl.closest("button") : null;
+            if (i < q.answers.length) {
+                if (btnEl) btnEl.parentElement.classList.remove("d-none");
+                if (txtEl) txtEl.innerText = q.answers[i].text;
+            } else {
+                if (btnEl) btnEl.parentElement.classList.add("d-none");
+            }
+        }
+
         showScreen("screenAnswering");
     });
 

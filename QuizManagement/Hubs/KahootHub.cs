@@ -62,6 +62,18 @@ namespace QuizManagement.Hubs
                 totalPlayers = participants.Count,
                 players = participants.Select(p => new { p.Id, p.Nickname, p.TotalScore })
             });
+
+            // Nếu phòng đã bắt đầu chơi, gửi câu hỏi hiện tại ngay cho người chơi vừa vào/reconnect
+            var room = await _kahootService.GetRoomByCodeAsync(roomCode);
+            if (room != null && room.Status == "InProgress")
+            {
+                var restoredState = await EnsureRoomStateAsync(roomCode);
+                if (restoredState != null && restoredState.CurrentQuestionIndex < restoredState.Questions.Count)
+                {
+                    var questionPayload = BuildQuestionPayload(restoredState);
+                    await Clients.Caller.SendAsync("ReceiveQuestion", questionPayload);
+                }
+            }
         }
 
         // Host đăng ký quản lý phòng (không tính là người chơi)
@@ -71,12 +83,32 @@ namespace QuizManagement.Hubs
             await Groups.AddToGroupAsync(Context.ConnectionId, roomCode);
 
             var participants = await _kahootService.GetParticipantsAsync(roomCode);
+            var room = await _kahootService.GetRoomByCodeAsync(roomCode);
+
             await Clients.Caller.SendAsync("HostRegistered", new
             {
                 roomCode = roomCode,
+                status = room?.Status ?? "Waiting",
                 totalPlayers = participants.Count,
                 players = participants.Select(p => new { p.Id, p.Nickname, p.TotalScore })
             });
+
+            // NẾU PHÒNG ĐANG IN PROGRESS: Gửi ngay câu hỏi hiện tại cho Host
+            if (room != null && room.Status == "InProgress")
+            {
+                var state = await EnsureRoomStateAsync(roomCode);
+                if (state != null && state.CurrentQuestionIndex < state.Questions.Count)
+                {
+                    var questionPayload = BuildQuestionPayload(state);
+                    await Clients.Caller.SendAsync("ReceiveQuestion", questionPayload);
+
+                    await Clients.Caller.SendAsync("AnswerSubmitted", new
+                    {
+                        currentAnswerCount = state.CurrentAnswerCount,
+                        totalPlayers = participants.Count
+                    });
+                }
+            }
         }
 
         // Host bấm Start game
@@ -112,11 +144,73 @@ namespace QuizManagement.Hubs
             await PushCurrentQuestion(roomCode);
         }
 
+        public async Task GetCurrentQuestion(string roomCode)
+        {
+            roomCode = roomCode.Trim().ToUpperInvariant();
+            var state = await EnsureRoomStateAsync(roomCode);
+            if (state != null && state.CurrentQuestionIndex < state.Questions.Count)
+            {
+                var questionPayload = BuildQuestionPayload(state);
+                await Clients.Caller.SendAsync("ReceiveQuestion", questionPayload);
+            }
+        }
+
+        private async Task<RoomGameState?> EnsureRoomStateAsync(string roomCode)
+        {
+            if (_roomStates.TryGetValue(roomCode, out var state))
+            {
+                return state;
+            }
+
+            var room = await _kahootService.GetRoomByCodeAsync(roomCode);
+            if (room == null) return null;
+
+            var questions = await _kahootService.GetRoomQuestionsAsync(room.Id);
+            if (questions.Count == 0) return null;
+
+            var participants = await _kahootService.GetParticipantsAsync(roomCode);
+
+            state = new RoomGameState
+            {
+                RoomCode = roomCode,
+                DeckId = room.DeckId,
+                Questions = questions,
+                CurrentQuestionIndex = Math.Max(0, room.CurrentQuestionIndex),
+                TotalParticipants = participants.Count,
+                CurrentAnswerCount = 0,
+                TimeLimitSeconds = 20
+            };
+
+            _roomStates[roomCode] = state;
+            return state;
+        }
+
+        private object BuildQuestionPayload(RoomGameState state)
+        {
+            var currentQ = state.Questions[state.CurrentQuestionIndex];
+            return new
+            {
+                questionIndex = state.CurrentQuestionIndex + 1,
+                totalQuestions = state.Questions.Count,
+                questionId = currentQ.Id,
+                content = currentQ.Content,
+                timeLimit = state.TimeLimitSeconds,
+                answers = currentQ.Answers.Select((a, idx) => new
+                {
+                    id = a.Id,
+                    text = a.Content,
+                    colorIndex = idx,
+                    optionLetter = idx switch { 0 => "A", 1 => "B", 2 => "C", 3 => "D", _ => "?" }
+                }).ToList()
+            };
+        }
+
         // Host chuyển sang câu hỏi tiếp theo
         public async Task NextQuestion(string roomCode)
         {
             roomCode = roomCode.Trim().ToUpperInvariant();
-            if (!_roomStates.TryGetValue(roomCode, out var state)) return;
+            var state = await EnsureRoomStateAsync(roomCode);
+            if (state == null) return;
 
             state.CurrentQuestionIndex++;
             state.CurrentAnswerCount = 0;
@@ -133,28 +227,12 @@ namespace QuizManagement.Hubs
 
         private async Task PushCurrentQuestion(string roomCode)
         {
-            if (!_roomStates.TryGetValue(roomCode, out var state)) return;
+            var state = await EnsureRoomStateAsync(roomCode);
+            if (state == null) return;
             if (state.CurrentQuestionIndex >= state.Questions.Count) return;
 
-            var currentQ = state.Questions[state.CurrentQuestionIndex];
             state.CurrentAnswerCount = 0;
-
-            // Tạo payload câu hỏi (không gửi IsCorrect về client để chống gian lận)
-            var questionPayload = new
-            {
-                questionIndex = state.CurrentQuestionIndex + 1,
-                totalQuestions = state.Questions.Count,
-                questionId = currentQ.Id,
-                content = currentQ.Content,
-                timeLimit = state.TimeLimitSeconds,
-                answers = currentQ.Answers.Select((a, idx) => new
-                {
-                    id = a.Id,
-                    text = a.Content,
-                    colorIndex = idx // 0: Đỏ, 1: Xanh dương, 2: Vàng, 3: Xanh lá
-                }).ToList()
-            };
-
+            var questionPayload = BuildQuestionPayload(state);
             await Clients.Group(roomCode).SendAsync("ReceiveQuestion", questionPayload);
         }
 

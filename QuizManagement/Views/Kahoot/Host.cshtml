@@ -1,25 +1,71 @@
 @model BusinessObjects.KahootRoom
 @{
-    ViewData["Title"] = "Trình chiếu câu hỏi: " + Model.RoomCode;
+    ViewData["Title"] = "Đấu Trí Trực Tiếp - Phòng: " + Model.RoomCode;
     Layout = "_Layout";
 }
 
 <style>
-    .kahoot-card {
+    .arena-container {
+        background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 60%, #020617 100%);
+        min-height: calc(100vh - 60px);
+        color: white;
+    }
+
+    .arena-badge {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        width: 52px;
+        height: 52px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        font-weight: 900;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.22);
+        box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.3), 0 4px 10px rgba(0, 0, 0, 0.3);
+        margin-right: 1.2rem;
+        flex-shrink: 0;
+    }
+
+    .arena-card {
         min-height: 120px;
         font-size: 1.35rem;
         font-weight: 700;
         display: flex;
         align-items: center;
-        padding: 1.5rem;
-        border-radius: 1rem;
+        padding: 1.5rem 1.75rem;
+        border-radius: 1.25rem;
         color: white;
-        transition: transform 0.2s, opacity 0.2s;
+        transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s, opacity 0.3s;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+        border: 2px solid rgba(255, 255, 255, 0.12);
+        position: relative;
+        overflow: hidden;
     }
-    .kahoot-red { background-color: #e21b3c; }
-    .kahoot-blue { background-color: #1368ce; }
-    .kahoot-yellow { background-color: #d89e00; }
-    .kahoot-green { background-color: #26890c; }
+
+    .arena-card-a { background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%); }
+    .arena-card-b { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+    .arena-card-c { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); }
+    .arena-card-d { background: linear-gradient(135deg, #10b981 0%, #047857 100%); }
+
+    .arena-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.6);
+    }
+
+    .arena-progress {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .arena-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444);
+        transition: width 1s linear;
+        box-shadow: 0 0 12px #38bdf8;
+    }
 
     .podium-step {
         display: flex;
@@ -28,35 +74,44 @@
         justify-content: flex-end;
         color: white;
         font-weight: bold;
-        border-radius: 1rem 1rem 0 0;
-        transition: height 0.5s ease-out;
+        border-radius: 1.25rem 1.25rem 0 0;
+        transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 </style>
 
-<div class="container-fluid py-3 min-vh-100 d-flex flex-column justify-content-between" style="background: #25076b; color: white;">
+<div class="arena-container container-fluid py-3 d-flex flex-column justify-content-between">
     <!-- Top Bar -->
     <div class="d-flex justify-content-between align-items-center px-4 py-2 border-bottom border-light border-opacity-10">
-        <div>
-            <span class="fs-4 fw-bold" id="questionCounter">Đang tải câu hỏi...</span>
-            <span class="badge bg-light text-dark ms-2">Mã PIN: @Model.RoomCode</span>
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-primary bg-opacity-25 text-info border border-info border-opacity-25 px-3 py-2 fs-6 rounded-pill">
+                <i class="bi bi-broadcast me-1"></i> QUIZ BATTLE ARENA
+            </span>
+            <span class="fs-4 fw-bold" id="questionCounter">Đang chuẩn bị câu hỏi...</span>
+            <span class="badge bg-warning text-dark px-3 py-2 fs-6 rounded-pill fw-bold">
+                <i class="bi bi-key-fill me-1"></i> PIN: @Model.RoomCode
+            </span>
         </div>
 
-        <!-- Timer Circle -->
-        <div class="d-flex align-items-center">
-            <div id="timerBox" class="bg-warning text-dark fw-bolder rounded-circle d-flex align-items-center justify-content-center shadow-lg"
-                 style="width: 70px; height: 70px; font-size: 2rem;">
-                20
+        <!-- Timer Digital -->
+        <div class="d-flex align-items-center gap-2">
+            <div id="timerBox" class="bg-dark border border-warning text-warning fw-bolder rounded-pill px-4 py-2 d-flex align-items-center gap-2 shadow-lg"
+                 style="font-size: 1.75rem; letter-spacing: 1px;">
+                <i class="bi bi-stopwatch-fill fs-3"></i>
+                <span id="timerText">20</span>s
             </div>
         </div>
 
         <!-- Answers count & Next button -->
         <div class="d-flex align-items-center gap-3">
-            <div class="text-end">
+            <div class="bg-dark bg-opacity-50 px-3 py-1 rounded-3 border border-white border-opacity-10 text-end">
                 <span class="d-block text-white-50 small">Đã trả lời:</span>
                 <span id="answerCount" class="fs-4 fw-bold text-success">0</span>
             </div>
+            <button id="btnSync" class="btn btn-outline-info px-3 py-2 fw-semibold rounded-pill d-none" title="Đồng bộ lại nếu bị trễ">
+                <i class="bi bi-arrow-repeat"></i> Đồng bộ
+            </button>
             <button id="btnSkip" class="btn btn-outline-light px-3 py-2 fw-bold rounded-pill">
-                Hết giờ / Xem điểm
+                <i class="bi bi-fast-forward-fill me-1"></i> Kết thúc câu hỏi
             </button>
             <button id="btnNext" class="btn btn-warning px-4 py-2 fw-bold rounded-pill d-none shadow">
                 Câu tiếp theo <i class="bi bi-arrow-right"></i>
@@ -64,35 +119,45 @@
         </div>
     </div>
 
+    <!-- Live Neon Countdown Bar -->
+    <div class="arena-progress mx-4 my-2">
+        <div id="timeProgressBar" class="arena-progress-bar" style="width: 100%;"></div>
+    </div>
+
     <!-- Center: Question Container -->
-    <div class="container my-auto py-4" id="gameplaySection">
+    <div class="container my-auto py-3" id="gameplaySection">
         <!-- Question Text -->
-        <div class="bg-white text-dark p-4 rounded-4 shadow-lg mb-4 text-center">
-            <h2 id="questionText" class="fw-bold mb-0" style="min-height: 70px; display: flex; align-items: center; justify-content: center;">
-                Đang chuẩn bị câu hỏi...
+        <div class="bg-dark bg-opacity-75 text-white p-4 rounded-4 shadow-lg mb-4 text-center border border-light border-opacity-10" style="backdrop-filter: blur(10px);">
+            <h2 id="questionText" class="fw-bold mb-0 text-white" style="min-height: 70px; display: flex; align-items: center; justify-content: center; line-height: 1.4;">
+                <span class="spinner-border spinner-border-sm text-warning me-2" role="status"></span>
+                Đang kết nối vào đấu trường...
             </h2>
         </div>
 
-        <!-- 4 Answer Options -->
+        <!-- 4 Modern A B C D Answer Options -->
         <div class="row g-3" id="answersGrid">
             <div class="col-md-6">
-                <div class="kahoot-card kahoot-red shadow" id="ans0">
-                    <span class="fs-2 me-3">▲</span> <span class="ans-text">Đang tải...</span>
+                <div class="arena-card arena-card-a" id="ans0">
+                    <span class="arena-badge">A</span>
+                    <span class="ans-text">Đang chuẩn bị...</span>
                 </div>
             </div>
             <div class="col-md-6">
-                <div class="kahoot-card kahoot-blue shadow" id="ans1">
-                    <span class="fs-2 me-3">◆</span> <span class="ans-text">Đang tải...</span>
+                <div class="arena-card arena-card-b" id="ans1">
+                    <span class="arena-badge">B</span>
+                    <span class="ans-text">Đang chuẩn bị...</span>
                 </div>
             </div>
             <div class="col-md-6">
-                <div class="kahoot-card kahoot-yellow shadow" id="ans2">
-                    <span class="fs-2 me-3">●</span> <span class="ans-text">Đang tải...</span>
+                <div class="arena-card arena-card-c" id="ans2">
+                    <span class="arena-badge">C</span>
+                    <span class="ans-text">Đang chuẩn bị...</span>
                 </div>
             </div>
             <div class="col-md-6">
-                <div class="kahoot-card kahoot-green shadow" id="ans3">
-                    <span class="fs-2 me-3">■</span> <span class="ans-text">Đang tải...</span>
+                <div class="arena-card arena-card-d" id="ans3">
+                    <span class="arena-badge">D</span>
+                    <span class="ans-text">Đang chuẩn bị...</span>
                 </div>
             </div>
         </div>
@@ -101,11 +166,14 @@
     <!-- Leaderboard Section (Hidden during answering) -->
     <div class="container my-auto py-4 d-none" id="leaderboardSection">
         <div class="text-center mb-4">
-            <h2 class="display-6 fw-bold text-warning"><i class="bi bi-trophy-fill me-2"></i>BẢNG XẾP HẠNG TOP 5</h2>
+            <span class="badge bg-warning bg-opacity-25 text-warning px-3 py-2 rounded-pill fs-6 mb-2">
+                <i class="bi bi-lightning-charge-fill me-1"></i> BẢNG ĐIỂM CHIẾN ĐẤU
+            </span>
+            <h2 class="display-6 fw-bold text-white"><i class="bi bi-trophy-fill text-warning me-2"></i>BẢNG XẾP HẠNG TOP 5</h2>
         </div>
         <div class="row justify-content-center">
             <div class="col-md-8">
-                <div class="list-group shadow-lg rounded-4 overflow-hidden" id="leaderboardList">
+                <div class="list-group shadow-lg rounded-4 overflow-hidden border border-white border-opacity-10" id="leaderboardList">
                     <!-- Dynamic leaderboard entries -->
                 </div>
             </div>
@@ -116,7 +184,7 @@
     <div class="container my-auto py-4 d-none" id="podiumSection">
         <div class="text-center mb-4">
             <h1 class="display-4 fw-bolder text-warning">🏆 BỤC VINH DANH CHUNG CUỘC 🏆</h1>
-            <p class="fs-5 text-white-50">Chúc mừng các thí sinh xuất sắc nhất trận đấu!</p>
+            <p class="fs-5 text-white-50">Chúc mừng các chiến binh xuất sắc nhất đấu trường!</p>
         </div>
         <div class="row justify-content-center align-items-end g-3" style="min-height: 350px;">
             <!-- 2nd Place -->
@@ -155,7 +223,7 @@
 
     <!-- Footer -->
     <div class="text-center py-2 text-white-50 small">
-        Quiz Management Live Host Screen
+        Quiz Arena Live Host Broadcast System
     </div>
 </div>
 
@@ -165,6 +233,7 @@
     <script>
         const roomCode = "@Model.RoomCode";
         let timerInterval = null;
+        let totalDuration = 20;
         let timeLeft = 20;
         let currentQuestionData = null;
 
@@ -173,18 +242,20 @@
             .withAutomaticReconnect()
             .build();
 
-        const timerBox = document.getElementById("timerBox");
+        const timerText = document.getElementById("timerText");
+        const timeProgressBar = document.getElementById("timeProgressBar");
         const answerCount = document.getElementById("answerCount");
         const questionCounter = document.getElementById("questionCounter");
         const questionText = document.getElementById("questionText");
         const btnSkip = document.getElementById("btnSkip");
         const btnNext = document.getElementById("btnNext");
+        const btnSync = document.getElementById("btnSync");
         const gameplaySection = document.getElementById("gameplaySection");
         const leaderboardSection = document.getElementById("leaderboardSection");
         const podiumSection = document.getElementById("podiumSection");
         const leaderboardList = document.getElementById("leaderboardList");
 
-        connection.on("ReceiveQuestion", function(q) {
+        function applyQuestion(q) {
             currentQuestionData = q;
             leaderboardSection.classList.add("d-none");
             podiumSection.classList.add("d-none");
@@ -192,18 +263,20 @@
 
             btnSkip.classList.remove("d-none");
             btnNext.classList.add("d-none");
+            btnSync.classList.add("d-none");
 
             questionCounter.innerText = `Câu ${q.questionIndex} / ${q.totalQuestions}`;
             questionText.innerText = q.content;
             answerCount.innerText = "0";
 
-            // Render 4 answers
+            // Render 4 answers A, B, C, D
             for (let i = 0; i < 4; i++) {
                 const card = document.getElementById(`ans${i}`);
                 if (i < q.answers.length) {
                     card.classList.remove("d-none");
                     card.style.opacity = "1";
-                    card.style.border = "none";
+                    card.style.border = "2px solid rgba(255, 255, 255, 0.12)";
+                    card.style.transform = "scale(1)";
                     card.querySelector(".ans-text").innerText = q.answers[i].text;
                     card.dataset.answerId = q.answers[i].id;
                 } else {
@@ -211,18 +284,28 @@
                 }
             }
 
-            // Start Timer
-            timeLeft = q.timeLimit || 20;
-            timerBox.innerText = timeLeft;
+            // Start Timer & Progress Bar
+            totalDuration = q.timeLimit || 20;
+            timeLeft = totalDuration;
+            timerText.innerText = timeLeft;
+            timeProgressBar.style.width = "100%";
+
             clearInterval(timerInterval);
             timerInterval = setInterval(() => {
                 timeLeft--;
-                timerBox.innerText = timeLeft;
+                timerText.innerText = Math.max(0, timeLeft);
+                const percent = Math.max(0, (timeLeft / totalDuration) * 100);
+                timeProgressBar.style.width = percent + "%";
+
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
                     connection.invoke("EndQuestion", roomCode);
                 }
             }, 1000);
+        }
+
+        connection.on("ReceiveQuestion", function(q) {
+            applyQuestion(q);
         });
 
         connection.on("AnswerSubmitted", function(data) {
@@ -231,18 +314,21 @@
 
         connection.on("QuestionEnded", function(data) {
             clearInterval(timerInterval);
-            timerBox.innerText = "0";
+            timerText.innerText = "0";
+            timeProgressBar.style.width = "0%";
 
             // Highlight correct answer, dim wrong answers
             for (let i = 0; i < 4; i++) {
                 const card = document.getElementById(`ans${i}`);
                 if (card && card.dataset.answerId == data.correctAnswerId) {
                     card.style.opacity = "1";
-                    card.style.border = "5px solid #ffffff";
-                    card.style.transform = "scale(1.03)";
+                    card.style.border = "4px solid #ffffff";
+                    card.style.transform = "scale(1.04)";
+                    card.style.boxShadow = "0 0 30px rgba(16, 185, 129, 0.8)";
                 } else if (card) {
-                    card.style.opacity = "0.35";
-                    card.style.transform = "scale(1)";
+                    card.style.opacity = "0.3";
+                    card.style.transform = "scale(0.98)";
+                    card.style.boxShadow = "none";
                 }
             }
 
@@ -282,13 +368,13 @@
             leaderboardList.innerHTML = "";
             leaderboard.forEach(p => {
                 const item = document.createElement("div");
-                item.className = "list-group-item d-flex justify-content-between align-items-center p-3 fs-5 fw-bold border-0 border-bottom";
+                item.className = "list-group-item bg-dark bg-opacity-75 text-white d-flex justify-content-between align-items-center p-3 fs-5 fw-bold border-0 border-bottom border-light border-opacity-10";
                 item.innerHTML = `
-                    <div>
-                        <span class="badge bg-primary rounded-circle me-3 px-3 py-2">#${p.rank}</span>
+                    <div class="d-flex align-items-center">
+                        <span class="badge ${p.rank === 1 ? 'bg-warning text-dark' : 'bg-primary'} rounded-pill me-3 px-3 py-2">#${p.rank}</span>
                         ${escapeHtml(p.nickname)}
                     </div>
-                    <span class="badge bg-success rounded-pill px-3 py-2">${p.score} pts</span>
+                    <span class="badge bg-success rounded-pill px-3 py-2 fs-6">${p.score} pts</span>
                 `;
                 leaderboardList.appendChild(item);
             });
@@ -302,6 +388,10 @@
 
         btnSkip.addEventListener("click", function() {
             connection.invoke("EndQuestion", roomCode);
+        });
+
+        btnSync.addEventListener("click", function() {
+            connection.invoke("GetCurrentQuestion", roomCode);
         });
 
         btnNext.addEventListener("click", function() {
@@ -320,8 +410,20 @@
         });
 
         connection.start().then(function() {
-            console.log("Connected as Host to KahootHub");
-            connection.invoke("RegisterHost", roomCode);
-        }).catch(err => console.error("SignalR Connection Error: ", err));
+            console.log("Connected as Host to Hub");
+            connection.invoke("RegisterHost", roomCode).then(() => {
+                // Đảm bảo lấy câu hỏi nếu đã vào trận
+                setTimeout(() => {
+                    if (!currentQuestionData) {
+                        connection.invoke("GetCurrentQuestion", roomCode);
+                        btnSync.classList.remove("d-none");
+                    }
+                }, 1000);
+            });
+        }).catch(err => {
+            console.error("SignalR Connection Error: ", err);
+            btnSync.classList.remove("d-none");
+        });
     </script>
 }
+
