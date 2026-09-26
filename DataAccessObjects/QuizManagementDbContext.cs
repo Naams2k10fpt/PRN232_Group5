@@ -39,6 +39,12 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
 
     public virtual DbSet<FlashcardProgress> FlashcardProgresses { get; set; }
 
+    public virtual DbSet<KahootRoom> KahootRooms { get; set; }
+
+    public virtual DbSet<KahootParticipant> KahootParticipants { get; set; }
+
+    public virtual DbSet<KahootAnswer> KahootAnswers { get; set; }
+
     // ASP.NET Core Data Protection keys (auth cookies, email/reset tokens) must outlive the
     // container: Render's free-tier disk is wiped on every deploy and idle sleep.
     public virtual DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
@@ -347,6 +353,76 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_LoginAttempts_Users");
+        });
+
+        modelBuilder.Entity<KahootRoom>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.RoomCode).HasMaxLength(10).IsRequired();
+            entity.HasIndex(e => e.RoomCode).IsUnique();
+            entity.Property(e => e.Title).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Status).HasMaxLength(20).HasDefaultValue("Waiting");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(e => e.HostUser)
+                .WithMany()
+                .HasForeignKey(e => e.HostUserId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_KahootRooms_Users");
+
+            entity.HasOne(e => e.Deck)
+                .WithMany()
+                .HasForeignKey(e => e.DeckId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_KahootRooms_Decks");
+        });
+
+        modelBuilder.Entity<KahootParticipant>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nickname).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.ConnectionId).HasMaxLength(100);
+            entity.Property(e => e.TotalScore).HasDefaultValue(0);
+            entity.Property(e => e.CurrentRank).HasDefaultValue(0);
+            entity.Property(e => e.JoinedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(e => e.Room)
+                .WithMany(r => r.Participants)
+                .HasForeignKey(e => e.RoomId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_KahootParticipants_Rooms");
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_KahootParticipants_Users");
+        });
+
+        modelBuilder.Entity<KahootAnswer>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.IsCorrect).HasDefaultValue(false);
+            entity.Property(e => e.AnswerTimeSeconds).HasPrecision(5, 2);
+            entity.Property(e => e.ScoreEarned).HasDefaultValue(0);
+
+            entity.HasOne(e => e.Participant)
+                .WithMany(p => p.Answers)
+                .HasForeignKey(e => e.ParticipantId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_KahootAnswers_Participants");
+
+            entity.HasOne(e => e.Question)
+                .WithMany()
+                .HasForeignKey(e => e.QuestionId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_KahootAnswers_Questions");
+
+            entity.HasOne(e => e.SelectedAnswer)
+                .WithMany()
+                .HasForeignKey(e => e.SelectedAnswerId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_KahootAnswers_Answers");
         });
 
         OnModelCreatingPartial(modelBuilder);
