@@ -1050,7 +1050,19 @@ textarea.form-control { resize: vertical; min-height: 90px; }
   border-radius: var(--r-md);
   background: var(--bg);
   font-size: 0.95rem;
-  pointer-events: none;
+  cursor: pointer;
+  transition: border-color var(--t), background var(--t);
+}
+.fc-option:hover {
+  border-color: var(--accent);
+}
+.fc-option--selected {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.fc-option--selected .fc-option-label {
+  background: var(--accent);
+  color: #fff;
 }
 .fc-option-label {
   display: inline-flex;
@@ -1110,10 +1122,35 @@ textarea.form-control { resize: vertical; min-height: 90px; }
   background: var(--border);
   color: var(--text-muted);
 }
+.fc-back-option--picked-wrong {
+  background: var(--danger-bg);
+  border-color: var(--danger);
+  color: var(--text);
+}
+.fc-back-option--picked-wrong .fc-option-label {
+  background: var(--danger);
+  color: #fff;
+}
 .fc-check-icon {
   color: #198754;
   flex-shrink: 0;
   margin-left: auto;
+}
+.fc-cross-icon {
+  color: var(--danger);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.fc-picked-tag {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.fc-picked-tag + .fc-check-icon,
+.fc-picked-tag + .fc-cross-icon {
+  margin-left: 0;
 }
 
 /* Back side - Explanation */

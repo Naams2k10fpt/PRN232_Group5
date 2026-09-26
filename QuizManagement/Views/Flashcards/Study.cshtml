@@ -73,7 +73,7 @@ else
                     <div class="fc-options" id="optionsPanel"></div>
                     <div class="fc-hint">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/><path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5.002 5.002 0 0 0 8 3zM3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9H3.1z"/></svg>
-                        Nhấn để lật thẻ
+                        <span id="frontHintText">Nhấn để lật thẻ</span>
                     </div>
                 </div>
                 <!-- BACK: Correct Answer + Explanation -->
@@ -109,6 +109,7 @@ else
         <div class="fc-shortcut-guide">
             <div class="fc-shortcut-title">Phím tắt</div>
             <div class="fc-shortcut-grid">
+                <div class="fc-shortcut-item"><kbd>1</kbd> <kbd>2</kbd> …<span>Chọn đáp án A, B…</span></div>
                 <div class="fc-shortcut-item"><kbd>Space</kbd><span>Lật thẻ</span></div>
                 <div class="fc-shortcut-item"><kbd>←</kbd><span>Thẻ trước</span></div>
                 <div class="fc-shortcut-item"><kbd>→</kbd><span>Thẻ tiếp</span></div>
@@ -128,6 +129,8 @@ else
 
             // Per-card status: 'unseen' | 'known' | 'again'
             const cardStatus = new Map();
+            // Indexes of the answers picked on the front of the current card; shown as ✓/✗ on the back.
+            let picked = new Set();
 
             const fcScene = document.querySelector('.fc-scene');
             const cardInner = document.getElementById('flashcardInner');
@@ -145,8 +148,11 @@ else
             const studyCounter = document.getElementById('studyCounter');
             const saveError = document.getElementById('flashcardSaveError');
             const requestVerificationToken = document.querySelector('#flashcardReviewToken input').value;
+            const frontHintText = document.getElementById('frontHintText');
 
             const labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+            const checkIcon = '<svg class="fc-check-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>';
+            const crossIcon = '<svg class="fc-cross-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z"/></svg>';
 
             function getCounts() {
                 let known = 0, again = 0;
@@ -160,6 +166,7 @@ else
             function renderCard() {
                 const card = cards[currentIndex];
                 flipped = false;
+                picked = new Set();
                 cardInner.classList.remove('fc-card--flipped');
 
                 // Reset stamp overlays
@@ -171,26 +178,22 @@ else
                 // Front side
                 questionTextFront.textContent = card.Content || '';
                 cardTypeFront.textContent = card.QuestionType === 1 ? 'Một đáp án đúng' : 'Nhiều đáp án đúng';
+                frontHintText.textContent = card.QuestionType === 1
+                    ? 'Chọn một đáp án, hoặc nhấn để lật thẻ'
+                    : 'Chọn các đáp án đúng, rồi nhấn vào thẻ để xem kết quả';
 
-                // Options on front
+                // Options on front (clickable; picking does not flip the card except for single-answer questions)
                 optionsPanel.innerHTML = '';
                 for (let i = 0; i < (card.AllAnswers || []).length; i++) {
                     const opt = card.AllAnswers[i];
                     const el = document.createElement('div');
                     el.className = 'fc-option';
+                    el.dataset.index = String(i);
                     el.innerHTML = `<span class="fc-option-label">${labels[i] || (i + 1)}</span><span class="fc-option-text">${escapeHtml(opt.Content)}</span>`;
                     optionsPanel.appendChild(el);
                 }
 
-                // Back side
-                backAnswerList.innerHTML = '';
-                for (let i = 0; i < (card.AllAnswers || []).length; i++) {
-                    const opt = card.AllAnswers[i];
-                    const el = document.createElement('div');
-                    el.className = 'fc-back-option' + (opt.IsCorrect ? ' fc-back-option--correct' : ' fc-back-option--wrong');
-                    el.innerHTML = `<span class="fc-option-label">${labels[i] || (i + 1)}</span><span class="fc-option-text">${escapeHtml(opt.Content)}</span>${opt.IsCorrect ? '<svg class="fc-check-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>' : ''}`;
-                    backAnswerList.appendChild(el);
-                }
+                renderBack();
 
                 if (card.Explanation) {
                     backExplanation.innerHTML = `<div class="fc-explanation-title">Giải thích</div><div class="fc-explanation-body">${escapeHtml(card.Explanation)}</div>`;
@@ -232,6 +235,50 @@ else
                 updateCounters();
             }
 
+            // Back side: correct answers get a green ✓, picked wrong answers a red ✗, the rest stay dimmed.
+            function renderBack() {
+                const card = cards[currentIndex];
+                backAnswerList.innerHTML = '';
+                for (let i = 0; i < (card.AllAnswers || []).length; i++) {
+                    const opt = card.AllAnswers[i];
+                    const wasPicked = picked.has(i);
+                    const el = document.createElement('div');
+                    let state, icon, status;
+                    if (opt.IsCorrect) {
+                        state = 'fc-back-option--correct'; icon = checkIcon; status = 'Đáp án đúng';
+                    } else if (wasPicked) {
+                        state = 'fc-back-option--picked-wrong'; icon = crossIcon; status = 'Bạn chọn sai';
+                    } else {
+                        state = 'fc-back-option--wrong'; icon = ''; status = '';
+                    }
+                    el.className = `fc-back-option ${state}`;
+                    if (opt.IsCorrect && wasPicked) status = 'Bạn chọn đúng';
+                    if (status) el.setAttribute('aria-label', `${labels[i] || (i + 1)}. ${opt.Content} — ${status}`);
+                    const pickedTag = wasPicked ? '<span class="fc-picked-tag">Bạn chọn</span>' : '';
+                    el.innerHTML = `<span class="fc-option-label">${labels[i] || (i + 1)}</span><span class="fc-option-text">${escapeHtml(opt.Content)}</span>${pickedTag}${icon}`;
+                    backAnswerList.appendChild(el);
+                }
+            }
+
+            function pickAnswer(index) {
+                if (isAnimating || flipped) return;
+                const card = cards[currentIndex];
+                if (index < 0 || index >= (card.AllAnswers || []).length) return;
+
+                if (card.QuestionType === 1) {
+                    picked = new Set([index]);
+                } else if (picked.has(index)) {
+                    picked.delete(index);
+                } else {
+                    picked.add(index);
+                }
+                optionsPanel.querySelectorAll('.fc-option').forEach(el =>
+                    el.classList.toggle('fc-option--selected', picked.has(Number(el.dataset.index))));
+
+                // Single answer: show the result right away on the back.
+                if (card.QuestionType === 1) flipCard();
+            }
+
             function updateCounters() {
                 const { known, again } = getCounts();
                 cardCounter.textContent = `Thẻ ${currentIndex + 1}/${cards.length}`;
@@ -244,6 +291,7 @@ else
                 cardInner.classList.toggle('fc-card--flipped', flipped);
 
                 if (flipped) {
+                    renderBack();
                     againButton.classList.remove('d-none');
                     knownButton.classList.remove('d-none');
 
@@ -374,8 +422,18 @@ else
             }
 
             // Event listeners
+            optionsPanel.addEventListener('click', event => {
+                const option = event.target.closest('.fc-option');
+                if (!option) return;
+                event.stopPropagation();   // picking an answer must not also flip the card
+                pickAnswer(Number(option.dataset.index));
+            });
             cardInner.addEventListener('click', flipCard);
             document.addEventListener('keydown', event => {
+                if (!flipped && /^[1-8]$/.test(event.key)) {
+                    pickAnswer(Number(event.key) - 1);
+                    return;
+                }
                 if (event.key === ' ') {
                     event.preventDefault();
                     flipCard();
