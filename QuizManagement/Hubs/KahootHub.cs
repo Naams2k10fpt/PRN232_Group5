@@ -31,14 +31,8 @@ namespace QuizManagement.Hubs
             _kahootService = kahootService;
         }
 
-        // Overload 2 tham số cho client gọi không kèm userId (Web & Mobile guest)
-        public async Task JoinRoom(string roomCode, string nickname)
-        {
-            await JoinRoom(roomCode, nickname, null);
-        }
-
         // Host hoặc Player tham gia nhóm SignalR theo RoomCode
-        public async Task JoinRoom(string roomCode, string nickname, string? userId)
+        public async Task JoinRoom(string roomCode, string nickname, string? userId = null)
         {
             roomCode = roomCode.Trim().ToUpperInvariant();
             await Groups.AddToGroupAsync(Context.ConnectionId, roomCode);

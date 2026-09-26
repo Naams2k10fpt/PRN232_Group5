@@ -249,7 +249,7 @@
 
     connection.start().then(function() {
         console.log("Connected to KahootHub as Player");
-        connection.invoke("JoinRoom", roomCode, nickname);
+        connection.invoke("JoinRoom", roomCode, nickname, "");
     }).catch(err => console.error("SignalR Error: ", err));
 </script>
 </body>
