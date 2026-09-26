@@ -68,7 +68,7 @@ public class KahootService : IKahootService
         {
             RoomId = room.Id,
             Nickname = string.IsNullOrWhiteSpace(nickname) ? $"Player_{RandomNumberGenerator.GetInt32(1000, 9999)}" : nickname.Trim(),
-            UserId = userId,
+            UserId = string.IsNullOrWhiteSpace(userId) ? null : userId.Trim(),
             ConnectionId = connectionId,
             TotalScore = 0,
             CurrentRank = 0,

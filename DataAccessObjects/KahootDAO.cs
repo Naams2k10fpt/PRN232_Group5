@@ -53,6 +53,19 @@ namespace DataAccessObjects
 
         public KahootParticipant AddParticipant(QuizManagementDbContext context, KahootParticipant participant)
         {
+            if (!string.IsNullOrWhiteSpace(participant.UserId))
+            {
+                var userExists = context.Users.Any(u => u.Id == participant.UserId);
+                if (!userExists)
+                {
+                    participant.UserId = null;
+                }
+            }
+            else
+            {
+                participant.UserId = null;
+            }
+
             context.KahootParticipants.Add(participant);
             context.SaveChanges();
             return participant;

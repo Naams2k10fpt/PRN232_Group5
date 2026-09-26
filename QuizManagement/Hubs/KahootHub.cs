@@ -37,8 +37,9 @@ namespace QuizManagement.Hubs
             roomCode = roomCode.Trim().ToUpperInvariant();
             await Groups.AddToGroupAsync(Context.ConnectionId, roomCode);
 
+            string? validUserId = string.IsNullOrWhiteSpace(userId) ? null : userId.Trim();
             // Kiểm tra và tạo participant
-            var participant = await _kahootService.JoinRoomAsync(roomCode, nickname, userId, Context.ConnectionId);
+            var participant = await _kahootService.JoinRoomAsync(roomCode, nickname, validUserId, Context.ConnectionId);
 
             _connectionMap[Context.ConnectionId] = (roomCode, participant.Id, participant.Nickname);
 
