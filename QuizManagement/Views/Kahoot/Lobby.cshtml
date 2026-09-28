@@ -1,0 +1,430 @@
+@model BusinessObjects.KahootRoom
+@{
+    ViewData["Title"] = "Phòng chờ thi đấu: " + Model.RoomCode;
+    Layout = "_Layout";
+    int initialCount = Model.Participants?.Count ?? 0;
+}
+
+<style>
+    .lobby-wrapper {
+        min-height: calc(100vh - 120px);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .lobby-header-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r-xl);
+        padding: 1.25rem 2rem;
+        box-shadow: var(--shadow);
+    }
+
+    .qr-glass-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r-xl);
+        padding: 2rem;
+        box-shadow: var(--shadow-lg);
+        position: relative;
+        overflow: hidden;
+    }
+    .qr-glass-card::before {
+        content: '';
+        position: absolute;
+        top: -50px;
+        left: -50px;
+        width: 120px;
+        height: 120px;
+        background: var(--accent-light);
+        filter: blur(40px);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .qr-box-wrapper {
+        background: #ffffff;
+        padding: 1rem;
+        border-radius: var(--r-lg);
+        display: inline-block;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .pin-badge-display {
+        font-family: 'Inter', monospace;
+        font-size: 3.25rem;
+        font-weight: 900;
+        letter-spacing: 6px;
+        color: var(--cyan);
+        text-shadow: 0 0 20px rgba(34, 211, 238, 0.4);
+    }
+
+    .players-container-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r-xl);
+        padding: 2rem;
+        box-shadow: var(--shadow-lg);
+        min-height: 420px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .player-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-strong);
+        color: var(--text);
+        padding: 0.65rem 1.25rem;
+        border-radius: var(--r-full);
+        font-size: 1.05rem;
+        font-weight: 600;
+        box-shadow: var(--shadow-sm);
+        animation: chipPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transition: transform 0.2s, border-color 0.2s;
+    }
+    .player-chip:hover {
+        transform: translateY(-2px);
+        border-color: var(--accent);
+    }
+
+    .player-chip .avatar-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        font-weight: 800;
+    }
+
+    .count-pill {
+        background: var(--accent-light);
+        color: var(--accent);
+        border: 1px solid rgba(124, 109, 248, 0.3);
+        padding: 0.35rem 1rem;
+        border-radius: var(--r-full);
+        font-size: 1.25rem;
+        font-weight: 800;
+        transition: transform 0.2s, background 0.2s;
+    }
+    .count-pill.bump {
+        transform: scale(1.2);
+        background: var(--accent);
+        color: white;
+    }
+
+    .btn-start-arena {
+        background: linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%);
+        color: white;
+        border: none;
+        padding: 0.85rem 2.25rem;
+        font-size: 1.15rem;
+        font-weight: 700;
+        border-radius: var(--r-full);
+        box-shadow: 0 4px 20px rgba(124, 109, 248, 0.4);
+        transition: all 0.2s;
+    }
+    .btn-start-arena:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(124, 109, 248, 0.6);
+        color: white;
+    }
+    .btn-start-arena:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    @@keyframes chipPopIn {
+        from {
+            opacity: 0;
+            transform: scale(0.6) translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+    }
+</style>
+
+<div class="container py-4 lobby-wrapper">
+    <!-- Header Thông Tin Trận Đấu -->
+    <div class="lobby-header-card d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge" style="background:var(--accent-light); color:var(--accent); font-weight:700;">
+                    <i class="bi bi-broadcast me-1"></i> ĐẤU TRƯỜNG TRỰC TIẾP
+                </span>
+                <span class="badge" style="background:var(--cyan-light); color:var(--cyan); font-weight:700;">
+                    @(Model.Deck?.Name ?? "Chung")
+                </span>
+            </div>
+            <h2 class="fw-bold mb-0 text-white">@Model.Title</h2>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <div class="text-end">
+                <span class="text-muted small d-block">Tổng số câu hỏi:</span>
+                <span class="fs-5 fw-bold text-white">@Model.TotalQuestions câu</span>
+            </div>
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-2">
+                <i class="bi bi-x-circle me-1"></i> Rời phòng
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Section: QR Code (Left) & Realtime Players (Right) -->
+    <div class="row g-4 my-auto">
+        <!-- Cột trái: QR Code & PIN -->
+        <div class="col-lg-5">
+            <div class="qr-glass-card text-center">
+                <p class="text-muted fw-bold mb-3 text-uppercase" style="letter-spacing:1px; font-size:0.9rem;">
+                    <i class="bi bi-qr-code-scan me-1 text-info"></i> Quét mã QR để vào ngay
+                </p>
+                <div class="qr-box-wrapper mb-3">
+                    <div id="qrcode"></div>
+                </div>
+                <div class="pt-2">
+                    <small class="text-muted d-block mb-1">Hoặc nhập mã PIN tại ứng dụng:</small>
+                    <div class="pin-badge-display" id="pinDisplay">@Model.RoomCode</div>
+                </div>
+                <div class="mt-3 text-muted small">
+                    <i class="bi bi-info-circle me-1"></i> Người chơi có thể dùng App Mobile hoặc trình duyệt Web để tham gia.
+                </div>
+            </div>
+        </div>
+
+        <!-- Cột phải: Danh sách người tham gia realtime -->
+        <div class="col-lg-7">
+            <div class="players-container-card">
+                <div class="d-flex justify-content-between align-items-center pb-3 border-bottom" style="border-color:var(--border)!important;">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="count-pill" id="playerCountBox">
+                            <i class="bi bi-people-fill me-2"></i>
+                            <span id="playerCount">@initialCount</span>
+                        </div>
+                        <span class="text-white fw-bold fs-5">Thí sinh đã sẵn sàng</span>
+                    </div>
+                    <button id="btnStartGame" class="btn-start-arena">
+                        <i class="bi bi-play-fill me-1"></i> BẮT ĐẦU TRẬN ĐẤU
+                    </button>
+                </div>
+
+                <!-- Lưới danh sách người chơi -->
+                <div class="flex-grow-1 py-4" style="min-height: 250px;">
+                    <div id="playerList" class="d-flex flex-wrap gap-2 align-content-start" style="max-height: 320px; overflow-y: auto;">
+                        @if (Model.Participants != null && Model.Participants.Any())
+                        {
+                            @foreach (var p in Model.Participants)
+                            {
+                                <div class="player-chip" data-id="@p.Id">
+                                    <div class="avatar-circle">@(string.IsNullOrEmpty(p.Nickname) ? "P" : p.Nickname.Substring(0, 1).ToUpper())</div>
+                                    <span>@p.Nickname</span>
+                                </div>
+                            }
+                        }
+                    </div>
+
+                    <div id="emptyHint" class="text-center py-5 text-muted @(initialCount > 0 ? "d-none" : "")">
+                        <div class="mb-3" style="font-size: 3rem; opacity: 0.3;">
+                            <i class="bi bi-hourglass-split"></i>
+                        </div>
+                        <p class="fs-6 mb-1">Đang chờ thí sinh tham gia phòng đấu...</p>
+                        <small style="color:var(--text-dim);">Quét mã QR bên cạnh hoặc nhập mã PIN để hiển thị tại đây.</small>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-top d-flex justify-content-between align-items-center text-muted small" style="border-color:var(--border)!important;">
+                    <span><i class="bi bi-shield-check text-success me-1"></i> Kết nối thời gian thực SignalR</span>
+                    <span id="connStatus" class="badge bg-success bg-opacity-25 text-success">Đang trực tuyến</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="text-center py-3 text-muted small">
+        Quiz Management Live Arena Engine • Phiên bản đồng bộ 2026
+    </div>
+</div>
+
+@section Scripts {
+    <!-- QR Code Generator JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Microsoft SignalR JS Client -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+
+    <script>
+        const roomCode = "@Model.RoomCode".trim().toUpperCase();
+        const joinUrl = `${window.location.origin}/Kahoot/Join?roomCode=${encodeURIComponent(roomCode)}`;
+
+        // 1. Render QR Code
+        new QRCode(document.getElementById("qrcode"), {
+            text: joinUrl,
+            width: 200,
+            height: 200,
+            colorDark: "#0b1120",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+
+        // 2. Elements
+        const playerList = document.getElementById("playerList");
+        const playerCount = document.getElementById("playerCount");
+        const playerCountBox = document.getElementById("playerCountBox");
+        const emptyHint = document.getElementById("emptyHint");
+        const btnStart = document.getElementById("btnStartGame");
+        const connStatus = document.getElementById("connStatus");
+
+        const renderedNicknames = new Set();
+        // Nạp sẵn nickname có từ Razor
+        document.querySelectorAll(".player-chip span").forEach(el => {
+            renderedNicknames.add(el.innerText.trim());
+        });
+
+        function bumpCounter(newTotal) {
+            playerCount.innerText = newTotal;
+            playerCountBox.classList.add("bump");
+            setTimeout(() => playerCountBox.classList.remove("bump"), 300);
+        }
+
+        function addPlayerChip(nickname) {
+            if (!nickname) return;
+            nickname = nickname.trim();
+            if (renderedNicknames.has(nickname)) return; // Tránh trùng lặp
+
+            renderedNicknames.add(nickname);
+            if (emptyHint) emptyHint.classList.add("d-none");
+
+            const chip = document.createElement("div");
+            chip.className = "player-chip";
+            const initial = nickname.charAt(0).toUpperCase();
+            chip.innerHTML = `
+                <div class="avatar-circle">${escapeHtml(initial)}</div>
+                <span>${escapeHtml(nickname)}</span>
+            `;
+            playerList.appendChild(chip);
+        }
+
+        function updateAllPlayers(players, total) {
+            bumpCounter(total !== undefined ? total : players.length);
+            if (players && players.length > 0) {
+                if (emptyHint) emptyHint.classList.add("d-none");
+                players.forEach(p => {
+                    const nick = p.nickname || p.Nickname || p.name;
+                    addPlayerChip(nick);
+                });
+            } else if (total === 0) {
+                if (emptyHint) emptyHint.classList.remove("d-none");
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 3. Kết nối SignalR Hub
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/hubs/kahoot")
+            .withAutomaticReconnect([0, 1000, 2000, 5000])
+            .build();
+
+        connection.on("HostRegistered", function(data) {
+            console.log("[Host] Đã đăng ký phòng:", data);
+            const total = data.totalPlayers !== undefined ? data.totalPlayers : (data.TotalPlayers !== undefined ? data.TotalPlayers : 0);
+            const players = data.players || data.Players || [];
+            updateAllPlayers(players, total);
+        });
+
+        // LẮNG NGHE REALTIME KHI CÓ NGƯỜI CHƠI THAM GIA
+        connection.on("PlayerJoined", function(data) {
+            console.log("[Host] Nhận tín hiệu PlayerJoined:", data);
+            const total = data.totalPlayers !== undefined ? data.totalPlayers : (data.TotalPlayers !== undefined ? data.TotalPlayers : (renderedNicknames.size + 1));
+            bumpCounter(total);
+
+            const nick = data.nickname || data.Nickname;
+            if (nick) {
+                addPlayerChip(nick);
+            }
+            if (data.players || data.Players) {
+                updateAllPlayers(data.players || data.Players, total);
+            }
+        });
+
+        connection.on("PlayerLeft", function(data) {
+            console.log("[Host] PlayerLeft:", data);
+            const total = data.totalPlayers !== undefined ? data.totalPlayers : (data.TotalPlayers !== undefined ? data.TotalPlayers : 0);
+            bumpCounter(total);
+        });
+
+        connection.on("GameStarted", function() {
+            window.location.href = `/Kahoot/Host?roomCode=${encodeURIComponent(roomCode)}`;
+        });
+
+        // Xử lý mất kết nối & Reconnect tự động
+        connection.onreconnecting(() => {
+            connStatus.className = "badge bg-warning bg-opacity-25 text-warning";
+            connStatus.innerText = "Đang kết nối lại...";
+        });
+
+        connection.onreconnected(() => {
+            connStatus.className = "badge bg-success bg-opacity-25 text-success";
+            connStatus.innerText = "Đang trực tuyến";
+            // Đăng ký lại Host sau khi reconnect để không bị mất group SignalR
+            connection.invoke("RegisterHost", roomCode).catch(console.error);
+            fetchRoomData();
+        });
+
+        connection.onclose(() => {
+            connStatus.className = "badge bg-danger bg-opacity-25 text-danger";
+            connStatus.innerText = "Mất kết nối";
+        });
+
+        // Khởi động kết nối
+        connection.start().then(function() {
+            console.log("Connected to KahootHub as Host");
+            connection.invoke("RegisterHost", roomCode).catch(console.error);
+        }).catch(err => {
+            console.error("SignalR Connection Error: ", err);
+            connStatus.className = "badge bg-danger bg-opacity-25 text-danger";
+            connStatus.innerText = "Lỗi kết nối";
+        });
+
+        // 4. Cơ chế Heartbeat Polling 2.5s phòng trường hợp websocket bị chậm
+        async function fetchRoomData() {
+            try {
+                const res = await fetch(`/api/kahoot/room/${encodeURIComponent(roomCode)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.totalPlayers !== undefined && data.totalPlayers !== parseInt(playerCount.innerText)) {
+                        updateAllPlayers(data.players || [], data.totalPlayers);
+                    }
+                }
+            } catch (e) {
+                console.warn("Polling error:", e);
+            }
+        }
+        const pollTimer = setInterval(fetchRoomData, 2500);
+
+        // 5. Nút Bắt đầu trận đấu
+        btnStart.addEventListener("click", function() {
+            btnStart.disabled = true;
+            btnStart.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang khởi động...';
+            clearInterval(pollTimer);
+
+            connection.invoke("StartGame", roomCode).catch(err => {
+                alert("Lỗi khởi động: " + err);
+                btnStart.disabled = false;
+                btnStart.innerHTML = '<i class="bi bi-play-fill me-1"></i> BẮT ĐẦU TRẬN ĐẤU';
+            });
+        });
+    </script>
+}
+

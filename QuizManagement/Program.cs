@@ -6,6 +6,7 @@ using DataAccessObjects;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using QuizManagement.Infrastructure;
+using QuizManagement.Hubs;
 using System.Security.Claims;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -47,6 +48,7 @@ builder.Services.AddScoped<IQuizRepository, QuizRepository>();
 builder.Services.AddScoped<IAdminRepository, AdminRepository>();
 builder.Services.AddScoped<IQuestionReportRepository, QuestionReportRepository>();
 builder.Services.AddScoped<ILoginAttemptRepository, LoginAttemptRepository>();
+builder.Services.AddScoped<IKahootRepository, KahootRepository>();
 
 // 3. Services
 builder.Services.AddSingleton(TimeProvider.System);
@@ -60,8 +62,20 @@ builder.Services.AddScoped<IQuestionImportService, QuestionImportService>();
 builder.Services.AddScoped<IQuestionReportService, QuestionReportService>();
 builder.Services.AddScoped<ILoginAttemptLogService, LoginAttemptLogService>();
 builder.Services.AddSingleton<IDeckExportService, DeckExportService>();
+builder.Services.AddScoped<IKahootService, KahootService>();
 
 // 4. Infrastructure (web-tier)
+builder.Services.AddSignalR();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.SetIsOriginAllowed(_ => true)
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+});
 builder.Services.AddScoped<ILoginAttemptService, LoginAttemptService>();
 builder.Services.AddSingleton<AccountTokenService>();
 builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.SectionName));
@@ -258,11 +272,13 @@ if (!hosting.BehindProxy)
     app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
+app.UseCors("AllowAll");
 app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHub<KahootHub>("/hubs/kahoot");
 app.MapHealthChecks("/healthz");
 app.MapControllerRoute(
     name: "default",
