@@ -38,7 +38,26 @@ namespace QuizManagement.Controllers
             return View("~/Views/Questions/Import.cshtml", BuildInputModel(deck));
         }
 
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult DownloadTemplate()
+        {
+            var bytes = _questionImportService.GenerateExcelTemplate();
+            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Mau_Import_Cau_Hoi.xlsx");
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult DownloadTextTemplate()
+        {
+            var template = _questionImportService.GetTextTemplate();
+            var bytes = System.Text.Encoding.UTF8.GetBytes(template);
+            return File(bytes, "text/plain; charset=utf-8", "Mau_Import_Cau_Hoi.txt");
+        }
+
+
         [HttpPost]
+
         [ValidateAntiForgeryToken]
         [RequestSizeLimit(QuestionImportLimits.MaxRequestBytes)]
         [RequestFormLimits(

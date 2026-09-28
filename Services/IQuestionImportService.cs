@@ -9,5 +9,7 @@ namespace Services
         QuestionImportPreview ValidateRows(IEnumerable<QuestionImportRow> rows);
 
         string GetTextTemplate();
+
+        byte[] GenerateExcelTemplate();
     }
 }

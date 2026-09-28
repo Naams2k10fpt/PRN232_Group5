@@ -4,46 +4,199 @@
     ViewData["Title"] = "Import câu hỏi";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 mb-1">Import câu hỏi</h1>
-        <p class="text-muted mb-0">@Model.SubjectName / @Model.DeckName</p>
+<style>
+    .import-hero-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r-xl);
+        padding: 1.75rem 2rem;
+        box-shadow: var(--shadow);
+    }
+    .template-box {
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r-xl);
+        padding: 1.5rem;
+    }
+    .template-btn-excel {
+        background: rgba(16, 185, 129, 0.15);
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        color: #34d399;
+        font-weight: 700;
+        transition: all var(--t);
+    }
+    .template-btn-excel:hover {
+        background: #10b981;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    }
+    .template-btn-text {
+        background: var(--cyan-light);
+        border: 1px solid rgba(34, 211, 238, 0.4);
+        color: var(--cyan);
+        font-weight: 700;
+        transition: all var(--t);
+    }
+    .template-btn-text:hover {
+        background: var(--cyan);
+        color: #0b1120;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(34, 211, 238, 0.4);
+    }
+    .import-panel {
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r-xl);
+        padding: 1.75rem;
+        box-shadow: var(--shadow);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .import-textarea {
+        background: var(--bg-elevated) !important;
+        border: 1px solid var(--border) !important;
+        color: var(--text) !important;
+        border-radius: var(--r-lg) !important;
+        font-family: 'Consolas', 'Courier New', monospace;
+        font-size: 0.92rem;
+        padding: 1rem;
+        transition: border-color var(--t);
+    }
+    .import-textarea:focus {
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 3px var(--accent-light) !important;
+        outline: none !important;
+    }
+    .file-drop-zone {
+        background: var(--bg-elevated);
+        border: 2px dashed var(--border-strong);
+        border-radius: var(--r-lg);
+        padding: 2rem 1.5rem;
+        text-align: center;
+        transition: border-color var(--t), background var(--t);
+    }
+    .file-drop-zone:hover {
+        border-color: var(--accent);
+        background: var(--accent-light);
+    }
+</style>
+
+<div class="container py-4">
+    <!-- Header -->
+    <div class="import-hero-card d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge" style="background:var(--accent-light); color:var(--accent); font-weight:700;">
+                    <i class="bi bi-box-arrow-in-down me-1"></i> IMPORT DỮ LIỆU
+                </span>
+                <span class="badge" style="background:var(--cyan-light); color:var(--cyan); font-weight:700;">
+                    @Model.SubjectName
+                </span>
+            </div>
+            <h2 class="fw-bold mb-0 text-white">Import câu hỏi vào: @Model.DeckName</h2>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-controller="Questions" asp-action="Index" asp-route-deckId="@Model.DeckId" class="btn btn-outline-secondary rounded-pill px-3">
+                <i class="bi bi-arrow-left me-1"></i> Quay lại câu hỏi
+            </a>
+        </div>
     </div>
-    <a asp-controller="Questions" asp-action="Index" asp-route-deckId="@Model.DeckId" class="btn btn-outline-secondary">Quay lại</a>
-</div>
 
-<form asp-controller="QuestionImport" asp-action="Preview" method="post" enctype="multipart/form-data">
-    <input asp-for="DeckId" type="hidden" />
-    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+    <!-- Tải File Mẫu (Templates) Section -->
+    <div class="template-box mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h5 class="fw-bold text-white mb-1"><i class="bi bi-download me-2 text-warning"></i>Tải mẫu nhập liệu câu hỏi chuẩn</h5>
+                <p class="text-muted small mb-0">Tải file mẫu về máy, điền câu hỏi theo các cột/cú pháp rồi tải lên lại bên dưới để tránh lỗi định dạng.</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a asp-controller="QuestionImport" asp-action="DownloadTemplate" class="btn template-btn-excel rounded-pill px-4 py-2">
+                    <i class="bi bi-file-earmark-excel-fill me-2 fs-5"></i> Tải File Excel Mẫu (.xlsx)
+                </a>
+                <a asp-controller="QuestionImport" asp-action="DownloadTextTemplate" class="btn template-btn-text rounded-pill px-4 py-2">
+                    <i class="bi bi-file-earmark-text-fill me-2 fs-5"></i> Tải File Text Mẫu (.txt)
+                </a>
+            </div>
+        </div>
+    </div>
 
-    <div class="row g-4">
-        <div class="col-lg-6">
-            <div class="border rounded p-3 h-100">
-                <h2 class="h5 mb-3">Excel (.xlsx)</h2>
-                <input asp-for="ExcelFile" class="form-control" type="file" accept=".xlsx" />
-                <div class="small text-muted mt-3">
-                    Tối đa @(QuestionImportLimits.MaxUploadBytes / 1024 / 1024) MB và @QuestionImportLimits.MaxRows.ToString("N0") dòng.<br />
-                    Header hỗ trợ: Question, Type, Answer1, Correct1, Answer2, Correct2, Explanation.
-                    Correct nhận true/false, 1/0, yes/no, x.
+    <!-- Form Import -->
+    <form asp-controller="QuestionImport" asp-action="Preview" method="post" enctype="multipart/form-data">
+        <input asp-for="DeckId" type="hidden" />
+        <div asp-validation-summary="All" class="alert alert-danger mb-4 d-none" id="valSummary"></div>
+
+        <div class="row g-4">
+            <!-- Cột trái: Tải lên file Excel -->
+            <div class="col-lg-6">
+                <div class="import-panel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="fw-bold text-white mb-0">
+                            <i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i> Cách 1: Tải file Excel
+                        </h4>
+                        <span class="badge bg-success bg-opacity-25 text-success">Khuyên dùng</span>
+                    </div>
+                    <p class="text-muted small mb-4">
+                        Hỗ trợ file định dạng <strong>.xlsx</strong>. Tối đa @(QuestionImportLimits.MaxUploadBytes / 1024 / 1024) MB và @QuestionImportLimits.MaxRows.ToString("N0") câu hỏi/lần.
+                    </p>
+
+                    <div class="file-drop-zone my-auto">
+                        <i class="bi bi-cloud-arrow-up display-4 text-accent mb-3 d-block" style="color:var(--accent);"></i>
+                        <label for="ExcelFile" class="form-label fw-bold text-white mb-2 cursor-pointer">
+                            Nhấn vào đây để chọn file Excel từ máy
+                        </label>
+                        <input asp-for="ExcelFile" class="form-control" type="file" accept=".xlsx" style="background:var(--bg-surface); color:var(--text); border-color:var(--border);" />
+                        <div class="text-muted small mt-2">
+                            Header hỗ trợ: Question, Type, Answer1, Correct1, Answer2, Correct2, Explanation...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cột phải: Dán văn bản text trực tiếp -->
+            <div class="col-lg-6">
+                <div class="import-panel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="fw-bold text-white mb-0">
+                            <i class="bi bi-textarea-t me-2 text-info"></i> Cách 2: Dán nội dung Text
+                        </h4>
+                        <button type="button" class="btn btn-sm btn-outline-info rounded-pill" onclick="insertSampleText()">
+                            <i class="bi bi-clipboard-plus me-1"></i> Dán nội dung mẫu
+                        </button>
+                    </div>
+                    <p class="text-muted small mb-3">
+                        Dán trực tiếp danh sách câu hỏi. Dùng <code>*</code> cho đáp án Đúng, <code>-</code> cho đáp án Sai.
+                    </p>
+
+                    <textarea asp-for="RawText" id="rawTextArea" class="form-control import-textarea flex-grow-1" rows="12"
+                              placeholder="Question: 2 + 2 bằng mấy?&#10;Type: single&#10;* 4&#10;- 3&#10;- 5&#10;Explanation: 2 cộng 2 bằng 4."></textarea>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-6">
-            <div class="border rounded p-3 h-100">
-                <h2 class="h5 mb-3">Text</h2>
-                <textarea asp-for="RawText" class="form-control" rows="14" placeholder="Dán câu hỏi theo mẫu bên dưới"></textarea>
-            </div>
+        <div class="d-flex justify-content-between align-items-center mt-4 pt-2">
+            <a asp-controller="Questions" asp-action="Index" asp-route-deckId="@Model.DeckId" class="btn btn-outline-secondary px-4 py-2 rounded-pill">
+                Hủy bỏ
+            </a>
+            <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow">
+                <i class="bi bi-eye-fill me-2"></i> Xem trước & Kiểm tra câu hỏi
+            </button>
         </div>
-    </div>
+    </form>
 
-    <div class="mt-4">
-        <button type="submit" class="btn btn-primary">Xem trước import</button>
-        <a asp-controller="Questions" asp-action="Index" asp-route-deckId="@Model.DeckId" class="btn btn-outline-secondary">Hủy</a>
+    <!-- Mẫu tham khảo dưới cùng -->
+    <div class="mt-5 pt-3 border-top" style="border-color:var(--border)!important;">
+        <h5 class="fw-bold text-white mb-3"><i class="bi bi-code-square me-2 text-muted"></i>Cấu trúc cú pháp Text chi tiết:</h5>
+        <pre class="p-3 rounded-4 text-wrap mb-0" style="background:var(--bg-elevated); color:var(--cyan); border:1px solid var(--border); font-family:monospace; font-size:0.9rem;" id="sampleTemplatePre">@Model.TextTemplate</pre>
     </div>
-</form>
-
-<div class="mt-4">
-    <h2 class="h5">Mẫu text</h2>
-    <pre class="border rounded p-3 text-wrap" style="background:var(--bg-surface);color:var(--text);">@Model.TextTemplate</pre>
 </div>
+
+<script>
+    function insertSampleText() {
+        const template = document.getElementById("sampleTemplatePre").innerText;
+        document.getElementById("rawTextArea").value = template;
+        document.getElementById("rawTextArea").focus();
+    }
+</script>
+

@@ -73,21 +73,24 @@ namespace QuizManagement.Controllers
                 return View(model);
             }
 
-            if (!_deckService.TryAddDeck(new Deck
+            var newDeck = new Deck
             {
                 SubjectId = model.SubjectId,
                 Name = model.Name,
                 TimeLimitMinutes = model.TimeLimitMinutes,
                 CreatedBy = User.Identity?.Name
-            }))
+            };
+
+            if (!_deckService.TryAddDeck(newDeck))
             {
                 ModelState.AddModelError(nameof(model.Name), "Tên bộ đề đã tồn tại trong môn học này.");
                 return View(model);
             }
 
-            TempData["SuccessMessage"] = "Đã tạo bộ đề.";
-            return RedirectToAction(nameof(Index), new { subjectId = model.SubjectId });
+            TempData["SuccessMessage"] = $"Đã tạo bộ đề \"{newDeck.Name}\"! Bạn có thể thêm câu hỏi hoặc Import câu hỏi ngay bên dưới.";
+            return RedirectToAction("Index", "Questions", new { deckId = newDeck.Id });
         }
+
 
         [Authorize(Policy = "ManageContent")]
         public IActionResult Edit(int id)

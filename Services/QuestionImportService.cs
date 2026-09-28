@@ -601,5 +601,100 @@ Explanation: 2 and 3 are prime numbers.
 
         private static string? NullIfWhiteSpace(string? value)
             => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+        public byte[] GenerateExcelTemplate()
+        {
+            using var memoryStream = new MemoryStream();
+            using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                WriteTextEntry(archive, "[Content_Types].xml", """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+</Types>
+""");
+
+                WriteTextEntry(archive, "_rels/.rels", """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>
+""");
+
+                WriteTextEntry(archive, "xl/_rels/workbook.xml.rels", """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+</Relationships>
+""");
+
+                WriteTextEntry(archive, "xl/workbook.xml", """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets>
+    <sheet name="Questions" sheetId="1" r:id="rId1"/>
+  </sheets>
+</workbook>
+""");
+
+                var sheetData = new StringBuilder();
+                sheetData.AppendLine("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""");
+                sheetData.AppendLine("""<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">""");
+                sheetData.AppendLine("""  <sheetData>""");
+
+                var sampleRows = new List<List<string>>
+                {
+                    new() { "Question", "Type", "Answer1", "Correct1", "Answer2", "Correct2", "Answer3", "Correct3", "Answer4", "Correct4", "Explanation" },
+                    new() { "C# là ngôn ngữ lập trình được phát triển bởi công ty nào?", "single", "Microsoft", "true", "Google", "false", "Apple", "false", "Oracle", "false", "C# do Microsoft phát triển." },
+                    new() { "Chọn các kiểu dữ liệu dạng giá trị (Value Type) trong C#:", "multiple", "int", "true", "bool", "true", "struct", "true", "string", "false", "int, bool, struct là value type, string là reference type." }
+                };
+
+                for (var r = 0; r < sampleRows.Count; r++)
+                {
+                    var rowNum = r + 1;
+                    sheetData.Append($"    <row r=\"{rowNum}\">");
+                    var cols = sampleRows[r];
+                    for (var c = 0; c < cols.Count; c++)
+                    {
+                        var colLetter = GetColumnName(c);
+                        var cellRef = $"{colLetter}{rowNum}";
+                        var escapedVal = System.Security.SecurityElement.Escape(cols[c]) ?? string.Empty;
+                        sheetData.Append($"<c r=\"{cellRef}\" t=\"inlineStr\"><is><t>{escapedVal}</t></is></c>");
+                    }
+                    sheetData.AppendLine("</row>");
+                }
+
+                sheetData.AppendLine("""  </sheetData>""");
+                sheetData.AppendLine("""</worksheet>""");
+
+                WriteTextEntry(archive, "xl/worksheets/sheet1.xml", sheetData.ToString());
+            }
+
+            return memoryStream.ToArray();
+        }
+
+        private static void WriteTextEntry(ZipArchive archive, string entryName, string content)
+        {
+            var entry = archive.CreateEntry(entryName, CompressionLevel.Fastest);
+            using var writer = new StreamWriter(entry.Open(), Encoding.UTF8);
+            writer.Write(content);
+        }
+
+        private static string GetColumnName(int columnIndex)
+        {
+            var dividend = columnIndex + 1;
+            var columnName = string.Empty;
+            while (dividend > 0)
+            {
+                var modulo = (dividend - 1) % 26;
+                columnName = (char)(65 + modulo) + columnName;
+                dividend = (dividend - modulo) / 26;
+            }
+            return columnName;
+        }
     }
 }
+
