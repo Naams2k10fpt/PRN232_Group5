@@ -74,6 +74,18 @@ public class QuestionImportControllerTests
         Assert.DoesNotContain(messages, message => message.Contains("secret parser detail", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void DownloadTemplate_ReturnsExcelFileResult()
+    {
+        var controller = BuildController(new QuestionServiceFake());
+        var result = controller.DownloadTemplate();
+
+        var fileResult = Assert.IsType<FileContentResult>(result);
+        Assert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileResult.ContentType);
+        Assert.Equal("Mau_Import_Cau_Hoi.xlsx", fileResult.FileDownloadName);
+        Assert.NotEmpty(fileResult.FileContents);
+    }
+
     private static QuestionImportController BuildController(
         QuestionServiceFake questionService,
         IQuestionImportService? importService = null)
@@ -163,7 +175,9 @@ public class QuestionImportControllerTests
         public QuestionImportPreview ParseExcel(Stream stream) => throw new NotSupportedException();
         public QuestionImportPreview ValidateRows(IEnumerable<QuestionImportRow> rows) => throw new NotSupportedException();
         public string GetTextTemplate() => string.Empty;
+        public byte[] GenerateExcelTemplate() => Array.Empty<byte>();
     }
+
 
     private sealed class TempDataProviderFake : ITempDataProvider
     {
