@@ -104,6 +104,7 @@ namespace QuizManagement.Controllers
                 return NotFound(new { message = "Phòng không tồn tại" });
             }
 
+            var participants = await _kahootService.GetParticipantsAsync(roomCode);
             return Ok(new
             {
                 roomCode = room.RoomCode,
@@ -111,7 +112,9 @@ namespace QuizManagement.Controllers
                 status = room.Status,
                 totalQuestions = room.TotalQuestions,
                 deckName = room.Deck?.Name,
-                createdAt = room.CreatedAt
+                createdAt = room.CreatedAt,
+                totalPlayers = participants.Count,
+                players = participants.Select(p => new { p.Id, p.Nickname, p.TotalScore })
             });
         }
 

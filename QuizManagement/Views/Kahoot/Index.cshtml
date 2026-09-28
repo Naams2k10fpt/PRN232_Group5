@@ -1,38 +1,139 @@
 @using BusinessObjects
 @{
-    ViewData["Title"] = "Tạo phòng thi đấu Kahoot";
+    ViewData["Title"] = "Đấu trường Kahoot Live";
     var decks = ViewBag.Decks as IEnumerable<Deck> ?? Enumerable.Empty<Deck>();
 }
 
+<style>
+    .arena-hero {
+        position: relative;
+        padding: 2.5rem 0 1.5rem;
+    }
+    .arena-create-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r-xl);
+        box-shadow: var(--shadow-lg);
+        overflow: hidden;
+        backdrop-filter: blur(20px);
+    }
+    .arena-create-header {
+        background: linear-gradient(135deg, rgba(124, 109, 248, 0.15) 0%, rgba(34, 211, 238, 0.08) 100%);
+        border-bottom: 1px solid var(--border);
+        padding: 1.75rem 2rem;
+    }
+    .feature-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        padding: 0.4rem 0.85rem;
+        border-radius: var(--r-full);
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    .form-control-custom, .form-select-custom {
+        background: var(--bg-elevated) !important;
+        border: 1px solid var(--border) !important;
+        color: var(--text) !important;
+        border-radius: var(--r-lg) !important;
+        padding: 0.75rem 1rem !important;
+        transition: border-color var(--t), box-shadow var(--t) !important;
+    }
+    .form-control-custom:focus, .form-select-custom:focus {
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 3px var(--accent-light) !important;
+        outline: none !important;
+    }
+    .form-select-custom optgroup {
+        background: var(--bg-surface);
+        color: var(--accent);
+        font-weight: 700;
+    }
+    .form-select-custom option {
+        background: var(--bg-elevated);
+        color: var(--text);
+    }
+    .btn-create-arena {
+        background: linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%);
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+        font-weight: 700;
+        border-radius: var(--r-lg);
+        box-shadow: 0 4px 20px rgba(124, 109, 248, 0.4);
+        transition: all var(--t);
+    }
+    .btn-create-arena:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(124, 109, 248, 0.6);
+        color: white;
+    }
+    .join-link-box {
+        background: var(--bg-hover);
+        border: 1px dashed var(--border-strong);
+        border-radius: var(--r-lg);
+        padding: 1rem 1.5rem;
+        transition: border-color var(--t), background var(--t);
+    }
+    .join-link-box:hover {
+        border-color: var(--cyan);
+        background: var(--cyan-light);
+    }
+</style>
+
 <div class="container py-4">
-    <div class="row justify-content-center">
+    <div class="row justify-content-center arena-hero">
         <div class="col-lg-8">
-            <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-header bg-primary text-white py-3 rounded-top-4 d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0 fw-bold"><i class="bi bi-controller me-2"></i>Tạo phòng thi đấu Kahoot Live</h4>
-                    <span class="badge bg-light text-primary fs-6 px-3 py-2">Realtime Quiz</span>
+            <div class="arena-create-card">
+                <div class="arena-create-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge" style="background:var(--accent-light); color:var(--accent); font-weight:700;">
+                                <i class="bi bi-broadcast me-1"></i> LIVE ARENA
+                            </span>
+                            <span class="badge" style="background:var(--cyan-light); color:var(--cyan); font-weight:700;">
+                                Multiplayer Realtime
+                            </span>
+                        </div>
+                        <h3 class="fw-bold mb-0 text-white">Tạo Phòng Thi Đấu Kahoot Live</h3>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <span class="feature-chip"><i class="bi bi-qr-code text-info"></i> Mã QR</span>
+                        <span class="feature-chip"><i class="bi bi-phone text-warning"></i> App Mobile</span>
+                    </div>
                 </div>
-                <div class="card-body p-4">
-                    <p class="text-muted mb-4">
-                        Chọn một bộ đề từ các môn học của bạn để tạo phòng thi đấu thời gian thực.
-                        Hệ thống sẽ tự sinh <strong>mã PIN</strong> và <strong>mã QR</strong> để người chơi quét camera từ điện thoại và tham gia ngay lập tức.
+
+                <div class="p-4 p-md-5">
+                    <p class="text-muted mb-4" style="line-height: 1.6;">
+                        Chọn bộ đề trắc nghiệm để mở đấu trường thời gian thực. Hệ thống tự động tạo
+                        <strong class="text-white">mã PIN 6 số</strong> và <strong class="text-white">mã QR</strong>.
+                        Người tham gia có thể dùng ứng dụng di động hoặc trình duyệt để quét mã và tranh tài ngay tức thì!
                     </p>
 
                     <form asp-action="CreateRoom" method="post">
                         @Html.AntiForgeryToken()
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Tên phòng thi đấu</label>
-                            <input type="text" name="title" class="form-control form-control-lg" placeholder="Ví dụ: Ôn tập PRN232 - Tuần 3" required />
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold text-white">
+                                <i class="bi bi-fonts me-1 text-primary"></i> Tên phòng thi đấu
+                            </label>
+                            <input type="text" name="title" class="form-control form-control-custom form-control-lg"
+                                   placeholder="Ví dụ: Đấu trường PRN232 - Vòng chung kết" required />
                         </div>
 
                         <div class="mb-4">
-                            <label class="form-label fw-bold">Chọn bộ đề (Deck)</label>
-                            <select name="deckId" class="form-select form-select-lg" required>
+                            <label class="form-label fw-semibold text-white">
+                                <i class="bi bi-collection me-1 text-info"></i> Chọn bộ đề câu hỏi (Deck)
+                            </label>
+                            <select name="deckId" class="form-select form-select-custom form-select-lg" required>
                                 <option value="">-- Chọn bộ đề để thi đấu --</option>
-                                @foreach (var group in decks.GroupBy(d => d.Subject?.Name ?? "Môn học"))
+                                @foreach (var group in decks.GroupBy(d => d.Subject?.Name ?? "Môn học chung"))
                                 {
-                                    <optgroup label="Môn: @group.Key">
+                                    <optgroup label="📚 Môn: @group.Key">
                                         @foreach (var deck in group)
                                         {
                                             <option value="@deck.Id">@deck.Name (@deck.Questions.Count(q => !q.IsDeleted) câu hỏi)</option>
@@ -42,20 +143,33 @@
                             </select>
                         </div>
 
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg fw-bold py-3">
-                                <i class="bi bi-play-circle-fill me-2"></i>Tạo phòng & Nhận mã QR
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-create-arena">
+                                <i class="bi bi-play-circle-fill me-2"></i> Khởi tạo phòng & Tạo mã tham gia
                             </button>
                         </div>
                     </form>
-                </div>
-            </div>
 
-            <div class="mt-4 text-center">
-                <a asp-action="Join" class="text-decoration-none text-muted">
-                    <i class="bi bi-box-arrow-in-right me-1"></i>Bạn là người chơi? Bấm vào đây để nhập mã PIN tham gia
-                </a>
+                    <div class="mt-4 pt-3 border-top" style="border-color: var(--border) !important;">
+                        <a asp-action="Join" class="text-decoration-none">
+                            <div class="join-link-box d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                         style="width: 40px; height: 40px; background: var(--cyan-light); color: var(--cyan);">
+                                        <i class="bi bi-box-arrow-in-right fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-white">Bạn là thí sinh tham gia?</div>
+                                        <div class="text-muted small">Bấm vào đây để nhập mã PIN hoặc biệt danh vào phòng</div>
+                                    </div>
+                                </div>
+                                <i class="bi bi-chevron-right text-muted"></i>
+                            </div>
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+

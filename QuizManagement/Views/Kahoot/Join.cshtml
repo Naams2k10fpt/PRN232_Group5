@@ -1,34 +1,129 @@
 @{
-    ViewData["Title"] = "Tham gia phòng Kahoot";
+    ViewData["Title"] = "Tham gia đấu trường Kahoot";
     string prefilledCode = ViewBag.RoomCode as string ?? "";
 }
 
-<div class="container py-5 min-vh-100 d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, #1368ce 0%, #46178f 100%);">
-    <div class="card shadow-lg border-0 rounded-4 p-4 text-center" style="max-width: 420px; width: 100%;">
-        <div class="mb-3">
-            <h1 class="fw-bolder text-primary mb-1 display-5">KAHOOT!</h1>
-            <p class="text-muted">Nhập mã PIN hoặc quét mã QR để tham gia</p>
+<style>
+    .join-arena-wrapper {
+        min-height: calc(100vh - 120px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+    }
+    .join-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r-xl);
+        box-shadow: var(--shadow-lg);
+        max-width: 440px;
+        width: 100%;
+        padding: 2.5rem 2rem;
+        position: relative;
+        overflow: hidden;
+        backdrop-filter: blur(20px);
+    }
+    .join-card::before {
+        content: '';
+        position: absolute;
+        top: -60px;
+        right: -60px;
+        width: 160px;
+        height: 160px;
+        background: var(--cyan-light);
+        filter: blur(50px);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .join-title {
+        font-weight: 900;
+        font-size: 2rem;
+        letter-spacing: -0.5px;
+        background: linear-gradient(135deg, var(--accent) 0%, var(--cyan) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .pin-input {
+        background: var(--bg-elevated) !important;
+        border: 2px solid var(--border-strong) !important;
+        color: var(--cyan) !important;
+        font-family: 'Inter', monospace;
+        letter-spacing: 4px;
+        font-weight: 800;
+        border-radius: var(--r-lg) !important;
+        transition: all var(--t);
+    }
+    .pin-input:focus {
+        border-color: var(--cyan) !important;
+        box-shadow: 0 0 0 3px var(--cyan-light) !important;
+        outline: none !important;
+    }
+    .nick-input {
+        background: var(--bg-elevated) !important;
+        border: 1px solid var(--border) !important;
+        color: var(--text) !important;
+        border-radius: var(--r-lg) !important;
+        transition: all var(--t);
+    }
+    .nick-input:focus {
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 3px var(--accent-light) !important;
+        outline: none !important;
+    }
+    .btn-join-arena {
+        background: linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%);
+        color: white;
+        border: none;
+        padding: 0.95rem 1.5rem;
+        font-size: 1.1rem;
+        font-weight: 700;
+        border-radius: var(--r-lg);
+        box-shadow: 0 4px 20px rgba(124, 109, 248, 0.4);
+        transition: all var(--t);
+    }
+    .btn-join-arena:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(124, 109, 248, 0.6);
+        color: white;
+    }
+</style>
+
+<div class="join-arena-wrapper">
+    <div class="join-card text-center">
+        <div class="mb-4">
+            <div class="d-inline-flex align-items-center justify-content-center p-3 rounded-circle mb-3"
+                 style="background: var(--accent-light); color: var(--accent);">
+                <i class="bi bi-controller fs-2"></i>
+            </div>
+            <div class="join-title">QUIZ ARENA</div>
+            <p class="text-muted small mt-1 mb-0">Nhập mã PIN hoặc quét mã QR từ màn hình chính</p>
         </div>
 
         <form id="joinForm" onsubmit="handleJoin(event)">
             <div class="mb-3">
-                <input type="text" id="roomCodeInput" class="form-control form-control-lg text-center fw-bold fs-3 text-uppercase"
-                       placeholder="MÃ PIN (6 SỐ)" maxlength="10" value="@prefilledCode" required autofocus />
+                <label class="form-label small fw-semibold text-muted d-block text-start mb-1">MÃ PHÒNG (PIN)</label>
+                <input type="text" id="roomCodeInput" class="form-control form-control-lg text-center fs-3 pin-input text-uppercase"
+                       placeholder="6 KÝ TỰ" maxlength="10" value="@prefilledCode" required autofocus />
             </div>
             <div class="mb-4">
-                <input type="text" id="nicknameInput" class="form-control form-control-lg text-center fs-4"
-                       placeholder="Biệt danh (Nickname)" maxlength="20" required />
+                <label class="form-label small fw-semibold text-muted d-block text-start mb-1">BIỆT DANH THÍ SINH</label>
+                <input type="text" id="nicknameInput" class="form-control form-control-lg text-center fs-5 nick-input"
+                       placeholder="Nhập biệt danh thi đấu..." maxlength="20" required />
             </div>
 
             <div class="d-grid">
-                <button type="submit" class="btn btn-dark btn-lg py-3 fw-bold rounded-3 shadow">
-                    THAM GIA NGAY
+                <button type="submit" class="btn btn-join-arena">
+                    <i class="bi bi-lightning-charge-fill me-2"></i> VÀO ĐẤU TRƯỜNG NGAY
                 </button>
             </div>
         </form>
 
-        <div class="mt-4 text-muted small">
-            Quiz Management Live Multiplayer
+        <div class="mt-4 pt-3 border-top text-muted small d-flex justify-content-between align-items-center" style="border-color: var(--border) !important;">
+            <span><i class="bi bi-phone me-1"></i> Có thể dùng App</span>
+            <a asp-action="Index" class="text-muted text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i> Mở phòng mới
+            </a>
         </div>
     </div>
 </div>
@@ -43,3 +138,4 @@
         }
     }
 </script>
+
