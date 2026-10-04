@@ -36,6 +36,9 @@ public class DemoSeedPostgresTests
             Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'FlashcardProgresses'"));
             Assert.Equal(3, Scalar(database, "SELECT COUNT(*) FROM \"Users\" WHERE \"Id\" LIKE 'seed-%'"));
             Assert.Equal(21, Scalar(database, "SELECT COUNT(*) FROM \"Questions\""));
+            Assert.Equal(16, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroups\" WHERE \"CreatedByUserId\" LIKE 'seed-%'"));
+            Assert.Equal(14, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroups\" WHERE \"CreatedByUserId\" LIKE 'seed-%' AND \"AccessMode\" IN (0, 1)"));
+            Assert.Equal(19, Scalar(database, "SELECT COUNT(*) FROM \"GroupMessages\" WHERE \"SenderUserId\" LIKE 'seed-%'"));
         }
         finally
         {
@@ -69,6 +72,41 @@ public class DemoSeedPostgresTests
 
     [Fact]
     [Trait("Category", "PostgresIntegration")]
+    public void UserSampleSeed_ClonesQuizContentWithoutReplacingExistingUserData()
+    {
+        var databaseName = $"quizmanagementtests_{Guid.NewGuid():N}";
+        using var context = CreateContext(databaseName);
+        try
+        {
+            context.Database.Migrate();
+            using var database = Open(databaseName);
+            ExecuteSeed(database);
+            new NpgsqlCommand("""
+                INSERT INTO "Users" ("Id", "Username", "Email", "Role", "IsDisabled", "SecurityStamp", "CreatedAt")
+                VALUES ('outside-user', 'outside-user', 'outside@test.local', 'User', false, 'stamp', now());
+                INSERT INTO "Subjects" ("UserId", "Name", "IsDeleted", "CreatedAt")
+                VALUES ('outside-user', 'Existing subject', false, now());
+                SET quiz.seed_target_user_id = 'outside-user';
+                """, database).ExecuteNonQuery();
+
+            var script = File.ReadAllText(RootFile("db", "seed-user-sample.sql"));
+            new NpgsqlCommand(script, database).ExecuteNonQuery();
+            new NpgsqlCommand(script, database).ExecuteNonQuery();
+
+            Assert.Equal(3, Scalar(database, "SELECT COUNT(*) FROM \"Subjects\" WHERE \"UserId\" = 'outside-user'"));
+            Assert.Equal(3, Scalar(database, "SELECT COUNT(*) FROM \"Decks\" d JOIN \"Subjects\" s ON s.\"Id\" = d.\"SubjectId\" WHERE s.\"UserId\" = 'outside-user'"));
+            Assert.Equal(21, Scalar(database, "SELECT COUNT(*) FROM \"Questions\" q JOIN \"Decks\" d ON d.\"Id\" = q.\"DeckId\" JOIN \"Subjects\" s ON s.\"Id\" = d.\"SubjectId\" WHERE s.\"UserId\" = 'outside-user'"));
+            Assert.Equal(84, Scalar(database, "SELECT COUNT(*) FROM \"Answers\" a JOIN \"Questions\" q ON q.\"Id\" = a.\"QuestionId\" JOIN \"Decks\" d ON d.\"Id\" = q.\"DeckId\" JOIN \"Subjects\" s ON s.\"Id\" = d.\"SubjectId\" WHERE s.\"UserId\" = 'outside-user'"));
+            Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"Subjects\" WHERE \"UserId\" = 'outside-user' AND \"Name\" = 'Existing subject'"));
+        }
+        finally
+        {
+            context.Database.EnsureDeleted();
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "PostgresIntegration")]
     public void Seed_RerunsAfterDemoActivityWithoutDeletingUnrelatedData()
     {
         var databaseName = $"quizmanagementtests_{Guid.NewGuid():N}";
@@ -85,6 +123,7 @@ public class DemoSeedPostgresTests
             ExecuteSeed(database);
 
             Assert.Equal(3, Scalar(database, "SELECT COUNT(*) FROM \"Users\" WHERE \"Id\" LIKE 'seed-%'"));
+            Assert.Equal(16, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroups\" WHERE \"CreatedByUserId\" LIKE 'seed-%'"));
             Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"Users\" WHERE \"Id\" = 'outside-user'"));
             Assert.Equal(2, Scalar(database, "SELECT COUNT(*) FROM \"QuestionReports\" WHERE \"UserId\" = 'seed-user-001'"));
             Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"QuestionReports\" WHERE \"UserId\" = 'seed-user-001' AND NOT \"IsResolved\""));
