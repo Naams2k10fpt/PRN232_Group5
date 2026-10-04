@@ -11,6 +11,7 @@ using QuizManagement.Hubs;
 using System.Security.Claims;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.OpenApi.Models;
 using System.Text.Json;
 using System.Threading.RateLimiting;
 
@@ -252,6 +253,35 @@ builder.Services.AddControllersWithViews()
         };
     });
 
+// 9. Swagger UI (/swagger) cho mobile API. Luôn bật ở Development; nơi khác chỉ khi Swagger:Enabled=true.
+var swaggerEnabled = builder.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Swagger:Enabled");
+if (swaggerEnabled)
+{
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen(options =>
+    {
+        options.SwaggerDoc("v1", new OpenApiInfo
+        {
+            Title = "Quiz Management Mobile API",
+            Version = "v1",
+            Description = "REST API cho app mobile (PRM393). Đăng nhập qua POST /api/auth/login, rồi bấm Authorize và dán accessToken."
+        });
+        // Chỉ tài liệu hóa /api/*, không phải các trang MVC.
+        options.DocInclusionPredicate((_, api) => api.RelativePath?.StartsWith("api/", StringComparison.OrdinalIgnoreCase) == true);
+        options.AddSecurityDefinition(BearerSecurityOperationFilter.SchemeId, new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            Description = "accessToken từ POST /api/auth/login"
+        });
+        options.OperationFilter<BearerSecurityOperationFilter>();
+        var xmlDocs = Path.Combine(AppContext.BaseDirectory, $"{typeof(Program).Assembly.GetName().Name}.xml");
+        if (File.Exists(xmlDocs))
+            options.IncludeXmlComments(xmlDocs);
+    });
+}
+
 var app = builder.Build();
 
 // Chỉ tự áp dụng migration khi được bật rõ ràng (một instance duy nhất, ví dụ bản deploy free tier).
@@ -339,6 +369,12 @@ app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+if (swaggerEnabled)
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options => options.DocumentTitle = "Quiz Management Mobile API");
+}
 
 app.MapHub<KahootHub>("/hubs/kahoot");
 app.MapHealthChecks("/healthz");
