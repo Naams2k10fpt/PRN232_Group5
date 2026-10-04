@@ -96,6 +96,7 @@ Render gói Free chặn các cổng SMTP 25/465/587, nên ứng dụng gửi ema
    | `Database__MigrateOnStartup` | `true` | Tự áp dụng migration mới khi deploy |
    | `Email__Provider` | `BrevoApi` | Gửi email qua Brevo API |
    | `Email__FromName` | `Quiz Management` | Tên người gửi |
+   | `Swagger__Enabled` | `true` | Mở Swagger UI tại `/swagger` cho nhóm mobile; đặt `false` để ẩn |
 
 3. **Apply** → Render build `Dockerfile` và deploy (lần đầu khoảng 5–10 phút).
 4. Nếu tên `quiz-management` đã bị người khác dùng, Render thêm hậu tố vào URL. Khi đó sửa `App__PublicBaseUrl` theo URL thật trong tab **Environment** → **Save, rebuild, and deploy**. Cập nhật link ở mục 1.

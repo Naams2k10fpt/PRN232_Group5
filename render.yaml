@@ -22,6 +22,9 @@ services:
         value: BrevoApi
       - key: Email__FromName
         value: Quiz Management
+      # Swagger UI at /swagger for the mobile team. Set to "false" to hide it.
+      - key: Swagger__Enabled
+        value: "true"
       - key: ConnectionStrings__DefaultConnection
         sync: false
       - key: App__PublicBaseUrl
