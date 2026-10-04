@@ -41,6 +41,9 @@
                                 <a class="nav-link" asp-controller="History" asp-action="Index">Lịch sử</a>
                             </li>
                             <li class="nav-item">
+                                <a class="nav-link" asp-controller="StudyGroups" asp-action="Index">Nhóm học tập</a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link text-warning fw-bold" asp-controller="Kahoot" asp-action="Index">
                                     <i class="bi bi-controller me-1"></i>Kahoot Live
                                 </a>
@@ -127,6 +130,22 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @if (User.Identity?.IsAuthenticated == true && ViewData["UsesChatHub"] is not true)
+    {
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+        <script>
+            (() => {
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl('/hubs/chat').withAutomaticReconnect().build();
+                const connect = async () => {
+                    try { await connection.start(); }
+                    catch { window.setTimeout(connect, 5000); }
+                };
+                connection.onclose(() => window.setTimeout(connect, 5000));
+                connect();
+            })();
+        </script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

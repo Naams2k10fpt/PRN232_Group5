@@ -1,4 +1,5 @@
 -- Demo data for Quiz Management (PostgreSQL).
+-- Subjects and decks are shared for study, so do not clone them per user.
 --
 -- ISOLATED DEMO DATABASES ONLY. This script creates accounts with public credentials
 -- (password Test@123456) and replaces all data owned by the fixed seed identities.
@@ -43,7 +44,8 @@ DECLARE
     question_ids_json    text;
     result_snapshot_json text;
     history_id           int;
-    group_id             int;
+    group_seed            record;
+    group_id              int;
 BEGIN
     IF to_regclass('public."Users"') IS NULL THEN
         RAISE EXCEPTION 'Quiz Management schema not found. Apply EF Core migrations before seeding.';
@@ -61,6 +63,10 @@ BEGIN
     seed_attempt_ids := ARRAY(
         SELECT qa."Id" FROM "QuizAttempts" qa
         WHERE qa."UserId" = ANY (seed_user_ids) OR qa."DeckId" = ANY (seed_deck_ids));
+
+    -- Demo accounts can also participate in rooms created outside this seed.
+    DELETE FROM "GroupMessages" WHERE "SenderUserId" = ANY (seed_user_ids);
+    DELETE FROM "StudyGroups" WHERE "CreatedByUserId" = ANY (seed_user_ids);
 
     DELETE FROM "QuestionReports"
     WHERE "UserId" = ANY (seed_user_ids) OR "QuestionId" = ANY (seed_question_ids);
@@ -359,23 +365,72 @@ BEGIN
         ('user.demo@quiz.local', '127.0.0.1', false, false, user_id, now() - interval '3 hours'),
         ('unknown.demo@quiz.local', '127.0.0.2', false, false, NULL, now() - interval '4 hours');
 
-    -- 8. Study group chat.
-    INSERT INTO "StudyGroups" ("Name", "Description", "SubjectId", "CreatedByUserId", "CreatedAt")
-    VALUES ('Nhóm ôn PRN222', 'Nhóm demo: hỏi đáp ASP.NET Core MVC.', subject_aspnet_id, mentor_id, now() - interval '3 days')
-    RETURNING "Id" INTO group_id;
+    -- 8. Study rooms: enough public rooms to exercise search, filters and pagination.
+    CREATE TEMP TABLE seed_group_map (code text PRIMARY KEY, id int NOT NULL) ON COMMIT DROP;
+    FOR group_seed IN
+        SELECT * FROM (VALUES
+            ('cs-basics', 'C# căn bản', 'Hỏi đáp về cú pháp, kiểu dữ liệu và .NET.', subject_csharp_id, mentor_id, 0, 16),
+            ('cs-oop', 'Lập trình hướng đối tượng', 'Luyện class, interface, kế thừa và đa hình.', subject_csharp_id, mentor_id, 0, 15),
+            ('cs-linq', 'LINQ cùng nhau', 'Thảo luận truy vấn LINQ và bài tập thực hành.', subject_csharp_id, mentor_id, 1, 14),
+            ('cs-debug', 'Gỡ lỗi C#', 'Chia sẻ cách đọc lỗi và tìm nguyên nhân.', subject_csharp_id, mentor_id, 0, 13),
+            ('asp-mvc', 'ASP.NET Core MVC', 'Cùng làm controller, Razor View và routing.', subject_aspnet_id, mentor_id, 0, 12),
+            ('asp-auth', 'Authentication & Authorization', 'Trao đổi về cookie, role và phân quyền.', subject_aspnet_id, mentor_id, 1, 11),
+            ('asp-api', 'Thiết kế Web API', 'REST API, validation và xử lý lỗi.', subject_aspnet_id, mentor_id, 0, 10),
+            ('asp-razor', 'Razor View thực hành', 'Tag Helper, form và giao diện MVC.', subject_aspnet_id, mentor_id, 0, 9),
+            ('ef-query', 'Entity Framework Core', 'DbContext, quan hệ và truy vấn dữ liệu.', subject_aspnet_id, mentor_id, 0, 8),
+            ('ef-migrations', 'EF Core Migrations', 'Thực hành migration và xử lý schema.', subject_aspnet_id, mentor_id, 1, 7),
+            ('ef-performance', 'Tối ưu truy vấn EF', 'AsNoTracking, phân trang và hiệu năng.', subject_aspnet_id, mentor_id, 0, 6),
+            ('prn-project', 'Đồ án PRN232', 'Trao đổi tiến độ và kinh nghiệm làm đồ án.', subject_aspnet_id, mentor_id, 1, 5),
+            ('career', 'Hỏi đáp nghề .NET', 'Chia sẻ lộ trình học và kinh nghiệm phỏng vấn.', NULL::int, admin_id, 0, 4),
+            ('general', 'Góc học tập chung', 'Cùng đặt câu hỏi và tìm bạn học.', NULL::int, admin_id, 0, 3),
+            ('mentor-private', 'Nhóm ôn tập riêng', 'Phòng chỉ dành cho thành viên được mời.', subject_aspnet_id, mentor_id, 2, 2),
+            ('team-private', 'Nhóm dự án riêng', 'Phòng thảo luận nội bộ theo lời mời.', NULL::int, admin_id, 2, 1)
+        ) AS rooms (code, name, description, subject_id, owner_id, access_mode, age_days)
+    LOOP
+        INSERT INTO "StudyGroups"
+            ("Name", "Description", "SubjectId", "CreatedByUserId", "AccessMode", "CreatedAt")
+        VALUES (group_seed.name, group_seed.description, group_seed.subject_id,
+            group_seed.owner_id, group_seed.access_mode, now() - make_interval(days => group_seed.age_days))
+        RETURNING "Id" INTO group_id;
+        INSERT INTO seed_group_map (code, id) VALUES (group_seed.code, group_id);
+    END LOOP;
 
     INSERT INTO "StudyGroupMembers" ("GroupId", "UserId", "Role", "JoinedAt")
-    VALUES
-        (group_id, mentor_id, 'Owner', now() - interval '3 days'),
-        (group_id, user_id, 'Member', now() - interval '2 days'),
-        (group_id, admin_id, 'Member', now() - interval '2 days');
+    SELECT m.id, g."CreatedByUserId", 2, g."CreatedAt"
+    FROM seed_group_map m JOIN "StudyGroups" g ON g."Id" = m.id;
+
+    INSERT INTO "StudyGroupMembers" ("GroupId", "UserId", "Role", "JoinedAt")
+    SELECT m.id, user_id, 0, now() - interval '1 day'
+    FROM seed_group_map m
+    WHERE m.code IN ('cs-basics', 'asp-mvc', 'ef-query', 'mentor-private');
+
+    INSERT INTO "StudyGroupMembers" ("GroupId", "UserId", "Role", "JoinedAt")
+    SELECT m.id, admin_id, 0, now() - interval '1 day'
+    FROM seed_group_map m
+    WHERE m.code IN ('cs-basics', 'asp-mvc', 'prn-project');
+
+    INSERT INTO "StudyGroupMembers" ("GroupId", "UserId", "Role", "JoinedAt")
+    SELECT m.id, mentor_id, 0, now() - interval '1 day'
+    FROM seed_group_map m
+    WHERE m.code IN ('career', 'general');
 
     INSERT INTO "GroupMessages" ("GroupId", "SenderUserId", "Content", "SentAt")
-    VALUES
-        (group_id, mentor_id, 'Chào mọi người! Nhóm này để ôn PRN222, có câu nào chưa hiểu cứ hỏi nhé.', now() - interval '2 days'),
-        (group_id, user_id, 'Thầy ơi, Tag Helper khác HTML Helper ở điểm nào ạ?', now() - interval '26 hours'),
-        (group_id, mentor_id, 'Tag Helper viết như thuộc tính HTML (asp-for, asp-action); HTML Helper là gọi hàm C# (@Html.TextBoxFor).', now() - interval '25 hours'),
-        (group_id, user_id, 'Em hiểu rồi, cảm ơn thầy!', now() - interval '24 hours');
+    SELECT m.id, g."CreatedByUserId", 'Chào mừng bạn đến với ' || g."Name" || '! Hãy giới thiệu bản thân và đặt câu hỏi.',
+           g."CreatedAt" + interval '1 hour'
+    FROM seed_group_map m JOIN "StudyGroups" g ON g."Id" = m.id;
+
+    INSERT INTO "GroupMessages" ("GroupId", "SenderUserId", "Content", "SentAt")
+    SELECT m.id, user_id, 'Mình đang ôn phần này. Mọi người có tài liệu hoặc ví dụ nào hay không?', now() - interval '12 hours'
+    FROM seed_group_map m WHERE m.code IN ('asp-mvc', 'ef-query', 'mentor-private');
+
+    INSERT INTO "StudyGroupJoinRequests" ("GroupId", "UserId", "Status", "RequestedAt")
+    SELECT m.id, user_id, 0, now() - interval '3 hours'
+    FROM seed_group_map m WHERE m.code = 'asp-auth';
+
+    INSERT INTO "StudyGroupInvitations"
+        ("GroupId", "UserId", "InvitedByUserId", "Status", "InvitedAt", "ExpiresAt")
+    SELECT m.id, user_id, admin_id, 0, now() - interval '1 hour', now() + interval '7 days'
+    FROM seed_group_map m WHERE m.code = 'team-private';
 END
 $seed$;
 
@@ -390,4 +445,5 @@ SELECT
      WHERE s."UserId" = 'seed-mentor-001') AS "DeckCount",
     (SELECT COUNT(*) FROM "Questions" q JOIN "Decks" d ON d."Id" = q."DeckId"
      JOIN "Subjects" s ON s."Id" = d."SubjectId" WHERE s."UserId" = 'seed-mentor-001') AS "QuestionCount",
-    (SELECT COUNT(*) FROM "StudyGroups" WHERE "CreatedByUserId" = 'seed-mentor-001') AS "StudyGroupCount";
+    (SELECT COUNT(*) FROM "StudyGroups" WHERE "CreatedByUserId" IN
+        ('seed-admin-001', 'seed-mentor-001')) AS "GroupCount";

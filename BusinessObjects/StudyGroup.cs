@@ -1,28 +1,25 @@
-using System;
-using System.Collections.Generic;
-
 namespace BusinessObjects;
 
-// A study group with a realtime chat (ChatHub). Members join; messages are kept for paged history.
-public partial class StudyGroup
+public enum StudyGroupAccessMode
+{
+    PublicOpen,
+    PublicApproval,
+    PrivateInviteOnly
+}
+
+public sealed class StudyGroup
 {
     public int Id { get; set; }
-
-    public string Name { get; set; } = null!;
-
+    public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
-
     public int? SubjectId { get; set; }
-
-    public string CreatedByUserId { get; set; } = null!;
-
+    public string CreatedByUserId { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-    public virtual Subject? Subject { get; set; }
-
-    public virtual User CreatedByUser { get; set; } = null!;
-
-    public virtual ICollection<StudyGroupMember> Members { get; set; } = new List<StudyGroupMember>();
-
-    public virtual ICollection<GroupMessage> Messages { get; set; } = new List<GroupMessage>();
+    public StudyGroupAccessMode AccessMode { get; set; }
+    public Subject? Subject { get; set; }
+    public User CreatedByUser { get; set; } = null!;
+    public ICollection<StudyGroupMember> Members { get; set; } = new List<StudyGroupMember>();
+    public ICollection<GroupMessage> Messages { get; set; } = new List<GroupMessage>();
+    public ICollection<StudyGroupJoinRequest> JoinRequests { get; set; } = new List<StudyGroupJoinRequest>();
+    public ICollection<StudyGroupInvitation> Invitations { get; set; } = new List<StudyGroupInvitation>();
 }

@@ -45,6 +45,7 @@ Cách chạy local không đổi so với trước: `dotnet run` / Visual Studio
    dotnet ef database update --project DataAccessObjects --startup-project QuizManagement
    psql "host=localhost dbname=quizmanagement user=postgres password=postgres" -f db/seed-demo.sql
    ```
+   Seed tạo ba tài khoản `admin_demo`, `mentor_demo`, `user_demo`. Các phòng mẫu do `admin_demo` hoặc `mentor_demo` làm chủ; số thành viên trên thẻ phòng gồm cả chủ phòng. Tài khoản tự đăng ký trên máy local không tự được thêm vào phòng mẫu mà cần bấm **Tham gia** hoặc gửi yêu cầu tham gia.
 4. Chạy: `dotnet run --project QuizManagement --launch-profile http` → http://localhost:5039
 
 Muốn thử đúng image chạy trên Render: `docker compose up` (db + web) → http://localhost:8080. Container tự áp dụng migration khi khởi động.

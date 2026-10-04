@@ -176,6 +176,11 @@ namespace DataAccessObjects.Migrations
                     b.Property<int>("GroupId")
                         .HasColumnType("integer");
 
+                    b.Property<int>("Kind")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<string>("SenderUserId")
                         .IsRequired()
                         .HasColumnType("text");
@@ -557,6 +562,11 @@ namespace DataAccessObjects.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("AccessMode")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -587,6 +597,70 @@ namespace DataAccessObjects.Migrations
                     b.ToTable("StudyGroups");
                 });
 
+            modelBuilder.Entity("BusinessObjects.StudyGroupInvitation", b =>
+                {
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("InvitedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("InvitedByUserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("GroupId", "UserId");
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.ToTable("StudyGroupInvitations");
+                });
+
+            modelBuilder.Entity("BusinessObjects.StudyGroupJoinRequest", b =>
+                {
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReviewedByUserId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("GroupId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("GroupId", "Status");
+
+                    b.ToTable("StudyGroupJoinRequests");
+                });
+
             modelBuilder.Entity("BusinessObjects.StudyGroupMember", b =>
                 {
                     b.Property<int>("Id")
@@ -598,23 +672,33 @@ namespace DataAccessObjects.Migrations
                     b.Property<int>("GroupId")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsBanned")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<DateTime>("JoinedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<string>("Role")
-                        .IsRequired()
+                    b.Property<int?>("LastReadMessageId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Role")
                         .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasDefaultValue("Member");
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GroupId")
+                        .IsUnique()
+                        .HasFilter("\"Role\" = 2");
 
                     b.HasIndex("UserId");
 
@@ -1078,6 +1162,44 @@ namespace DataAccessObjects.Migrations
                     b.Navigation("Subject");
                 });
 
+            modelBuilder.Entity("BusinessObjects.StudyGroupInvitation", b =>
+                {
+                    b.HasOne("BusinessObjects.StudyGroup", "Group")
+                        .WithMany("Invitations")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObjects.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BusinessObjects.StudyGroupJoinRequest", b =>
+                {
+                    b.HasOne("BusinessObjects.StudyGroup", "Group")
+                        .WithMany("JoinRequests")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObjects.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BusinessObjects.StudyGroupMember", b =>
                 {
                     b.HasOne("BusinessObjects.StudyGroup", "Group")
@@ -1202,6 +1324,10 @@ namespace DataAccessObjects.Migrations
 
             modelBuilder.Entity("BusinessObjects.StudyGroup", b =>
                 {
+                    b.Navigation("Invitations");
+
+                    b.Navigation("JoinRequests");
+
                     b.Navigation("Members");
 
                     b.Navigation("Messages");

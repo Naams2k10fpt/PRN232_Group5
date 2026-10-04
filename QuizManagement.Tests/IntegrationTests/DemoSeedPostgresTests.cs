@@ -36,9 +36,11 @@ public class DemoSeedPostgresTests
             Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'FlashcardProgresses'"));
             Assert.Equal(3, Scalar(database, "SELECT COUNT(*) FROM \"Users\" WHERE \"Id\" LIKE 'seed-%'"));
             Assert.Equal(21, Scalar(database, "SELECT COUNT(*) FROM \"Questions\""));
-            Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroups\""));
-            Assert.Equal(3, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroupMembers\""));
-            Assert.Equal(4, Scalar(database, "SELECT COUNT(*) FROM \"GroupMessages\""));
+            Assert.Equal(16, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroups\" WHERE \"CreatedByUserId\" LIKE 'seed-%'"));
+            Assert.Equal(14, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroups\" WHERE \"CreatedByUserId\" LIKE 'seed-%' AND \"AccessMode\" IN (0, 1)"));
+            Assert.Equal(19, Scalar(database, "SELECT COUNT(*) FROM \"GroupMessages\" WHERE \"SenderUserId\" LIKE 'seed-%'"));
+            Assert.Equal(16, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroups\" g JOIN \"StudyGroupMembers\" m ON m.\"GroupId\" = g.\"Id\" AND m.\"UserId\" = g.\"CreatedByUserId\" AND m.\"Role\" = 2 WHERE g.\"CreatedByUserId\" LIKE 'seed-%'"));
+            Assert.Equal(2, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroupMembers\" m JOIN \"StudyGroups\" g ON g.\"Id\" = m.\"GroupId\" WHERE g.\"Name\" = 'Góc học tập chung' AND NOT m.\"IsBanned\""));
         }
         finally
         {
@@ -88,6 +90,7 @@ public class DemoSeedPostgresTests
             ExecuteSeed(database);
 
             Assert.Equal(3, Scalar(database, "SELECT COUNT(*) FROM \"Users\" WHERE \"Id\" LIKE 'seed-%'"));
+            Assert.Equal(16, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroups\" WHERE \"CreatedByUserId\" LIKE 'seed-%'"));
             Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"Users\" WHERE \"Id\" = 'outside-user'"));
             Assert.Equal(2, Scalar(database, "SELECT COUNT(*) FROM \"QuestionReports\" WHERE \"UserId\" = 'seed-user-001'"));
             Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"QuestionReports\" WHERE \"UserId\" = 'seed-user-001' AND NOT \"IsResolved\""));
@@ -117,9 +120,9 @@ public class DemoSeedPostgresTests
             Assert.Equal(2, Scalar(database, "SELECT COUNT(*) FROM \"LoginAttempts\" WHERE \"Email\" = 'user.demo@quiz.local'"));
             Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"LoginAttempts\" WHERE \"Email\" = 'unknown.demo@quiz.local'"));
             Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"LoginAttempts\" WHERE \"Email\" = 'outside@test.local'"));
-            // Seed group recreated as is; the outside group keeps its own member and message only.
-            Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroups\" WHERE \"CreatedByUserId\" = 'seed-mentor-001'"));
-            Assert.Equal(4, Scalar(database, "SELECT COUNT(*) FROM \"GroupMessages\" m JOIN \"StudyGroups\" g ON g.\"Id\" = m.\"GroupId\" WHERE g.\"CreatedByUserId\" = 'seed-mentor-001'"));
+            // The demo rooms are recreated; unrelated rooms and their own messages remain.
+            Assert.Equal(13, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroups\" WHERE \"CreatedByUserId\" = 'seed-mentor-001'"));
+            Assert.Equal(19, Scalar(database, "SELECT COUNT(*) FROM \"GroupMessages\" m JOIN \"StudyGroups\" g ON g.\"Id\" = m.\"GroupId\" WHERE g.\"CreatedByUserId\" LIKE 'seed-%'"));
             Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroups\" WHERE \"CreatedByUserId\" = 'outside-user'"));
             Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroupMembers\" m JOIN \"StudyGroups\" g ON g.\"Id\" = m.\"GroupId\" WHERE g.\"CreatedByUserId\" = 'outside-user'"));
             Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"GroupMessages\" WHERE \"SenderUserId\" = 'outside-user'"));
@@ -171,7 +174,7 @@ public class DemoSeedPostgresTests
             ), members AS (
                 INSERT INTO "StudyGroupMembers" ("GroupId", "UserId", "Role")
                 SELECT "Id", member, role FROM outside_group
-                CROSS JOIN (VALUES ('outside-user', 'Owner'), ('seed-user-001', 'Member')) AS m (member, role)
+                CROSS JOIN (VALUES ('outside-user', 2), ('seed-user-001', 0)) AS m (member, role)
             )
             INSERT INTO "GroupMessages" ("GroupId", "SenderUserId", "Content")
             SELECT "Id", sender, 'hello' FROM outside_group

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using QuizManagement.Infrastructure;
 using QuizManagement.Hubs;
+using QuizManagement.Services;
 using System.Security.Claims;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -68,6 +69,10 @@ builder.Services.AddScoped<IQuestionReportService, QuestionReportService>();
 builder.Services.AddScoped<ILoginAttemptLogService, LoginAttemptLogService>();
 builder.Services.AddSingleton<IDeckExportService, DeckExportService>();
 builder.Services.AddScoped<IKahootService, KahootService>();
+builder.Services.AddScoped<StudyGroupService>();
+builder.Services.AddSingleton<RoomPresence>();
+builder.Services.AddSingleton<PresenceBroadcaster>();
+builder.Services.AddHostedService<PresenceExpirationService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IFlashcardService, FlashcardService>();
 
@@ -380,6 +385,8 @@ if (swaggerEnabled)
 }
 
 app.MapHub<KahootHub>("/hubs/kahoot");
+app.MapHub<ChatHub>("/hubs/chat");
+app.MapControllers();
 app.MapHealthChecks("/healthz");
 app.MapControllerRoute(
     name: "default",
