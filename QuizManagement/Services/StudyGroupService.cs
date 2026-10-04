@@ -7,6 +7,11 @@ namespace QuizManagement.Services;
 public sealed record GroupSummary(int Id, string Name, string? Description, int? SubjectId,
     string? SubjectName, int MemberCount, int UnreadCount, bool IsMember,
     StudyGroupAccessMode AccessMode, bool HasPendingRequest);
+public sealed record GroupSubjectOption(int Id, string Name);
+public sealed record GroupDiscoverPage(List<GroupSummary> Groups, int TotalCount, int Page, int PageSize)
+{
+    public int PageCount => (int)Math.Ceiling((double)TotalCount / PageSize);
+}
 public sealed record ChatMessage(int Id, int GroupId, string SenderUserId, string SenderName,
     string? SenderAvatarUrl, string Content, DateTime SentAt);
 public sealed record GroupInvitationSummary(int GroupId, string GroupName, DateTime ExpiresAt);
@@ -54,8 +59,58 @@ public sealed class StudyGroupService
             query = query.Where(group => group.AccessMode != StudyGroupAccessMode.PrivateInviteOnly
                 || group.Members.Any(member => member.UserId == userId && !member.IsBanned));
 
-        return await query.OrderByDescending(group => group.CreatedAt)
-            .Select(group => new GroupSummary(
+        return await Summarize(query.OrderByDescending(group => group.CreatedAt), userId).ToListAsync();
+    }
+
+    public async Task<GroupDiscoverPage> DiscoverPageAsync(string userId, string? search,
+        StudyGroupAccessMode? accessMode, int? subjectId, string? sort, int page, int pageSize = 12)
+    {
+        pageSize = Math.Clamp(pageSize, 1, 50);
+        var query = PublicRoomsFor(userId);
+        search = search?.Trim();
+        if (!string.IsNullOrEmpty(search))
+        {
+            var term = search[..Math.Min(search.Length, 100)].ToLower();
+            query = query.Where(group => group.Name.ToLower().Contains(term)
+                || (group.Description != null && group.Description.ToLower().Contains(term)));
+        }
+        if (accessMode is StudyGroupAccessMode.PublicOpen or StudyGroupAccessMode.PublicApproval)
+            query = query.Where(group => group.AccessMode == accessMode);
+        if (subjectId.HasValue)
+            query = query.Where(group => group.SubjectId == subjectId);
+
+        var totalCount = await query.CountAsync();
+        var pageCount = Math.Max(1, (int)Math.Ceiling((double)totalCount / pageSize));
+        page = Math.Clamp(page, 1, pageCount);
+        query = sort == "popular"
+            ? query.OrderByDescending(group => group.Members.Count(member => !member.IsBanned))
+                .ThenByDescending(group => group.CreatedAt).ThenByDescending(group => group.Id)
+            : query.OrderByDescending(group => group.CreatedAt).ThenByDescending(group => group.Id);
+
+        var groups = await Summarize(query.Skip((page - 1) * pageSize).Take(pageSize), userId)
+            .ToListAsync();
+        return new GroupDiscoverPage(groups, totalCount, page, pageSize);
+    }
+
+    public Task<List<GroupSubjectOption>> PublicSubjectsAsync(string userId) =>
+        _db.Subjects.AsNoTracking()
+            .Where(subject => !subject.IsDeleted
+                && PublicRoomsFor(userId).Any(group => group.SubjectId == subject.Id))
+            .OrderBy(subject => subject.Name)
+            .Select(subject => new GroupSubjectOption(subject.Id, subject.Name)).ToListAsync();
+
+    public Task<List<GroupSubjectOption>> MySubjectsAsync(string userId) =>
+        _db.Subjects.AsNoTracking().Where(subject => subject.UserId == userId && !subject.IsDeleted)
+            .OrderBy(subject => subject.Name)
+            .Select(subject => new GroupSubjectOption(subject.Id, subject.Name)).ToListAsync();
+
+    private IQueryable<StudyGroup> PublicRoomsFor(string userId) =>
+        _db.StudyGroups.AsNoTracking()
+            .Where(group => group.AccessMode != StudyGroupAccessMode.PrivateInviteOnly
+                && !group.Members.Any(member => member.UserId == userId));
+
+    private static IQueryable<GroupSummary> Summarize(IQueryable<StudyGroup> query, string userId) =>
+        query.Select(group => new GroupSummary(
                 group.Id, group.Name, group.Description, group.SubjectId,
                 group.Subject == null ? null : group.Subject.Name,
                 group.Members.Count(member => !member.IsBanned),
@@ -66,9 +121,7 @@ public sealed class StudyGroupService
                 group.Members.Any(member => member.UserId == userId && !member.IsBanned),
                 group.AccessMode,
                 group.JoinRequests.Any(request => request.UserId == userId
-                    && request.Status == StudyGroupRequestStatus.Pending)))
-            .ToListAsync();
-    }
+                    && request.Status == StudyGroupRequestStatus.Pending)));
 
     public Task<List<GroupInvitationSummary>> InvitationsAsync(string userId) =>
         _db.StudyGroupInvitations.AsNoTracking()
@@ -90,7 +143,8 @@ public sealed class StudyGroupService
         description = description?.Trim();
         if (name.Length is < 1 or > 200 || description?.Length > 500
             || !Enum.IsDefined(accessMode)) return null;
-        if (subjectId.HasValue && !await _db.Subjects.AnyAsync(subject => subject.Id == subjectId.Value))
+        if (subjectId.HasValue && !await _db.Subjects.AnyAsync(subject => subject.Id == subjectId.Value
+            && subject.UserId == userId && !subject.IsDeleted))
             return null;
 
         var group = new StudyGroup

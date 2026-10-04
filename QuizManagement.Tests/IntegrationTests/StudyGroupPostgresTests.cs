@@ -160,6 +160,59 @@ public sealed class StudyGroupPostgresTests
 
     [Fact]
     [Trait("Category", "PostgresIntegration")]
+    public async Task Directory_FiltersPublicRoomsWithoutExposingPrivateOrJoinedGroups()
+    {
+        var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
+        var options = new DbContextOptionsBuilder<QuizManagementDbContext>()
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName)).Options;
+        await using var db = new QuizManagementDbContext(options);
+        try
+        {
+            await db.Database.MigrateAsync();
+            db.Users.AddRange(
+                new User { Id = "owner", Username = "Owner", Email = "owner@test.local",
+                    EmailConfirmed = true, Role = AppRoles.User, CreatedAt = DateTime.UtcNow },
+                new User { Id = "visitor", Username = "Visitor", Email = "visitor@test.local",
+                    EmailConfirmed = true, Role = AppRoles.User, CreatedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+            var subject = new Subject { UserId = "owner", Name = "Toán", CreatedAt = DateTime.UtcNow };
+            db.Subjects.Add(subject);
+            await db.SaveChangesAsync();
+
+            var chat = new StudyGroupService(db, TimeProvider.System);
+            Assert.Null(await chat.CreateAsync("visitor", "Không hợp lệ", null, subject.Id));
+            var open = (await chat.CreateAsync("owner", "Đại số", "Ôn công thức", subject.Id))!;
+            var approval = (await chat.CreateAsync("owner", "Hình học", "Bài tập toán", subject.Id,
+                StudyGroupAccessMode.PublicApproval))!;
+            var privateRoom = (await chat.CreateAsync("owner", "Riêng tư", null, null,
+                StudyGroupAccessMode.PrivateInviteOnly))!;
+
+            var publicPage = await chat.DiscoverPageAsync("visitor", null, null, null, null, 1, 1);
+            Assert.Equal(2, publicPage.TotalCount);
+            Assert.Equal(2, publicPage.PageCount);
+            Assert.Single(publicPage.Groups);
+            Assert.DoesNotContain(privateRoom.Id, publicPage.Groups.Select(group => group.Id));
+            Assert.Equal(approval.Id, Assert.Single((await chat.DiscoverPageAsync("visitor", "BÀI TẬP",
+                StudyGroupAccessMode.PublicApproval, subject.Id, "newest", 1)).Groups).Id);
+            Assert.Equal(open.Id, Assert.Single((await chat.DiscoverPageAsync("visitor", "ĐẠI SỐ",
+                StudyGroupAccessMode.PublicOpen, subject.Id, "popular", 1)).Groups).Id);
+            Assert.Equal(subject.Id, Assert.Single(await chat.PublicSubjectsAsync("visitor")).Id);
+            var ownerGroups = await chat.ListAsync("owner");
+            Assert.Contains(ownerGroups, group => group.Id == privateRoom.Id);
+
+            Assert.Equal(GroupJoinResult.Joined, await chat.JoinAsync(open.Id, "visitor"));
+            var remaining = await chat.DiscoverPageAsync("visitor", null, null, null, null, 1);
+            Assert.Equal(1, remaining.TotalCount);
+            Assert.Equal(approval.Id, Assert.Single(remaining.Groups).Id);
+        }
+        finally
+        {
+            await db.Database.EnsureDeletedAsync();
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "PostgresIntegration")]
     public async Task AccessMigration_PreservesExistingRoomAndPromotesItsCreator()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
