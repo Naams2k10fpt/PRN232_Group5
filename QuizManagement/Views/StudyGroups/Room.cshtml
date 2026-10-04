@@ -4,6 +4,7 @@
 @using System.Text.Json
 @{
     ViewData["Title"] = Model.Name;
+    ViewData["UsesChatHub"] = true;
     var messages = ViewBag.Messages as List<ChatMessage> ?? new();
     var userId = (string)ViewBag.UserId;
     var members = ViewBag.Members as List<GroupMemberSummary> ?? new();
@@ -25,10 +26,25 @@
         </form>
     }
 </div>
-<div class="card p-3">
+<div class="chat-room-layout chat-room-layout--three-columns">
+<aside class="card p-3 chat-room-activity" aria-label="Hoạt động nhóm">
+    <h2 class="h6 mb-1">Hoạt động nhóm</h2>
+    <p class="small text-muted mb-3">Thành viên tham gia và rời nhóm</p>
+    <div id="roomEvents" class="chat-room-events" aria-live="polite">
+        @foreach (var message in messages.Where(message => message.Kind != GroupMessageKind.Chat))
+        {
+            <div class="chat-system-event" data-message-id="@message.Id">
+                <span>@message.SenderName @(message.Kind == GroupMessageKind.Joined ? "đã vào phòng chat." : "đã rời phòng chat.")</span>
+                <time datetime="@message.SentAt.ToString("O")">@message.SentAt.ToLocalTime().ToString("HH:mm")</time>
+            </div>
+        }
+    </div>
+    <p id="roomEventsEmpty" class="small text-muted mb-0 @(messages.Any(message => message.Kind != GroupMessageKind.Chat) ? "d-none" : "")">Chưa có hoạt động nào.</p>
+</aside>
+<section class="card p-3 chat-room-main" aria-label="Nội dung phòng chat">
     <button id="loadOlder" type="button" class="btn btn-sm btn-outline-secondary align-self-center mb-2">Tải tin cũ</button>
-    <div id="chatMessages" class="d-flex flex-column gap-2 mb-3" style="height: 55vh; overflow-y: auto;">
-        @foreach (var message in messages)
+    <div id="chatMessages" class="d-flex flex-column gap-2 mb-3 chat-room-messages" aria-live="polite">
+        @foreach (var message in messages.Where(message => message.Kind == GroupMessageKind.Chat))
         {
             <div class="chat-message @(message.SenderUserId == userId ? "align-self-end" : "align-self-start")"
                  data-message-id="@message.Id" style="max-width:80%;">
@@ -43,6 +59,15 @@
         <button type="submit" class="btn btn-primary">Gửi</button>
     </form>
     <small id="chatStatus" class="text-muted mt-2">Đang kết nối...</small>
+</section>
+<aside class="card p-3 chat-room-members" aria-label="Danh sách thành viên">
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+        <h2 class="h6 mb-0">Thành viên</h2>
+        <span id="memberCount" class="small text-muted">@members.Count</span>
+    </div>
+    <p id="onlineCount" class="small text-muted mb-3">Đang kết nối...</p>
+    <div id="memberList" class="chat-member-list"></div>
+</aside>
 </div>
 
 @section Scripts {
@@ -50,37 +75,165 @@
     <script>
         const groupId = @Model.Id;
         const currentUserId = @Html.Raw(JsonSerializer.Serialize(userId));
+        const initialMembers = @Html.Raw(JsonSerializer.Serialize(members, JsonSerializerOptions.Web));
         const box = document.getElementById('chatMessages');
+        const eventBox = document.getElementById('roomEvents');
         const status = document.getElementById('chatStatus');
         const input = document.getElementById('chatInput');
+        const memberList = document.getElementById('memberList');
+        let roomMembers = initialMembers;
+        let onlineUserIds = new Set();
+        let webUserIds = new Set();
+        let presenceVersion = -1;
+        let websiteVersionByUser = new Map();
+        let roomJoined = false;
+        let visibilityTimer;
+        let visibilityQueue = Promise.resolve();
         const connection = new signalR.HubConnectionBuilder()
             .withUrl('/hubs/chat').withAutomaticReconnect().build();
 
-        function addMessage(message, prepend = false) {
-            if (box.querySelector(`[data-message-id="${message.id}"]`)) return;
-            const own = message.senderUserId === currentUserId;
-            const outer = document.createElement('div');
-            outer.dataset.messageId = message.id;
-            outer.className = `chat-message ${own ? 'align-self-end' : 'align-self-start'}`;
-            outer.style.maxWidth = '80%';
-            const meta = document.createElement('div');
-            meta.className = 'small text-muted';
-            meta.textContent = `${message.senderName} · ${new Date(message.sentAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
-            const body = document.createElement('div');
-            body.className = `rounded-3 p-2 ${own ? 'bg-primary' : 'bg-secondary'} text-white`;
-            body.style.whiteSpace = 'pre-wrap';
-            body.style.overflowWrap = 'anywhere';
-            body.textContent = message.content;
-            outer.append(meta, body);
-            if (prepend) box.prepend(outer);
-            else {
-                box.append(outer);
-                box.scrollTop = box.scrollHeight;
+        function renderMembers() {
+            memberList.replaceChildren();
+            document.getElementById('memberCount').textContent = roomMembers.length;
+            const onlineCount = roomMembers.filter(member => onlineUserIds.has(member.userId)).length;
+            const waitingCount = roomMembers.filter(member =>
+                !onlineUserIds.has(member.userId) && webUserIds.has(member.userId)).length;
+            document.getElementById('onlineCount').textContent =
+                `${onlineCount} online · ${waitingCount} chờ`;
+
+            for (const [role, label] of [[2, 'Chủ phòng'], [1, 'Người quản lý'], [0, 'Thành viên']]) {
+                const people = roomMembers.filter(member => member.role === role);
+                if (people.length === 0) continue;
+                const heading = document.createElement('h3');
+                heading.className = 'chat-member-group-heading';
+                heading.textContent = `${label} — ${people.length}`;
+                memberList.append(heading);
+
+                for (const member of people) {
+                    const active = onlineUserIds.has(member.userId);
+                    const waiting = !active && webUserIds.has(member.userId);
+                    const activity = active ? 'Online' : waiting ? 'Chờ' : 'Ngoại tuyến';
+                    const activityClass = active ? 'is-online' : waiting ? 'is-waiting' : '';
+                    const row = document.createElement('div');
+                    row.className = 'chat-member-row';
+                    const avatar = document.createElement('span');
+                    avatar.className = 'chat-member-avatar';
+                    avatar.textContent = member.username.trim().charAt(0).toUpperCase() || '?';
+                    const details = document.createElement('span');
+                    details.className = 'chat-member-details';
+                    const name = document.createElement('span');
+                    name.className = 'chat-member-name';
+                    name.textContent = member.username;
+                    const roleText = document.createElement('span');
+                    roleText.className = 'chat-member-role';
+                    roleText.textContent = label;
+                    const activityText = document.createElement('span');
+                    activityText.className = `chat-member-activity ${activityClass}`;
+                    activityText.textContent = activity;
+                    details.append(name, roleText, activityText);
+                    const state = document.createElement('span');
+                    state.className = `chat-member-state ${activityClass}`;
+                    state.title = activity;
+                    state.setAttribute('aria-label', state.title);
+                    row.append(avatar, details, state);
+                    memberList.append(row);
+                }
             }
         }
 
+        function applyPresence(snapshot) {
+            if (snapshot.groupId !== groupId || snapshot.version < presenceVersion) return;
+            presenceVersion = snapshot.version;
+            onlineUserIds = new Set(snapshot.onlineUserIds);
+            renderMembers();
+        }
+
+        function applyWebsite(snapshot) {
+            if (snapshot.groupId !== groupId) return;
+            const connected = new Set(snapshot.connectedUserIds);
+            for (const member of roomMembers) {
+                const previousVersion = websiteVersionByUser.get(member.userId) ?? -1;
+                if (snapshot.version < previousVersion) continue;
+                websiteVersionByUser.set(member.userId, snapshot.version);
+                if (connected.has(member.userId)) webUserIds.add(member.userId);
+                else webUserIds.delete(member.userId);
+            }
+            renderMembers();
+        }
+
+        function applyWebsiteChange(change) {
+            if (change.groupId !== groupId ||
+                change.version < (websiteVersionByUser.get(change.userId) ?? -1)) return;
+            websiteVersionByUser.set(change.userId, change.version);
+            if (change.connected) webUserIds.add(change.userId);
+            else webUserIds.delete(change.userId);
+            renderMembers();
+        }
+
+        async function refreshRoster() {
+            const roster = await connection.invoke('GetRoomRoster', groupId);
+            roomMembers = roster.members;
+            applyPresence(roster.presence);
+            applyWebsite(roster.website);
+            renderMembers();
+        }
+
+        function syncRoomViewing() {
+            visibilityQueue = visibilityQueue.catch(() => {}).then(async () => {
+                if (connection.state !== signalR.HubConnectionState.Connected) return;
+                if (!document.hidden && !roomJoined) {
+                    applyPresence(await connection.invoke('JoinGroup', groupId));
+                    roomJoined = true;
+                    await refreshRoster();
+                    await markLatestRead();
+                } else if (document.hidden && roomJoined) {
+                    await connection.invoke('LeaveGroup', groupId);
+                    roomJoined = false;
+                }
+            });
+            return visibilityQueue;
+        }
+
+        function addMessage(message, prepend = false) {
+            const isEvent = message.kind === 1 || message.kind === 2;
+            const target = isEvent ? eventBox : box;
+            if (target.querySelector(`[data-message-id="${message.id}"]`)) return;
+            const outer = document.createElement('div');
+            outer.dataset.messageId = message.id;
+            const time = new Date(message.sentAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            if (isEvent) {
+                outer.className = 'chat-system-event';
+                const text = document.createElement('span');
+                text.textContent = `${message.senderName} đã ${message.kind === 1 ? 'vào' : 'rời'} phòng chat.`;
+                const timestamp = document.createElement('time');
+                timestamp.dateTime = message.sentAt;
+                timestamp.textContent = time;
+                outer.append(text, timestamp);
+            } else {
+                const own = message.senderUserId === currentUserId;
+                outer.className = `chat-message ${own ? 'align-self-end' : 'align-self-start'}`;
+                outer.style.maxWidth = '80%';
+                const meta = document.createElement('div');
+                meta.className = 'small text-muted';
+                meta.textContent = `${message.senderName} · ${time}`;
+                const body = document.createElement('div');
+                body.className = `rounded-3 p-2 ${own ? 'bg-primary' : 'bg-secondary'} text-white`;
+                body.style.whiteSpace = 'pre-wrap';
+                body.style.overflowWrap = 'anywhere';
+                body.textContent = message.content;
+                outer.append(meta, body);
+            }
+            if (prepend) target.prepend(outer);
+            else {
+                target.append(outer);
+                target.scrollTop = target.scrollHeight;
+            }
+            if (isEvent) document.getElementById('roomEventsEmpty').classList.add('d-none');
+        }
+
         async function markLatestRead() {
-            const last = box.lastElementChild?.dataset.messageId;
+            if (document.hidden) return;
+            const last = box.querySelector('[data-message-id]:last-child')?.dataset.messageId;
             if (!last) return;
             await fetch(`/api/groups/${groupId}/read`, {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -96,8 +249,10 @@
         }
 
         document.getElementById('loadOlder').addEventListener('click', async () => {
-            const first = box.firstElementChild?.dataset.messageId;
-            if (!first) return;
+            const first = Math.min(...[box, eventBox]
+                .map(container => Number(container.querySelector('[data-message-id]')?.dataset.messageId))
+                .filter(Number.isFinite).filter(id => id > 0));
+            if (!Number.isFinite(first)) return;
             const response = await fetch(`/api/groups/${groupId}/messages?beforeId=${first}&limit=30`);
             if (!response.ok) return;
             const messages = await response.json();
@@ -110,21 +265,41 @@
             addMessage(message);
             await markLatestRead();
         });
+        connection.on('RoomPresenceChanged', snapshot => applyPresence(snapshot));
+        connection.on('WebsitePresenceDelta', change => applyWebsiteChange(change));
+        connection.on('RoomRosterChanged', changedGroupId => {
+            if (changedGroupId === groupId) refreshRoster().catch(() => {});
+        });
         connection.on('GroupAccessRevoked', revokedGroupId => {
             if (revokedGroupId === groupId) window.location.href = '/StudyGroups';
         });
-        connection.onreconnecting(() => status.textContent = 'Đang kết nối lại...');
+        connection.onreconnecting(() => {
+            status.textContent = 'Đang kết nối lại...';
+            roomJoined = false;
+            presenceVersion = -1;
+            websiteVersionByUser.clear();
+        });
         connection.onreconnected(async () => {
-            await connection.invoke('JoinGroup', groupId);
+            await syncRoomViewing();
             await refreshMessages();
+            if (!roomJoined) await refreshRoster();
             status.textContent = 'Đã kết nối';
         });
         connection.start().then(async () => {
-            await connection.invoke('JoinGroup', groupId);
+            await syncRoomViewing();
             await refreshMessages();
+            if (!roomJoined) await refreshRoster();
             status.textContent = 'Đã kết nối';
         }).catch(error => status.textContent = `Không kết nối được: ${error}`);
+        document.addEventListener('visibilitychange', () => {
+            window.clearTimeout(visibilityTimer);
+            visibilityTimer = window.setTimeout(() => {
+                syncRoomViewing().catch(error => status.textContent = `Không cập nhật được trạng thái: ${error}`);
+            }, document.hidden ? 400 : 0);
+        });
+        renderMembers();
         box.scrollTop = box.scrollHeight;
+        eventBox.scrollTop = eventBox.scrollHeight;
         document.getElementById('chatForm').addEventListener('submit', async event => {
             event.preventDefault();
             const content = input.value.trim();
