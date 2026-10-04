@@ -65,13 +65,13 @@
                                 <span class="badge bg-primary flex-shrink-0">@group.UnreadCount mới</span>
                             }
                         </div>
-                        <span class="small text-info mb-2">@(group.AccessMode switch {
-                            StudyGroupAccessMode.PublicApproval => "Công khai · cần duyệt",
-                            StudyGroupAccessMode.PrivateInviteOnly => "Riêng tư",
-                            _ => "Công khai · vào ngay"
-                        })</span>
+                        @if (group.AccessMode == StudyGroupAccessMode.PrivateInviteOnly)
+                        {
+                            <span class="small text-info mb-2">Riêng tư</span>
+                        }
                         <p class="text-muted mb-2 study-group-card__description">@(group.Description ?? "Chưa có mô tả")</p>
-                        <p class="small text-muted mb-1">@group.MemberCount thành viên (gồm chủ phòng) · @(group.SubjectName ?? "Chung")</p>
+                        <p class="small text-muted mb-1">@group.MemberCount thành viên</p>
+                        <p class="small text-muted mb-1">Môn học: @(group.SubjectName ?? "Chung")</p>
                         <p class="small text-muted mb-3">Chủ phòng: @(group.OwnerName ?? "Chưa xác định")</p>
                         <a asp-action="Room" asp-route-id="@group.Id" class="btn btn-outline-primary mt-auto">Mở phòng chat</a>
                     </article>
@@ -145,9 +145,9 @@
                 <div class="col-md-6 col-lg-4">
                     <article class="card h-100 p-3 study-group-card">
                         <h3 class="h5 mb-2 text-break">@group.Name</h3>
-                        <span class="small text-info mb-2">@(group.AccessMode == StudyGroupAccessMode.PublicApproval ? "Cần duyệt" : "Vào ngay")</span>
                         <p class="text-muted mb-2 study-group-card__description">@(group.Description ?? "Chưa có mô tả")</p>
-                        <p class="small text-muted mb-1">@group.MemberCount thành viên (gồm chủ phòng) · @(group.SubjectName ?? "Chung")</p>
+                        <p class="small text-muted mb-1">@group.MemberCount thành viên</p>
+                        <p class="small text-muted mb-1">Môn học: @(group.SubjectName ?? "Chung")</p>
                         <p class="small text-muted mb-3">Chủ phòng: @(group.OwnerName ?? "Chưa xác định")</p>
                         @if (group.HasPendingRequest)
                         {
