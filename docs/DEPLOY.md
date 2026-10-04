@@ -85,6 +85,7 @@ Render gói Free chặn các cổng SMTP 25/465/587, nên ứng dụng gửi ema
    | `App__PublicBaseUrl` | `https://quiz-management.onrender.com` (hoặc URL Render cấp, xem bước 4) |
    | `Email__ApiKey` | API key Brevo |
    | `Email__FromAddress` | Email sender đã xác minh trên Brevo |
+   | `Jwt__SigningKey` | Khóa ký JWT cho mobile API: chuỗi ngẫu nhiên ≥ 32 byte. `render.yaml` để Render tự sinh (`generateValue`); với service đã tạo trước đó, thêm thủ công trong tab **Environment** (nút **Generate**). Đổi khóa sẽ đăng xuất mọi người dùng mobile |
 
    Các biến còn lại đã có sẵn trong `render.yaml`:
 

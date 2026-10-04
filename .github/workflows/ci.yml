@@ -58,6 +58,7 @@ jobs:
             -e Email__Provider=BrevoApi \
             -e Email__ApiKey=ci-placeholder \
             -e Email__FromAddress=ci@example.test \
+            -e Jwt__SigningKey=ci-placeholder-signing-key-at-least-32-bytes \
             quiz-management:ci
           for i in $(seq 1 30); do
             if curl -fsS http://localhost:8081/healthz; then echo; exit 0; fi

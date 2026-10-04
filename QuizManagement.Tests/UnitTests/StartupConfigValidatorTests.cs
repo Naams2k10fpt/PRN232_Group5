@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using QuizManagement.Infrastructure;
 using Xunit;
 
@@ -7,6 +7,7 @@ namespace QuizManagement.Tests.UnitTests;
 public class StartupConfigValidatorTests
 {
     private const string Connection = "Host=localhost;Database=quiz";
+    private const string ProductionJwtKey = "a-test-signing-key-that-is-long-enough-1234";
 
     [Fact]
     public void Development_AllowsLogEmailAndNoPublicUrl()
@@ -59,9 +60,39 @@ public class StartupConfigValidatorTests
             ("App:PublicBaseUrl", "https://quiz.onrender.com"),
             ("Email:Provider", "brevoapi"),
             ("Email:ApiKey", "xkeysib-test"),
-            ("Email:FromAddress", "sender@example.com"));
+            ("Email:FromAddress", "sender@example.com"),
+            ("Jwt:SigningKey", ProductionJwtKey));
 
         Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void Production_RequiresJwtSigningKey()
+    {
+        var errors = Validate(isDevelopment: false, ("ConnectionStrings:DefaultConnection", Connection));
+
+        Assert.Contains(errors, error => error.Contains("Jwt:SigningKey"));
+    }
+
+    [Fact]
+    public void Development_AllowsMissingJwtSigningKey()
+    {
+        var errors = Validate(isDevelopment: true, ("ConnectionStrings:DefaultConnection", Connection));
+
+        Assert.DoesNotContain(errors, error => error.Contains("Jwt:SigningKey"));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void JwtSigningKey_ShorterThan32Bytes_IsRejected(bool isDevelopment)
+    {
+        var errors = Validate(
+            isDevelopment,
+            ("ConnectionStrings:DefaultConnection", Connection),
+            ("Jwt:SigningKey", "too-short"));
+
+        Assert.Contains(errors, error => error.Contains("Jwt:SigningKey"));
     }
 
     [Theory]
