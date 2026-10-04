@@ -14,6 +14,13 @@ REST API for the PRM393 mobile app, next to the web app.
    In Swagger UI, click **Authorize** and paste the token.
 3. Errors are always `{ "code", "message", "errors"?, "retryAfterSeconds"? }`. Switch on `code`, show `message`.
 
+| Endpoint | Returns |
+| --- | --- |
+| `GET /api/subjects?search=&page=1&pageSize=20` | Subjects with deck and question counts (paged, `pageSize` ≤ 100) |
+| `GET /api/subjects/{id}` | One subject |
+| `GET /api/subjects/{subjectId}/decks` | Decks of a subject with the user's flashcard progress (`dueCount`, `learnedCount`, `nextReviewAtUtc`) |
+| `GET /api/decks/{id}` | One deck with the user's flashcard progress |
+
 Postman: import `docs/postman/QuizManagement.postman_collection.json`, set `baseUrl`, run **Auth / Login** first.
 
 New `/api/*` controllers: add `[ApiController]` and `[ApiAuthorize]` (bearer only, 401/403 as JSON); see

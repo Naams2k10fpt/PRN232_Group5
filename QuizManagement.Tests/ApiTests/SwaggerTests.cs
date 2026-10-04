@@ -18,5 +18,8 @@ public class SwaggerTests : IDisposable
         Assert.All(paths.EnumerateObject(), path => Assert.StartsWith("/api/", path.Name));
         Assert.True(paths.GetProperty("/api/profile").GetProperty("get").TryGetProperty("security", out _));
         Assert.False(paths.GetProperty("/api/auth/login").GetProperty("post").TryGetProperty("security", out _));
+
+        foreach (var catalogPath in new[] { "/api/subjects", "/api/subjects/{id}", "/api/subjects/{subjectId}/decks", "/api/decks/{id}" })
+            Assert.True(paths.GetProperty(catalogPath).GetProperty("get").TryGetProperty("security", out _), catalogPath);
     }
 }

@@ -23,6 +23,9 @@ internal sealed class ApiTestHost : WebApplicationFactory<Program>
     public EmailSenderFake Emails { get; } = new();
     public LockoutFake Lockout { get; } = new();
 
+    // Lets a test replace more DB-backed services (e.g. the catalog) with in-memory fakes.
+    public Action<IServiceCollection>? ConfigureServices { get; init; }
+
     static ApiTestHost()
     {
         // Environment variables override appsettings.Local.json in Program, so a developer's local database
@@ -43,6 +46,7 @@ internal sealed class ApiTestHost : WebApplicationFactory<Program>
             services.AddSingleton<ILoginAttemptLogService, LoginAttemptLogFake>();
             // Real token service, but with in-memory keys instead of the database key ring.
             services.AddSingleton(AccountSecurityFakes.Tokens());
+            ConfigureServices?.Invoke(services);
         });
     }
 
