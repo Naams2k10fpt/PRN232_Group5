@@ -71,7 +71,8 @@
                             _ => "Công khai · vào ngay"
                         })</span>
                         <p class="text-muted mb-2 study-group-card__description">@(group.Description ?? "Chưa có mô tả")</p>
-                        <p class="small text-muted mb-3">@group.MemberCount thành viên · @(group.SubjectName ?? "Chung")</p>
+                        <p class="small text-muted mb-1">@group.MemberCount thành viên (gồm chủ phòng) · @(group.SubjectName ?? "Chung")</p>
+                        <p class="small text-muted mb-3">Chủ phòng: @(group.OwnerName ?? "Chưa xác định")</p>
                         <a asp-action="Room" asp-route-id="@group.Id" class="btn btn-outline-primary mt-auto">Mở phòng chat</a>
                     </article>
                 </div>
@@ -146,7 +147,8 @@
                         <h3 class="h5 mb-2 text-break">@group.Name</h3>
                         <span class="small text-info mb-2">@(group.AccessMode == StudyGroupAccessMode.PublicApproval ? "Cần duyệt" : "Vào ngay")</span>
                         <p class="text-muted mb-2 study-group-card__description">@(group.Description ?? "Chưa có mô tả")</p>
-                        <p class="small text-muted mb-3">@group.MemberCount thành viên · @(group.SubjectName ?? "Chung")</p>
+                        <p class="small text-muted mb-1">@group.MemberCount thành viên (gồm chủ phòng) · @(group.SubjectName ?? "Chung")</p>
+                        <p class="small text-muted mb-3">Chủ phòng: @(group.OwnerName ?? "Chưa xác định")</p>
                         @if (group.HasPendingRequest)
                         {
                             <form asp-action="CancelRequest" asp-route-id="@group.Id" method="post" class="mt-auto">

@@ -39,6 +39,8 @@ public class DemoSeedPostgresTests
             Assert.Equal(16, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroups\" WHERE \"CreatedByUserId\" LIKE 'seed-%'"));
             Assert.Equal(14, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroups\" WHERE \"CreatedByUserId\" LIKE 'seed-%' AND \"AccessMode\" IN (0, 1)"));
             Assert.Equal(19, Scalar(database, "SELECT COUNT(*) FROM \"GroupMessages\" WHERE \"SenderUserId\" LIKE 'seed-%'"));
+            Assert.Equal(16, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroups\" g JOIN \"StudyGroupMembers\" m ON m.\"GroupId\" = g.\"Id\" AND m.\"UserId\" = g.\"CreatedByUserId\" AND m.\"Role\" = 2 WHERE g.\"CreatedByUserId\" LIKE 'seed-%'"));
+            Assert.Equal(2, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroupMembers\" m JOIN \"StudyGroups\" g ON g.\"Id\" = m.\"GroupId\" WHERE g.\"Name\" = 'Góc học tập chung' AND NOT m.\"IsBanned\""));
         }
         finally
         {

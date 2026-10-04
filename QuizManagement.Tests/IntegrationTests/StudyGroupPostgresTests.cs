@@ -135,6 +135,7 @@ public sealed class StudyGroupPostgresTests
                 await chat.TransferOwnershipAsync(approval.Id, "owner", "member"));
             Assert.True(await chat.IsOwnerAsync(approval.Id, "member"));
             Assert.False(await chat.IsOwnerAsync(approval.Id, "owner"));
+            Assert.Equal("Member", (await chat.ListAsync("member")).Single(group => group.Id == approval.Id).OwnerName);
             Assert.Equal(GroupActionResult.Forbidden, await chat.LeaveAsync(approval.Id, "member"));
             Assert.Equal(GroupActionResult.Success, await chat.LeaveAsync(approval.Id, "owner"));
 

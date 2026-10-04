@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace QuizManagement.Services;
 
 public sealed record GroupSummary(int Id, string Name, string? Description, int? SubjectId,
-    string? SubjectName, int MemberCount, int UnreadCount, bool IsMember,
+    string? SubjectName, string? OwnerName, int MemberCount, int UnreadCount, bool IsMember,
     StudyGroupAccessMode AccessMode, bool HasPendingRequest);
 public sealed record GroupSubjectOption(int Id, string Name);
 public sealed record GroupDiscoverPage(List<GroupSummary> Groups, int TotalCount, int Page, int PageSize)
@@ -113,6 +113,8 @@ public sealed class StudyGroupService
         query.Select(group => new GroupSummary(
                 group.Id, group.Name, group.Description, group.SubjectId,
                 group.Subject == null ? null : group.Subject.Name,
+                group.Members.Where(member => member.Role == StudyGroupMemberRole.Owner && !member.IsBanned)
+                    .Select(member => member.User.Username).FirstOrDefault(),
                 group.Members.Count(member => !member.IsBanned),
                 group.Messages.Count(message =>
                     group.Members.Any(member => member.UserId == userId && !member.IsBanned
