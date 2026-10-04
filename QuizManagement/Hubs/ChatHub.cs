@@ -32,7 +32,10 @@ public sealed class ChatHub : Hub
 
         var message = await _groups.SendAsync(groupId, userId, content);
         if (message is null) throw new HubException("Bạn chưa tham gia nhóm này.");
-        await Clients.Group(GroupName(groupId)).SendAsync("ReceiveMessage", message);
+        // Resolve recipients for every send: a removed member's existing connection must not
+        // continue receiving messages through an old SignalR group subscription.
+        var recipients = await _groups.RecipientIdsAsync(groupId);
+        await Clients.Users(recipients).SendAsync("ReceiveMessage", message);
         return message;
     }
 

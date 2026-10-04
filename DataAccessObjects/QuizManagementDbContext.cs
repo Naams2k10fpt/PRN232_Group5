@@ -47,6 +47,8 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
     public virtual DbSet<StudyGroup> StudyGroups { get; set; }
     public virtual DbSet<StudyGroupMember> StudyGroupMembers { get; set; }
     public virtual DbSet<GroupMessage> GroupMessages { get; set; }
+    public virtual DbSet<StudyGroupJoinRequest> StudyGroupJoinRequests { get; set; }
+    public virtual DbSet<StudyGroupInvitation> StudyGroupInvitations { get; set; }
 
     // ASP.NET Core Data Protection keys (auth cookies, email/reset tokens) must outlive the
     // container: Render's free-tier disk is wiped on every deploy and idle sleep.
@@ -434,6 +436,7 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
             entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
             entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.AccessMode).HasConversion<int>().HasDefaultValue(StudyGroupAccessMode.PublicOpen);
             entity.HasOne(e => e.Subject).WithMany()
                 .HasForeignKey(e => e.SubjectId).OnDelete(DeleteBehavior.SetNull);
             entity.HasOne(e => e.CreatedByUser).WithMany()
@@ -444,7 +447,10 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
         {
             entity.HasKey(e => new { e.GroupId, e.UserId });
             entity.Property(e => e.JoinedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.Role).HasConversion<int>().HasDefaultValue(StudyGroupMemberRole.Member);
+            entity.Property(e => e.IsBanned).HasDefaultValue(false);
             entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.GroupId).IsUnique().HasFilter("\"Role\" = 2");
             entity.HasOne(e => e.Group).WithMany(e => e.Members)
                 .HasForeignKey(e => e.GroupId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.User).WithMany()
@@ -462,6 +468,30 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
                 .HasForeignKey(e => e.GroupId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.SenderUser).WithMany()
                 .HasForeignKey(e => e.SenderUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StudyGroupJoinRequest>(entity =>
+        {
+            entity.HasKey(e => new { e.GroupId, e.UserId });
+            entity.Property(e => e.Status).HasConversion<int>();
+            entity.Property(e => e.RequestedAt).HasDefaultValueSql("now()");
+            entity.HasIndex(e => new { e.GroupId, e.Status });
+            entity.HasOne(e => e.Group).WithMany(e => e.JoinRequests)
+                .HasForeignKey(e => e.GroupId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.User).WithMany()
+                .HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StudyGroupInvitation>(entity =>
+        {
+            entity.HasKey(e => new { e.GroupId, e.UserId });
+            entity.Property(e => e.Status).HasConversion<int>();
+            entity.Property(e => e.InvitedAt).HasDefaultValueSql("now()");
+            entity.HasIndex(e => new { e.UserId, e.Status });
+            entity.HasOne(e => e.Group).WithMany(e => e.Invitations)
+                .HasForeignKey(e => e.GroupId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.User).WithMany()
+                .HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         OnModelCreatingPartial(modelBuilder);

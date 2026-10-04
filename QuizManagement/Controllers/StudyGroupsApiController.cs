@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using QuizManagement.Services;
 using System.Security.Claims;
+using BusinessObjects;
 
 namespace QuizManagement.Controllers;
 
@@ -24,7 +25,7 @@ public sealed class StudyGroupsApiController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateStudyGroupRequest request)
     {
         var group = await _groups.CreateAsync(UserId(), request.Name ?? "", request.Description,
-            request.SubjectId);
+            request.SubjectId, request.AccessMode);
         return group is null
             ? BadRequest(new { message = "Tên, mô tả hoặc môn học không hợp lệ." })
             : Created($"/api/groups/{group.Id}", new { group.Id, group.Name });
@@ -33,23 +34,37 @@ public sealed class StudyGroupsApiController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> Detail(int id)
     {
-        if (!await _groups.IsMemberAsync(id, UserId())) return Forbid();
+        if (!await _groups.IsMemberAsync(id, UserId())) return NotFound();
         var group = await _groups.GetAsync(id);
         return group is null ? NotFound() : Ok(new
         {
-            group.Id, group.Name, group.Description, group.SubjectId, group.CreatedAt
+            group.Id, group.Name, group.Description, group.SubjectId, group.CreatedAt, group.AccessMode
         });
     }
 
     [HttpPost("{id:int}/join")]
-    public async Task<IActionResult> Join(int id) =>
-        await _groups.JoinAsync(id, UserId()) ? NoContent() : NotFound();
+    public async Task<IActionResult> Join(int id)
+    {
+        var result = await _groups.JoinAsync(id, UserId());
+        return result switch
+        {
+            GroupJoinResult.Joined or GroupJoinResult.AlreadyMember => NoContent(),
+            GroupJoinResult.PendingApproval => Accepted(),
+            GroupJoinResult.Banned => Forbid(),
+            _ => NotFound()
+        };
+    }
+
+    [HttpDelete("{id:int}/join-request")]
+    public async Task<IActionResult> CancelJoinRequest(int id) =>
+        await _groups.CancelRequestAsync(id, UserId()) == GroupActionResult.Success
+            ? NoContent() : NotFound();
 
     [HttpGet("{id:int}/messages")]
     public async Task<IActionResult> Messages(int id, [FromQuery] int? beforeId, [FromQuery] int limit = 30)
     {
         var messages = await _groups.MessagesAsync(id, UserId(), beforeId, limit);
-        return messages is null ? Forbid() : Ok(messages);
+        return messages is null ? NotFound() : Ok(messages);
     }
 
     [HttpPost("{id:int}/read")]
@@ -61,5 +76,6 @@ public sealed class StudyGroupsApiController : ControllerBase
     private string UserId() => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 }
 
-public sealed record CreateStudyGroupRequest(string? Name, string? Description, int? SubjectId);
+public sealed record CreateStudyGroupRequest(string? Name, string? Description, int? SubjectId,
+    StudyGroupAccessMode AccessMode = StudyGroupAccessMode.PublicOpen);
 public sealed record MarkGroupReadRequest(int LastMessageId);
