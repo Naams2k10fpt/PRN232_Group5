@@ -43,6 +43,7 @@ DECLARE
     question_ids_json    text;
     result_snapshot_json text;
     history_id           int;
+    group_id             int;
 BEGIN
     IF to_regclass('public."Users"') IS NULL THEN
         RAISE EXCEPTION 'Quiz Management schema not found. Apply EF Core migrations before seeding.';
@@ -63,6 +64,12 @@ BEGIN
 
     DELETE FROM "QuestionReports"
     WHERE "UserId" = ANY (seed_user_ids) OR "QuestionId" = ANY (seed_question_ids);
+
+    -- Chat: demo accounts may have joined or posted in groups other people created; those rows go,
+    -- the groups stay. Groups the demo accounts created go with all their members and messages.
+    DELETE FROM "GroupMessages" WHERE "SenderUserId" = ANY (seed_user_ids);
+    DELETE FROM "StudyGroupMembers" WHERE "UserId" = ANY (seed_user_ids);
+    DELETE FROM "StudyGroups" WHERE "CreatedByUserId" = ANY (seed_user_ids);
 
     DELETE FROM "LoginAttempts"
     WHERE "UserId" = ANY (seed_user_ids) OR "Email" = ANY (seed_emails);
@@ -351,6 +358,24 @@ BEGIN
         ('user.demo@quiz.local', '127.0.0.1', true, false, user_id, now() - interval '2 hours'),
         ('user.demo@quiz.local', '127.0.0.1', false, false, user_id, now() - interval '3 hours'),
         ('unknown.demo@quiz.local', '127.0.0.2', false, false, NULL, now() - interval '4 hours');
+
+    -- 8. Study group chat.
+    INSERT INTO "StudyGroups" ("Name", "Description", "SubjectId", "CreatedByUserId", "CreatedAt")
+    VALUES ('Nhóm ôn PRN222', 'Nhóm demo: hỏi đáp ASP.NET Core MVC.', subject_aspnet_id, mentor_id, now() - interval '3 days')
+    RETURNING "Id" INTO group_id;
+
+    INSERT INTO "StudyGroupMembers" ("GroupId", "UserId", "Role", "JoinedAt")
+    VALUES
+        (group_id, mentor_id, 'Owner', now() - interval '3 days'),
+        (group_id, user_id, 'Member', now() - interval '2 days'),
+        (group_id, admin_id, 'Member', now() - interval '2 days');
+
+    INSERT INTO "GroupMessages" ("GroupId", "SenderUserId", "Content", "SentAt")
+    VALUES
+        (group_id, mentor_id, 'Chào mọi người! Nhóm này để ôn PRN222, có câu nào chưa hiểu cứ hỏi nhé.', now() - interval '2 days'),
+        (group_id, user_id, 'Thầy ơi, Tag Helper khác HTML Helper ở điểm nào ạ?', now() - interval '26 hours'),
+        (group_id, mentor_id, 'Tag Helper viết như thuộc tính HTML (asp-for, asp-action); HTML Helper là gọi hàm C# (@Html.TextBoxFor).', now() - interval '25 hours'),
+        (group_id, user_id, 'Em hiểu rồi, cảm ơn thầy!', now() - interval '24 hours');
 END
 $seed$;
 
@@ -364,4 +389,5 @@ SELECT
     (SELECT COUNT(*) FROM "Decks" d JOIN "Subjects" s ON s."Id" = d."SubjectId"
      WHERE s."UserId" = 'seed-mentor-001') AS "DeckCount",
     (SELECT COUNT(*) FROM "Questions" q JOIN "Decks" d ON d."Id" = q."DeckId"
-     JOIN "Subjects" s ON s."Id" = d."SubjectId" WHERE s."UserId" = 'seed-mentor-001') AS "QuestionCount";
+     JOIN "Subjects" s ON s."Id" = d."SubjectId" WHERE s."UserId" = 'seed-mentor-001') AS "QuestionCount",
+    (SELECT COUNT(*) FROM "StudyGroups" WHERE "CreatedByUserId" = 'seed-mentor-001') AS "StudyGroupCount";

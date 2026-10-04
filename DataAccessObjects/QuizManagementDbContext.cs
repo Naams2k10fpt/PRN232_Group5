@@ -45,6 +45,12 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
 
     public virtual DbSet<KahootAnswer> KahootAnswers { get; set; }
 
+    public virtual DbSet<StudyGroup> StudyGroups { get; set; }
+
+    public virtual DbSet<StudyGroupMember> StudyGroupMembers { get; set; }
+
+    public virtual DbSet<GroupMessage> GroupMessages { get; set; }
+
     // ASP.NET Core Data Protection keys (auth cookies, email/reset tokens) must outlive the
     // container: Render's free-tier disk is wiped on every deploy and idle sleep.
     public virtual DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
@@ -423,6 +429,70 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
                 .HasForeignKey(e => e.SelectedAnswerId)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_KahootAnswers_Answers");
+        });
+
+        // Study groups + group chat. Users are disabled, never deleted, so user FKs restrict;
+        // deleting a group removes its members and messages.
+        modelBuilder.Entity<StudyGroup>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(e => e.Subject)
+                .WithMany()
+                .HasForeignKey(e => e.SubjectId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_StudyGroups_Subjects");
+
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_StudyGroups_Users");
+        });
+
+        modelBuilder.Entity<StudyGroupMember>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Role).HasMaxLength(20).HasDefaultValue(StudyGroupRoles.Member);
+            entity.Property(e => e.JoinedAt).HasDefaultValueSql("now()");
+            entity.HasIndex(e => new { e.GroupId, e.UserId }).IsUnique();
+            entity.HasIndex(e => e.UserId);
+
+            entity.HasOne(e => e.Group)
+                .WithMany(g => g.Members)
+                .HasForeignKey(e => e.GroupId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_StudyGroupMembers_Groups");
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_StudyGroupMembers_Users");
+        });
+
+        modelBuilder.Entity<GroupMessage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Content).IsRequired();
+            entity.Property(e => e.SentAt).HasDefaultValueSql("now()");
+            // Paged history: newest messages of one group first.
+            entity.HasIndex(e => new { e.GroupId, e.SentAt });
+
+            entity.HasOne(e => e.Group)
+                .WithMany(g => g.Messages)
+                .HasForeignKey(e => e.GroupId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_GroupMessages_Groups");
+
+            entity.HasOne(e => e.SenderUser)
+                .WithMany()
+                .HasForeignKey(e => e.SenderUserId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_GroupMessages_Users");
         });
 
         OnModelCreatingPartial(modelBuilder);
