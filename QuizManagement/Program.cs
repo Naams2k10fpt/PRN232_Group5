@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using QuizManagement.Infrastructure;
 using QuizManagement.Hubs;
+using QuizManagement.Services;
 using System.Security.Claims;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -63,6 +64,7 @@ builder.Services.AddScoped<IQuestionReportService, QuestionReportService>();
 builder.Services.AddScoped<ILoginAttemptLogService, LoginAttemptLogService>();
 builder.Services.AddSingleton<IDeckExportService, DeckExportService>();
 builder.Services.AddScoped<IKahootService, KahootService>();
+builder.Services.AddScoped<StudyGroupService>();
 
 // 4. Infrastructure (web-tier)
 builder.Services.AddSignalR();
@@ -279,6 +281,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapHub<KahootHub>("/hubs/kahoot");
+app.MapHub<ChatHub>("/hubs/chat");
+app.MapControllers();
 app.MapHealthChecks("/healthz");
 app.MapControllerRoute(
     name: "default",

@@ -1,0 +1,47 @@
+@model List<QuizManagement.Services.GroupSummary>
+@{
+    ViewData["Title"] = "Nhóm học tập";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Nhóm học tập</h1>
+</div>
+
+<form asp-action="Create" method="post" class="card p-3 mb-4">
+    @Html.AntiForgeryToken()
+    <h2 class="h5">Tạo nhóm mới</h2>
+    <div class="row g-2">
+        <div class="col-md-4"><input name="name" maxlength="200" required class="form-control" placeholder="Tên nhóm" /></div>
+        <div class="col-md-5"><input name="description" maxlength="500" class="form-control" placeholder="Mô tả ngắn" /></div>
+        <div class="col-md-3"><button type="submit" class="btn btn-primary w-100">Tạo nhóm</button></div>
+    </div>
+</form>
+
+<div class="row g-3">
+    @foreach (var group in Model)
+    {
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 p-3">
+                <h2 class="h5">@group.Name</h2>
+                <p class="text-muted mb-2">@(group.Description ?? "Chưa có mô tả")</p>
+                <p class="small mb-3">@group.MemberCount thành viên · @(group.SubjectName ?? "Chung")
+                    @if (group.IsMember && group.UnreadCount > 0)
+                    {
+                        <span class="badge bg-primary ms-1">@group.UnreadCount mới</span>
+                    }
+                </p>
+                @if (group.IsMember)
+                {
+                    <a asp-action="Room" asp-route-id="@group.Id" class="btn btn-outline-primary mt-auto">Mở phòng chat</a>
+                }
+                else
+                {
+                    <form asp-action="Join" asp-route-id="@group.Id" method="post" class="mt-auto">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-primary w-100">Tham gia</button>
+                    </form>
+                }
+            </div>
+        </div>
+    }
+</div>

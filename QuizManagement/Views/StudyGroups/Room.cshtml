@@ -1,0 +1,122 @@
+@model BusinessObjects.StudyGroup
+@using QuizManagement.Services
+@using System.Text.Json
+@{
+    ViewData["Title"] = Model.Name;
+    var messages = ViewBag.Messages as List<ChatMessage> ?? new();
+    var userId = (string)ViewBag.UserId;
+}
+
+<div class="d-flex align-items-center gap-3 mb-3">
+    <a asp-action="Index" class="btn btn-outline-secondary">← Nhóm</a>
+    <div><h1 class="h4 mb-0">@Model.Name</h1><small class="text-muted">@Model.Description</small></div>
+</div>
+<div class="card p-3">
+    <button id="loadOlder" type="button" class="btn btn-sm btn-outline-secondary align-self-center mb-2">Tải tin cũ</button>
+    <div id="chatMessages" class="d-flex flex-column gap-2 mb-3" style="height: 55vh; overflow-y: auto;">
+        @foreach (var message in messages)
+        {
+            <div class="chat-message @(message.SenderUserId == userId ? "align-self-end" : "align-self-start")"
+                 data-message-id="@message.Id" style="max-width:80%;">
+                <div class="small text-muted">@message.SenderName · @message.SentAt.ToLocalTime().ToString("HH:mm")</div>
+                <div class="rounded-3 p-2 @(message.SenderUserId == userId ? "bg-primary text-white" : "bg-secondary text-white")"
+                     style="white-space:pre-wrap; overflow-wrap:anywhere;">@message.Content</div>
+            </div>
+        }
+    </div>
+    <form id="chatForm" class="d-flex gap-2">
+        <input id="chatInput" class="form-control" maxlength="2000" required placeholder="Nhập tin nhắn..." autocomplete="off" />
+        <button type="submit" class="btn btn-primary">Gửi</button>
+    </form>
+    <small id="chatStatus" class="text-muted mt-2">Đang kết nối...</small>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script>
+        const groupId = @Model.Id;
+        const currentUserId = @Html.Raw(JsonSerializer.Serialize(userId));
+        const box = document.getElementById('chatMessages');
+        const status = document.getElementById('chatStatus');
+        const input = document.getElementById('chatInput');
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl('/hubs/chat').withAutomaticReconnect().build();
+
+        function addMessage(message, prepend = false) {
+            if (box.querySelector(`[data-message-id="${message.id}"]`)) return;
+            const own = message.senderUserId === currentUserId;
+            const outer = document.createElement('div');
+            outer.dataset.messageId = message.id;
+            outer.className = `chat-message ${own ? 'align-self-end' : 'align-self-start'}`;
+            outer.style.maxWidth = '80%';
+            const meta = document.createElement('div');
+            meta.className = 'small text-muted';
+            meta.textContent = `${message.senderName} · ${new Date(message.sentAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+            const body = document.createElement('div');
+            body.className = `rounded-3 p-2 ${own ? 'bg-primary' : 'bg-secondary'} text-white`;
+            body.style.whiteSpace = 'pre-wrap';
+            body.style.overflowWrap = 'anywhere';
+            body.textContent = message.content;
+            outer.append(meta, body);
+            if (prepend) box.prepend(outer);
+            else {
+                box.append(outer);
+                box.scrollTop = box.scrollHeight;
+            }
+        }
+
+        async function markLatestRead() {
+            const last = box.lastElementChild?.dataset.messageId;
+            if (!last) return;
+            await fetch(`/api/groups/${groupId}/read`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({lastMessageId: Number(last)})
+            });
+        }
+
+        async function refreshMessages() {
+            const response = await fetch(`/api/groups/${groupId}/messages?limit=50`);
+            if (!response.ok) return;
+            for (const message of await response.json()) addMessage(message);
+            await markLatestRead();
+        }
+
+        document.getElementById('loadOlder').addEventListener('click', async () => {
+            const first = box.firstElementChild?.dataset.messageId;
+            if (!first) return;
+            const response = await fetch(`/api/groups/${groupId}/messages?beforeId=${first}&limit=30`);
+            if (!response.ok) return;
+            const messages = await response.json();
+            for (const message of messages.reverse()) addMessage(message, true);
+            if (messages.length === 0) document.getElementById('loadOlder').disabled = true;
+        });
+
+        connection.on('ReceiveMessage', async message => {
+            addMessage(message);
+            await markLatestRead();
+        });
+        connection.onreconnecting(() => status.textContent = 'Đang kết nối lại...');
+        connection.onreconnected(async () => {
+            await connection.invoke('JoinGroup', groupId);
+            await refreshMessages();
+            status.textContent = 'Đã kết nối';
+        });
+        connection.start().then(async () => {
+            await connection.invoke('JoinGroup', groupId);
+            await refreshMessages();
+            status.textContent = 'Đã kết nối';
+        }).catch(error => status.textContent = `Không kết nối được: ${error}`);
+        box.scrollTop = box.scrollHeight;
+        document.getElementById('chatForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            const content = input.value.trim();
+            if (!content) return;
+            try {
+                await connection.invoke('SendMessage', groupId, content);
+                input.value = '';
+            } catch (error) {
+                status.textContent = `Gửi thất bại: ${error}`;
+            }
+        });
+    </script>
+}

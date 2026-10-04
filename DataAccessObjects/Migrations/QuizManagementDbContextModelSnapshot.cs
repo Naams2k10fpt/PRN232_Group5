@@ -305,6 +305,20 @@ namespace DataAccessObjects.Migrations
                     b.ToTable("KahootRooms");
                 });
 
+            modelBuilder.Entity("BusinessObjects.GroupMessage", b =>
+                {
+                    b.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("integer");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<string>("Content").IsRequired().HasMaxLength(2000).HasColumnType("character varying(2000)");
+                    b.Property<int>("GroupId").HasColumnType("integer");
+                    b.Property<string>("SenderUserId").IsRequired().HasColumnType("text");
+                    b.Property<DateTime>("SentAt").ValueGeneratedOnAdd().HasColumnType("timestamp with time zone").HasDefaultValueSql("now()");
+                    b.HasKey("Id");
+                    b.HasIndex("GroupId", "Id");
+                    b.HasIndex("SenderUserId");
+                    b.ToTable("GroupMessages");
+                });
+
             modelBuilder.Entity("BusinessObjects.LoginAttempt", b =>
                 {
                     b.Property<int>("Id")
@@ -567,6 +581,32 @@ namespace DataAccessObjects.Migrations
                         .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("Subjects");
+                });
+
+            modelBuilder.Entity("BusinessObjects.StudyGroup", b =>
+                {
+                    b.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("integer");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<DateTime>("CreatedAt").ValueGeneratedOnAdd().HasColumnType("timestamp with time zone").HasDefaultValueSql("now()");
+                    b.Property<string>("CreatedByUserId").IsRequired().HasColumnType("text");
+                    b.Property<string>("Description").HasMaxLength(500).HasColumnType("character varying(500)");
+                    b.Property<string>("Name").IsRequired().HasMaxLength(200).HasColumnType("character varying(200)");
+                    b.Property<int?>("SubjectId").HasColumnType("integer");
+                    b.HasKey("Id");
+                    b.HasIndex("CreatedByUserId");
+                    b.HasIndex("SubjectId");
+                    b.ToTable("StudyGroups");
+                });
+
+            modelBuilder.Entity("BusinessObjects.StudyGroupMember", b =>
+                {
+                    b.Property<int>("GroupId").HasColumnType("integer");
+                    b.Property<string>("UserId").HasColumnType("text");
+                    b.Property<DateTime>("JoinedAt").ValueGeneratedOnAdd().HasColumnType("timestamp with time zone").HasDefaultValueSql("now()");
+                    b.Property<int?>("LastReadMessageId").HasColumnType("integer");
+                    b.HasKey("GroupId", "UserId");
+                    b.HasIndex("UserId");
+                    b.ToTable("StudyGroupMembers");
                 });
 
             modelBuilder.Entity("BusinessObjects.TestHistory", b =>
@@ -867,6 +907,18 @@ namespace DataAccessObjects.Migrations
                     b.Navigation("HostUser");
                 });
 
+            modelBuilder.Entity("BusinessObjects.GroupMessage", b =>
+                {
+                    b.HasOne("BusinessObjects.StudyGroup", "Group")
+                        .WithMany("Messages").HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade).IsRequired();
+                    b.HasOne("BusinessObjects.User", "SenderUser")
+                        .WithMany().HasForeignKey("SenderUserId")
+                        .OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.Navigation("Group");
+                    b.Navigation("SenderUser");
+                });
+
             modelBuilder.Entity("BusinessObjects.LoginAttempt", b =>
                 {
                     b.HasOne("BusinessObjects.User", "User")
@@ -937,6 +989,30 @@ namespace DataAccessObjects.Migrations
                         .IsRequired()
                         .HasConstraintName("FK_Subjects_Users");
 
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BusinessObjects.StudyGroup", b =>
+                {
+                    b.HasOne("BusinessObjects.User", "CreatedByUser")
+                        .WithMany().HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("BusinessObjects.Subject", "Subject")
+                        .WithMany().HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                    b.Navigation("CreatedByUser");
+                    b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("BusinessObjects.StudyGroupMember", b =>
+                {
+                    b.HasOne("BusinessObjects.StudyGroup", "Group")
+                        .WithMany("Members").HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade).IsRequired();
+                    b.HasOne("BusinessObjects.User", "User")
+                        .WithMany().HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade).IsRequired();
+                    b.Navigation("Group");
                     b.Navigation("User");
                 });
 
@@ -1014,6 +1090,12 @@ namespace DataAccessObjects.Migrations
             modelBuilder.Entity("BusinessObjects.KahootRoom", b =>
                 {
                     b.Navigation("Participants");
+                });
+
+            modelBuilder.Entity("BusinessObjects.StudyGroup", b =>
+                {
+                    b.Navigation("Members");
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("BusinessObjects.Question", b =>
