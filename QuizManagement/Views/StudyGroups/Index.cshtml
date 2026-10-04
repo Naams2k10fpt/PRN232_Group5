@@ -1,99 +1,254 @@
-@model List<QuizManagement.Services.GroupSummary>
+@model QuizManagement.Models.StudyGroupsIndexViewModel
 @using BusinessObjects
-@using QuizManagement.Services
 @{
     ViewData["Title"] = "Nhóm học tập";
-    var invitations = ViewBag.Invitations as List<GroupInvitationSummary> ?? new();
+    var openCreateGroup = TempData["OpenCreateGroup"] is true;
+    var createGroupSubjectId = TempData["CreateGroupSubjectId"]?.ToString();
+    var createGroupAccessMode = TempData["CreateGroupAccessMode"]?.ToString();
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">Nhóm học tập</h1>
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Nhóm học tập</h1>
+        <p>Học cùng bạn bè và khám phá các phòng thảo luận công khai.</p>
+    </div>
 </div>
 
 @if (TempData["SuccessMessage"] is string successMessage)
 {
-    <div class="alert alert-success">@successMessage</div>
+    <div class="alert alert-success" role="status">@successMessage</div>
 }
 @if (TempData["ErrorMessage"] is string errorMessage)
 {
-    <div class="alert alert-danger">@errorMessage</div>
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
 }
 
-@if (invitations.Count > 0)
-{
-    <section class="card p-3 mb-4">
-        <h2 class="h5">Lời mời vào nhóm</h2>
-        @foreach (var invitation in invitations)
-        {
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <span class="me-auto">@invitation.GroupName · hết hạn @invitation.ExpiresAt.ToLocalTime().ToString("dd/MM/yyyy")</span>
-                <form asp-action="RespondInvitation" asp-route-id="@invitation.GroupId" method="post">
-                    @Html.AntiForgeryToken()
-                    <button class="btn btn-sm btn-primary" name="accept" value="true">Chấp nhận</button>
-                    <button class="btn btn-sm btn-outline-secondary" name="accept" value="false">Từ chối</button>
-                </form>
-            </div>
-        }
-    </section>
-}
-
-<form asp-action="Create" method="post" class="card p-3 mb-4">
-    @Html.AntiForgeryToken()
-    <h2 class="h5">Tạo nhóm mới</h2>
-    <div class="row g-2">
-        <div class="col-md-4"><input name="name" maxlength="200" required class="form-control" placeholder="Tên nhóm" /></div>
-        <div class="col-md-5"><input name="description" maxlength="500" class="form-control" placeholder="Mô tả ngắn" /></div>
-        <div class="col-md-3">
-            <select name="accessMode" class="form-select mb-2" aria-label="Quyền tham gia nhóm">
-                <option value="PublicOpen">Công khai · vào ngay</option>
-                <option value="PublicApproval">Công khai · cần duyệt</option>
-                <option value="PrivateInviteOnly">Private · chỉ được mời</option>
-            </select>
-            <button type="submit" class="btn btn-primary w-100">Tạo nhóm</button>
+<section class="study-groups-section" aria-labelledby="my-groups-heading">
+    <div class="study-groups-section__header">
+        <div>
+            <h2 id="my-groups-heading" class="h4 mb-1">Nhóm của bạn</h2>
+            <p class="text-muted small mb-0">Các phòng bạn đã tham gia, bao gồm nhóm riêng tư.</p>
         </div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createGroupModal">+ Tạo nhóm</button>
     </div>
-</form>
 
-<div class="row g-3">
-    @foreach (var group in Model)
+    @if (Model.Invitations.Count > 0)
     {
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100 p-3">
-                <h2 class="h5">@group.Name</h2>
-                <span class="small text-info mb-2">@(group.AccessMode switch {
-                    StudyGroupAccessMode.PublicApproval => "Cần duyệt",
-                    StudyGroupAccessMode.PrivateInviteOnly => "Private",
-                    _ => "Công khai"
-                })</span>
-                <p class="text-muted mb-2">@(group.Description ?? "Chưa có mô tả")</p>
-                <p class="small mb-3">@group.MemberCount thành viên · @(group.SubjectName ?? "Chung")
-                    @if (group.IsMember && group.UnreadCount > 0)
-                    {
-                        <span class="badge bg-primary ms-1">@group.UnreadCount mới</span>
-                    }
-                </p>
-                @if (group.IsMember)
-                {
-                    <a asp-action="Room" asp-route-id="@group.Id" class="btn btn-outline-primary mt-auto">Mở phòng chat</a>
-                }
-                else
-                {
-                    @if (group.HasPendingRequest)
-                    {
-                        <form asp-action="CancelRequest" asp-route-id="@group.Id" method="post" class="mt-auto">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-outline-secondary w-100">Đang chờ · hủy yêu cầu</button>
-                        </form>
-                    }
-                    else
-                    {
-                        <form asp-action="Join" asp-route-id="@group.Id" method="post" class="mt-auto">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-primary w-100">@(group.AccessMode == StudyGroupAccessMode.PublicApproval ? "Yêu cầu tham gia" : "Tham gia")</button>
-                        </form>
-                    }
-                }
-            </div>
+        <div class="card p-3 mb-3" aria-label="Lời mời vào nhóm">
+            <h3 class="h6 mb-3">Lời mời vào nhóm</h3>
+            @foreach (var invitation in Model.Invitations)
+            {
+                <div class="study-group-invitation">
+                    <span>@invitation.GroupName <span class="text-muted small">· Hết hạn @invitation.ExpiresAt.ToLocalTime().ToString("dd/MM/yyyy")</span></span>
+                    <form asp-action="RespondInvitation" asp-route-id="@invitation.GroupId" method="post" class="d-flex gap-2">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-primary" name="accept" value="true">Chấp nhận</button>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary" name="accept" value="false">Từ chối</button>
+                    </form>
+                </div>
+            }
         </div>
     }
+
+    @if (Model.MyGroups.Count == 0)
+    {
+        <div class="card empty-state study-groups-empty">
+            <h3>Bạn chưa tham gia nhóm nào</h3>
+            <p>Tạo nhóm mới hoặc tìm một phòng công khai ở bên dưới.</p>
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createGroupModal">Tạo nhóm đầu tiên</button>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var group in Model.MyGroups)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <article class="card h-100 p-3 study-group-card">
+                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                            <h3 class="h5 mb-0 text-break">@group.Name</h3>
+                            @if (group.UnreadCount > 0)
+                            {
+                                <span class="badge bg-primary flex-shrink-0">@group.UnreadCount mới</span>
+                            }
+                        </div>
+                        <span class="small text-info mb-2">@(group.AccessMode switch {
+                            StudyGroupAccessMode.PublicApproval => "Công khai · cần duyệt",
+                            StudyGroupAccessMode.PrivateInviteOnly => "Riêng tư",
+                            _ => "Công khai · vào ngay"
+                        })</span>
+                        <p class="text-muted mb-2 study-group-card__description">@(group.Description ?? "Chưa có mô tả")</p>
+                        <p class="small text-muted mb-3">@group.MemberCount thành viên · @(group.SubjectName ?? "Chung")</p>
+                        <a asp-action="Room" asp-route-id="@group.Id" class="btn btn-outline-primary mt-auto">Mở phòng chat</a>
+                    </article>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+<section id="discover" class="study-groups-section study-groups-section--discover" aria-labelledby="discover-heading">
+    <div class="study-groups-section__header">
+        <div>
+            <h2 id="discover-heading" class="h4 mb-1">Khám phá phòng công khai</h2>
+            <p class="text-muted small mb-0">Tìm phòng phù hợp và tham gia hoặc gửi yêu cầu.</p>
+        </div>
+    </div>
+
+    <form asp-action="Index" method="get" class="card p-3 mb-3 study-groups-filters" role="search">
+        <div class="row g-2 align-items-end">
+            <div class="col-lg-4 col-md-6">
+                <label for="groupSearch" class="form-label">Tìm phòng</label>
+                <input id="groupSearch" type="search" name="search" value="@Model.Search" maxlength="100"
+                       class="form-control" placeholder="Tên hoặc mô tả phòng" />
+            </div>
+            <div class="col-lg-2 col-md-6">
+                <label for="groupAccess" class="form-label">Cách tham gia</label>
+                <select id="groupAccess" name="accessMode" class="form-select">
+                    <option value="">Tất cả</option>
+                    <option value="PublicOpen" selected="@(Model.AccessMode == StudyGroupAccessMode.PublicOpen)">Vào ngay</option>
+                    <option value="PublicApproval" selected="@(Model.AccessMode == StudyGroupAccessMode.PublicApproval)">Cần duyệt</option>
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-6">
+                <label for="groupSubject" class="form-label">Môn học</label>
+                <select id="groupSubject" name="subjectId" class="form-select">
+                    <option value="">Tất cả</option>
+                    @foreach (var subject in Model.PublicSubjects)
+                    {
+                        <option value="@subject.Id" selected="@(Model.SubjectId == subject.Id)">@subject.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-6">
+                <label for="groupSort" class="form-label">Sắp xếp</label>
+                <select id="groupSort" name="sort" class="form-select">
+                    <option value="newest" selected="@(Model.Sort == "newest")">Mới nhất</option>
+                    <option value="popular" selected="@(Model.Sort == "popular")">Nhiều thành viên</option>
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-6 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-fill">Áp dụng</button>
+                <a asp-action="Index" asp-fragment="discover" class="btn btn-outline-secondary" aria-label="Xóa bộ lọc">Xóa</a>
+            </div>
+        </div>
+    </form>
+
+    <p class="text-muted small mb-3">@Model.Discovery.TotalCount phòng phù hợp</p>
+    @if (Model.Discovery.Groups.Count == 0)
+    {
+        <div class="card empty-state study-groups-empty">
+            <h3>Không tìm thấy phòng phù hợp</h3>
+            <p>Thử từ khóa hoặc bộ lọc khác.</p>
+            <a asp-action="Index" asp-fragment="discover" class="btn btn-outline-primary">Xem tất cả phòng công khai</a>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var group in Model.Discovery.Groups)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <article class="card h-100 p-3 study-group-card">
+                        <h3 class="h5 mb-2 text-break">@group.Name</h3>
+                        <span class="small text-info mb-2">@(group.AccessMode == StudyGroupAccessMode.PublicApproval ? "Cần duyệt" : "Vào ngay")</span>
+                        <p class="text-muted mb-2 study-group-card__description">@(group.Description ?? "Chưa có mô tả")</p>
+                        <p class="small text-muted mb-3">@group.MemberCount thành viên · @(group.SubjectName ?? "Chung")</p>
+                        @if (group.HasPendingRequest)
+                        {
+                            <form asp-action="CancelRequest" asp-route-id="@group.Id" method="post" class="mt-auto">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-secondary w-100">Đang chờ · hủy yêu cầu</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <form asp-action="Join" asp-route-id="@group.Id" method="post" class="mt-auto">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-primary w-100">@(group.AccessMode == StudyGroupAccessMode.PublicApproval ? "Yêu cầu tham gia" : "Tham gia")</button>
+                            </form>
+                        }
+                    </article>
+                </div>
+            }
+        </div>
+    }
+
+    @if (Model.Discovery.PageCount > 1)
+    {
+        <nav class="study-groups-pages" aria-label="Trang phòng công khai">
+            @if (Model.Discovery.Page > 1)
+            {
+                <a asp-action="Index" asp-route-search="@Model.Search" asp-route-accessMode="@Model.AccessMode"
+                   asp-route-subjectId="@Model.SubjectId" asp-route-sort="@Model.Sort"
+                   asp-route-page="@(Model.Discovery.Page - 1)" asp-fragment="discover" class="btn btn-outline-secondary">Trước</a>
+            }
+            <span>Trang @Model.Discovery.Page / @Model.Discovery.PageCount</span>
+            @if (Model.Discovery.Page < Model.Discovery.PageCount)
+            {
+                <a asp-action="Index" asp-route-search="@Model.Search" asp-route-accessMode="@Model.AccessMode"
+                   asp-route-subjectId="@Model.SubjectId" asp-route-sort="@Model.Sort"
+                   asp-route-page="@(Model.Discovery.Page + 1)" asp-fragment="discover" class="btn btn-outline-secondary">Tiếp</a>
+            }
+        </nav>
+    }
+</section>
+
+<div class="modal fade" id="createGroupModal" tabindex="-1" aria-labelledby="createGroupHeading"
+     aria-hidden="true" data-open-on-load="@openCreateGroup.ToString().ToLowerInvariant()">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h2 id="createGroupHeading" class="modal-title h5">Tạo nhóm mới</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="newGroupName" class="form-label">Tên nhóm</label>
+                        <input id="newGroupName" name="name" value="@TempData["CreateGroupName"]" maxlength="200" required class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="newGroupDescription" class="form-label">Mô tả ngắn</label>
+                        <textarea id="newGroupDescription" name="description" maxlength="500" rows="3" class="form-control">@TempData["CreateGroupDescription"]</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newGroupSubject" class="form-label">Môn học</label>
+                        <select id="newGroupSubject" name="subjectId" class="form-select">
+                            <option value="">Chung</option>
+                            @foreach (var subject in Model.MySubjects)
+                            {
+                                <option value="@subject.Id" selected="@(createGroupSubjectId == subject.Id.ToString())">@subject.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label for="newGroupAccess" class="form-label">Quyền tham gia</label>
+                        <select id="newGroupAccess" name="accessMode" class="form-select">
+                            <option value="PublicOpen" selected="@(createGroupAccessMode == "PublicOpen")">Công khai · vào ngay</option>
+                            <option value="PublicApproval" selected="@(createGroupAccessMode == "PublicApproval")">Công khai · cần duyệt</option>
+                            <option value="PrivateInviteOnly" selected="@(createGroupAccessMode == "PrivateInviteOnly")">Riêng tư · chỉ được mời</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Tạo nhóm</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+
+@section Scripts {
+    <script>
+        const createGroupModal = document.getElementById('createGroupModal');
+        if (createGroupModal.dataset.openOnLoad === 'true') {
+            bootstrap.Modal.getOrCreateInstance(createGroupModal).show();
+        }
+        createGroupModal.addEventListener('shown.bs.modal', () => {
+            document.getElementById('newGroupName').focus();
+        });
+    </script>
+}

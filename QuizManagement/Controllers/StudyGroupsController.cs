@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using QuizManagement.Hubs;
+using QuizManagement.Models;
 using QuizManagement.Services;
 using System.Security.Claims;
 
@@ -20,10 +21,27 @@ public sealed class StudyGroupsController : Controller
         _hub = hub;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? search, StudyGroupAccessMode? accessMode,
+        int? subjectId, string? sort, int page = 1)
     {
-        ViewBag.Invitations = await _groups.InvitationsAsync(UserId());
-        return View(await _groups.ListAsync(UserId(), discover: true));
+        var userId = UserId();
+        search = search?.Trim();
+        if (search?.Length > 100) search = search[..100];
+        if (accessMode is not (StudyGroupAccessMode.PublicOpen or StudyGroupAccessMode.PublicApproval))
+            accessMode = null;
+        sort = sort == "popular" ? "popular" : "newest";
+        return View(new StudyGroupsIndexViewModel
+        {
+            MyGroups = await _groups.ListAsync(userId),
+            Discovery = await _groups.DiscoverPageAsync(userId, search, accessMode, subjectId, sort, page),
+            Invitations = await _groups.InvitationsAsync(userId),
+            PublicSubjects = await _groups.PublicSubjectsAsync(userId),
+            MySubjects = await _groups.MySubjectsAsync(userId),
+            Search = search ?? string.Empty,
+            AccessMode = accessMode,
+            SubjectId = subjectId,
+            Sort = sort
+        });
     }
 
     [HttpPost]
@@ -35,6 +53,11 @@ public sealed class StudyGroupsController : Controller
         if (group is null)
         {
             TempData["ErrorMessage"] = "Thông tin nhóm không hợp lệ.";
+            TempData["OpenCreateGroup"] = true;
+            TempData["CreateGroupName"] = name;
+            TempData["CreateGroupDescription"] = description;
+            TempData["CreateGroupSubjectId"] = subjectId;
+            TempData["CreateGroupAccessMode"] = accessMode.ToString();
             return RedirectToAction(nameof(Index));
         }
         return RedirectToAction(nameof(Room), new { id = group.Id });
