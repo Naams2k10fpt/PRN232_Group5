@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Net.Mail;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 
 namespace QuizManagement.Infrastructure;
@@ -40,11 +41,18 @@ public sealed class LoggingEmailSender(ILogger<LoggingEmailSender> logger) : IEm
 {
     public Task<bool> SendAsync(string recipient, string subject, string htmlBody)
     {
-        logger.LogInformation(
-            "Development email to {Recipient}: {Subject}\n{Body}",
-            recipient,
-            subject,
-            htmlBody);
+        logger.LogInformation("Development email to {Recipient}: {Subject}", recipient, subject);
+
+        // The HTML email encodes query separators as &amp;; log a decoded URL for local use.
+        var link = Regex.Match(htmlBody, "href=\"([^\"]+)\"", RegexOptions.IgnoreCase);
+        if (link.Success)
+            logger.LogInformation(
+                "Development email link to {Recipient}: {Link}",
+                recipient,
+                WebUtility.HtmlDecode(link.Groups[1].Value));
+        else
+            logger.LogInformation("Development email body: {Body}", htmlBody);
+
         return Task.FromResult(true);
     }
 }
