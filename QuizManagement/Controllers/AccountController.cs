@@ -9,7 +9,6 @@ using Microsoft.Extensions.Options;
 using QuizManagement.Infrastructure;
 using QuizManagement.ViewModels.Account;
 using Services;
-using System.Net;
 using System.Security.Claims;
 
 namespace QuizManagement.Controllers
@@ -19,11 +18,9 @@ namespace QuizManagement.Controllers
         private const string RegistrationConflictMessage =
             "Không thể đăng ký với thông tin này. Vui lòng kiểm tra lại hoặc dùng thông tin khác.";
         private readonly IUserService _userService;
-        private readonly ILoginAttemptService _loginAttemptService;
-        private readonly ILoginAttemptLogService _loginAttemptLogService;
         private readonly AccountTokenService _accountTokenService;
-        private readonly IEmailSender _emailSender;
-        private readonly AppOptions _appOptions;
+        private readonly AccountService _accountService;
+        private readonly AccountEmails _accountEmails;
         private readonly PasswordHasher<User> _passwordHasher = new();
 
         public AccountController(
@@ -35,11 +32,9 @@ namespace QuizManagement.Controllers
             IOptions<AppOptions> appOptions)
         {
             _userService = userService;
-            _loginAttemptService = loginAttemptService;
-            _loginAttemptLogService = loginAttemptLogService;
             _accountTokenService = accountTokenService;
-            _emailSender = emailSender;
-            _appOptions = appOptions.Value;
+            _accountService = new AccountService(userService, loginAttemptService, loginAttemptLogService);
+            _accountEmails = new AccountEmails(accountTokenService, emailSender, appOptions.Value);
         }
 
         [HttpGet]
@@ -63,33 +58,14 @@ namespace QuizManagement.Controllers
                 return View(model);
             }
 
-            var emailExists = _userService.GetByEmail(model.Email) is not null;
-            var usernameExists = _userService.GetByUsername(model.Username) is not null;
-            if (emailExists || usernameExists)
+            var user = _accountService.Register(model.Username, model.Email, model.Password);
+            if (user is null)
             {
                 ModelState.AddModelError(string.Empty, RegistrationConflictMessage);
                 return View(model);
             }
 
-            var user = new User
-            {
-                Id = Guid.NewGuid().ToString(),
-                Username = model.Username,
-                Email = model.Email,
-                Role = AppRoles.User,
-                EmailConfirmed = false,
-                SecurityStamp = Guid.NewGuid().ToString(),
-                CreatedAt = DateTime.UtcNow
-            };
-
-            user.PasswordHash = _passwordHasher.HashPassword(user, model.Password);
-            if (!_userService.TryCreateUser(user))
-            {
-                ModelState.AddModelError(string.Empty, RegistrationConflictMessage);
-                return View(model);
-            }
-
-            var sent = await SendVerificationEmail(user);
+            var sent = await _accountEmails.SendVerificationEmail(user, Url);
             TempData["SuccessMessage"] = sent
                 ? "Đăng ký thành công. Vui lòng kiểm tra email để xác minh tài khoản."
                 : "Đăng ký thành công nhưng chưa gửi được email. Vui lòng dùng chức năng gửi lại email xác minh.";
@@ -112,7 +88,7 @@ namespace QuizManagement.Controllers
 
             var user = _userService.GetByEmail(model.Email);
             if (user is not null && !user.EmailConfirmed && !user.IsDisabled)
-                await SendVerificationEmail(user);
+                await _accountEmails.SendVerificationEmail(user, Url);
 
             TempData["SuccessMessage"] = "Nếu tài khoản tồn tại và chưa được xác minh, email mới đã được gửi.";
             return RedirectToAction(nameof(Login));
@@ -157,7 +133,7 @@ namespace QuizManagement.Controllers
 
             var user = _userService.GetByEmail(model.Email);
             if (user is not null && user.EmailConfirmed && !user.IsDisabled)
-                await SendPasswordResetEmail(user);
+                await _accountEmails.SendPasswordResetEmail(user, Url);
 
             TempData["SuccessMessage"] = "Nếu tài khoản hợp lệ, email đặt lại mật khẩu đã được gửi.";
             return RedirectToAction(nameof(Login));
@@ -220,63 +196,30 @@ namespace QuizManagement.Controllers
             }
 
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-
-            // Check rate limit before any DB query
-            var remaining = _loginAttemptService.GetRemainingLockoutTime(model.Email, ipAddress);
-            if (remaining is not null)
+            var result = _accountService.Login(model.Email, model.Password, ipAddress);
+            var error = result.Status switch
             {
-                var minutes = (int)Math.Ceiling(remaining.Value.TotalMinutes);
-                ModelState.AddModelError(string.Empty,
-                    $"Tài khoản tạm thời bị khóa do đăng nhập sai quá nhiều lần. Thử lại sau {minutes} phút.");
+                LoginStatus.LockedOut =>
+                    $"Tài khoản tạm thời bị khóa do đăng nhập sai quá nhiều lần. Thử lại sau {(int)Math.Ceiling(result.LockoutRemaining!.Value.TotalMinutes)} phút.",
+                LoginStatus.InvalidCredentials => "Email hoặc mật khẩu không đúng.",
+                LoginStatus.AccountDisabled => "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.",
+                LoginStatus.EmailNotConfirmed => "Email chưa được xác minh. Vui lòng kiểm tra hộp thư hoặc gửi lại email xác minh.",
+                _ => null
+            };
+            if (error is not null)
+            {
+                ModelState.AddModelError(string.Empty, error);
                 return View(model);
             }
 
-            var user = _userService.GetByEmail(model.Email);
-            if (user?.PasswordHash is null)
-            {
-                _loginAttemptLogService.Log(model.Email, ipAddress, false, null, countsTowardLockout: true);
-                ModelState.AddModelError(string.Empty, "Email hoặc mật khẩu không đúng.");
-                return View(model);
-            }
-
-            var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, model.Password);
-            if (verificationResult == PasswordVerificationResult.Failed)
-            {
-                _loginAttemptLogService.Log(model.Email, ipAddress, false, user.Id, countsTowardLockout: true);
-                ModelState.AddModelError(string.Empty, "Email hoặc mật khẩu không đúng.");
-                return View(model);
-            }
-
-            if (user.IsDisabled)
-            {
-                _loginAttemptLogService.Log(model.Email, ipAddress, false, user.Id);
-                ModelState.AddModelError(string.Empty, "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.");
-                return View(model);
-            }
-
-            if (!user.EmailConfirmed)
-            {
-                _loginAttemptLogService.Log(model.Email, ipAddress, false, user.Id);
-                ModelState.AddModelError(string.Empty, "Email chưa được xác minh. Vui lòng kiểm tra hộp thư hoặc gửi lại email xác minh.");
-                return View(model);
-            }
-
-            _loginAttemptLogService.Log(model.Email, ipAddress, true, user.Id);
-
-            // Ensure SecurityStamp exists for new users migrated from old schema
-            if (string.IsNullOrEmpty(user.SecurityStamp))
-            {
-                user.SecurityStamp = Guid.NewGuid().ToString();
-                _userService.UpdateProfile(user);
-            }
-
+            var user = result.User!;
             var claims = new List<Claim>
             {
                 new(ClaimTypes.NameIdentifier, user.Id),
                 new(ClaimTypes.Name, user.Username),
                 new(ClaimTypes.Email, user.Email),
                 new(ClaimTypes.Role, user.Role ?? AppRoles.User),
-                new("SecurityStamp", user.SecurityStamp)
+                new(SignedInUserValidator.SecurityStampClaim, user.SecurityStamp!)
             };
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -309,41 +252,6 @@ namespace QuizManagement.Controllers
         public IActionResult AccessDenied()
         {
             return View();
-        }
-
-        private Task<bool> SendVerificationEmail(User user)
-        {
-            var token = _accountTokenService.CreateEmailVerificationToken(user);
-            var url = AccountLink(nameof(VerifyEmail), new { userId = user.Id, token });
-            return url is null
-                ? Task.FromResult(false)
-                : _emailSender.SendAsync(
-                    user.Email,
-                    "Xác minh email Quiz Management",
-                    $"<p>Nhấn vào liên kết sau để xác minh email trong 24 giờ:</p><p><a href=\"{WebUtility.HtmlEncode(url)}\">Xác minh email</a></p>");
-        }
-
-        private Task<bool> SendPasswordResetEmail(User user)
-        {
-            var token = _accountTokenService.CreatePasswordResetToken(user);
-            var url = AccountLink(nameof(ResetPassword), new { userId = user.Id, token });
-            return url is null
-                ? Task.FromResult(false)
-                : _emailSender.SendAsync(
-                    user.Email,
-                    "Đặt lại mật khẩu Quiz Management",
-                    $"<p>Nhấn vào liên kết sau để đặt lại mật khẩu trong 1 giờ:</p><p><a href=\"{WebUtility.HtmlEncode(url)}\">Đặt lại mật khẩu</a></p>");
-        }
-
-        // Link trong email dùng App:PublicBaseUrl khi có (sau proxy, và không tin Host header của request);
-        // local không cấu hình thì dựng từ request như trước.
-        private string? AccountLink(string action, object values)
-        {
-            if (string.IsNullOrWhiteSpace(_appOptions.PublicBaseUrl))
-                return Url.Action(action, "Account", values, Request.Scheme);
-
-            var baseUri = new Uri(_appOptions.PublicBaseUrl);
-            return Url.Action(action, "Account", values, baseUri.Scheme, baseUri.Authority);
         }
     }
 }

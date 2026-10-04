@@ -11,6 +11,8 @@ using QuizManagement.Hubs;
 using System.Security.Claims;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
+using System.Text.Json;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -98,6 +100,18 @@ switch (emailProvider)
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        if (!context.HttpContext.Request.Path.StartsWithSegments("/api"))
+            return;
+
+        int? retryAfterSeconds = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter)
+            ? (int)Math.Ceiling(retryAfter.TotalSeconds)
+            : null;
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new ApiError("rate_limited", "Bạn thao tác quá nhanh. Vui lòng thử lại sau ít phút.", RetryAfterSeconds: retryAfterSeconds),
+            cancellationToken);
+    };
     options.AddPolicy(
         AuthenticationRateLimitPolicies.Login,
         AuthenticationRateLimitPolicies.CreateLoginPartition);
@@ -223,8 +237,20 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         };
     });
 
-// 8. MVC
-builder.Services.AddControllersWithViews();
+// 8. MVC + API. Lỗi validation của [ApiController] trả về ApiError giống mọi lỗi API khác.
+builder.Services.AddControllersWithViews()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(entry => entry.Value?.Errors.Count > 0)
+                .ToDictionary(
+                    entry => JsonNamingPolicy.CamelCase.ConvertName(entry.Key),
+                    entry => entry.Value!.Errors.Select(error => error.ErrorMessage).ToArray());
+            return new Microsoft.AspNetCore.Mvc.BadRequestObjectResult(new ApiError("validation_failed", "Dữ liệu không hợp lệ.", errors));
+        };
+    });
 
 var app = builder.Build();
 
@@ -321,3 +347,6 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+
+// Cho phép test khởi động toàn bộ pipeline (WebApplicationFactory<Program>).
+public partial class Program;
