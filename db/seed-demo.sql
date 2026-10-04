@@ -1,4 +1,5 @@
 -- Demo data for Quiz Management (PostgreSQL).
+-- Subjects and decks are shared for study, so do not clone them per user.
 --
 -- ISOLATED DEMO DATABASES ONLY. This script creates accounts with public credentials
 -- (password Test@123456) and replaces all data owned by the fixed seed identities.
