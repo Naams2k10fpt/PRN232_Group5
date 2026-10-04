@@ -438,36 +438,43 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.AccessMode).HasConversion<int>().HasDefaultValue(StudyGroupAccessMode.PublicOpen);
             entity.HasOne(e => e.Subject).WithMany()
-                .HasForeignKey(e => e.SubjectId).OnDelete(DeleteBehavior.SetNull);
+                .HasForeignKey(e => e.SubjectId).OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_StudyGroups_Subjects");
             entity.HasOne(e => e.CreatedByUser).WithMany()
-                .HasForeignKey(e => e.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey(e => e.CreatedByUserId).OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_StudyGroups_Users");
         });
 
         modelBuilder.Entity<StudyGroupMember>(entity =>
         {
-            entity.HasKey(e => new { e.GroupId, e.UserId });
+            entity.HasKey(e => e.Id);
             entity.Property(e => e.JoinedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.Role).HasConversion<int>().HasDefaultValue(StudyGroupMemberRole.Member);
             entity.Property(e => e.IsBanned).HasDefaultValue(false);
             entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.GroupId, e.UserId }).IsUnique();
             entity.HasIndex(e => e.GroupId).IsUnique().HasFilter("\"Role\" = 2");
             entity.HasOne(e => e.Group).WithMany(e => e.Members)
-                .HasForeignKey(e => e.GroupId).OnDelete(DeleteBehavior.Cascade);
+                .HasForeignKey(e => e.GroupId).OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_StudyGroupMembers_Groups");
             entity.HasOne(e => e.User).WithMany()
-                .HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+                .HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_StudyGroupMembers_Users");
         });
 
         modelBuilder.Entity<GroupMessage>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Content).HasMaxLength(2000).IsRequired();
+            entity.Property(e => e.Content).IsRequired();
             entity.Property(e => e.SentAt).HasDefaultValueSql("now()");
-            entity.HasIndex(e => new { e.GroupId, e.Id });
+            entity.HasIndex(e => new { e.GroupId, e.SentAt });
             entity.HasIndex(e => e.SenderUserId);
             entity.HasOne(e => e.Group).WithMany(e => e.Messages)
-                .HasForeignKey(e => e.GroupId).OnDelete(DeleteBehavior.Cascade);
+                .HasForeignKey(e => e.GroupId).OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_GroupMessages_Groups");
             entity.HasOne(e => e.SenderUser).WithMany()
-                .HasForeignKey(e => e.SenderUserId).OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey(e => e.SenderUserId).OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_GroupMessages_Users");
         });
 
         modelBuilder.Entity<StudyGroupJoinRequest>(entity =>

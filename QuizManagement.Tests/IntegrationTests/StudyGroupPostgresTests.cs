@@ -222,7 +222,7 @@ public sealed class StudyGroupPostgresTests
         try
         {
             var migrator = db.Database.GetService<IMigrator>();
-            await migrator.MigrateAsync("20261001090000_AddStudyGroups");
+            await migrator.MigrateAsync("20261004090814_AddStudyGroupChat");
             db.Users.Add(new User { Id = "creator", Username = "Creator",
                 Email = "creator@test.local", Role = AppRoles.User, CreatedAt = DateTime.UtcNow });
             await db.SaveChangesAsync();

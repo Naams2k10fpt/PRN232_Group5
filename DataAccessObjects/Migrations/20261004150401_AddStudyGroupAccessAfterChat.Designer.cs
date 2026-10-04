@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DataAccessObjects.Migrations
 {
     [DbContext(typeof(QuizManagementDbContext))]
-    [Migration("20261004090016_AddStudyGroupAccess")]
-    partial class AddStudyGroupAccess
+    [Migration("20261004150401_AddStudyGroupAccessAfterChat")]
+    partial class AddStudyGroupAccessAfterChat
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -174,8 +174,7 @@ namespace DataAccessObjects.Migrations
 
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasColumnType("text");
 
                     b.Property<int>("GroupId")
                         .HasColumnType("integer");
@@ -193,7 +192,7 @@ namespace DataAccessObjects.Migrations
 
                     b.HasIndex("SenderUserId");
 
-                    b.HasIndex("GroupId", "Id");
+                    b.HasIndex("GroupId", "SentAt");
 
                     b.ToTable("GroupMessages");
                 });
@@ -662,11 +661,14 @@ namespace DataAccessObjects.Migrations
 
             modelBuilder.Entity("BusinessObjects.StudyGroupMember", b =>
                 {
-                    b.Property<int>("GroupId")
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
-                    b.Property<string>("UserId")
-                        .HasColumnType("text");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsBanned")
                         .ValueGeneratedOnAdd()
@@ -686,13 +688,20 @@ namespace DataAccessObjects.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
-                    b.HasKey("GroupId", "UserId");
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
 
                     b.HasIndex("GroupId")
                         .IsUnique()
                         .HasFilter("\"Role\" = 2");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("GroupId", "UserId")
+                        .IsUnique();
 
                     b.ToTable("StudyGroupMembers");
                 });
@@ -984,13 +993,15 @@ namespace DataAccessObjects.Migrations
                         .WithMany("Messages")
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_GroupMessages_Groups");
 
                     b.HasOne("BusinessObjects.User", "SenderUser")
                         .WithMany()
                         .HasForeignKey("SenderUserId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_GroupMessages_Users");
 
                     b.Navigation("Group");
 
@@ -1135,12 +1146,14 @@ namespace DataAccessObjects.Migrations
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_StudyGroups_Users");
 
                     b.HasOne("BusinessObjects.Subject", "Subject")
                         .WithMany()
                         .HasForeignKey("SubjectId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_StudyGroups_Subjects");
 
                     b.Navigation("CreatedByUser");
 
@@ -1191,13 +1204,15 @@ namespace DataAccessObjects.Migrations
                         .WithMany("Members")
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_StudyGroupMembers_Groups");
 
                     b.HasOne("BusinessObjects.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_StudyGroupMembers_Users");
 
                     b.Navigation("Group");
 

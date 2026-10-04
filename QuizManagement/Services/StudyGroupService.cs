@@ -171,7 +171,7 @@ public sealed class StudyGroupService
     {
         var group = await _db.StudyGroups.FindAsync(groupId);
         if (group is null) return GroupJoinResult.NotFound;
-        var member = await _db.StudyGroupMembers.FindAsync(groupId, userId);
+        var member = await FindMemberAsync(groupId, userId);
         if (member?.IsBanned == true) return GroupJoinResult.Banned;
         if (member is not null) return GroupJoinResult.AlreadyMember;
         if (group.AccessMode == StudyGroupAccessMode.PrivateInviteOnly)
@@ -265,7 +265,7 @@ public sealed class StudyGroupService
             return GroupActionResult.NotFound;
         var request = await _db.StudyGroupJoinRequests.FindAsync(groupId, targetId);
         if (request?.Status != StudyGroupRequestStatus.Pending) return GroupActionResult.NotFound;
-        var member = await _db.StudyGroupMembers.FindAsync(groupId, targetId);
+        var member = await FindMemberAsync(groupId, targetId);
         if (approve && member?.IsBanned == true) return GroupActionResult.Forbidden;
         if (approve && !await _db.Users.AnyAsync(user => user.Id == targetId
             && !user.IsDisabled && user.EmailConfirmed)) return GroupActionResult.Forbidden;
@@ -291,7 +291,7 @@ public sealed class StudyGroupService
             EF.Property<string>(candidate, "NormalizedEmail") == normalized);
         if (user is null || user.IsDisabled || !user.EmailConfirmed)
             return GroupActionResult.NotFound;
-        var member = await _db.StudyGroupMembers.FindAsync(groupId, user.Id);
+        var member = await FindMemberAsync(groupId, user.Id);
         if (member?.IsBanned == true) return GroupActionResult.Forbidden;
         if (member is not null) return GroupActionResult.Conflict;
         var now = _clock.GetUtcNow().UtcDateTime;
@@ -320,7 +320,7 @@ public sealed class StudyGroupService
         if (invitation?.Status != StudyGroupInvitationStatus.Pending
             || invitation.ExpiresAt <= _clock.GetUtcNow().UtcDateTime)
             return GroupActionResult.NotFound;
-        var member = await _db.StudyGroupMembers.FindAsync(groupId, userId);
+        var member = await FindMemberAsync(groupId, userId);
         if (member?.IsBanned == true) return GroupActionResult.Forbidden;
         if (accept && member is null)
             _db.StudyGroupMembers.Add(new StudyGroupMember
@@ -369,7 +369,7 @@ public sealed class StudyGroupService
         string targetId, bool moderator)
     {
         if (!await IsOwnerAsync(groupId, actorId)) return GroupActionResult.Forbidden;
-        var target = await _db.StudyGroupMembers.FindAsync(groupId, targetId);
+        var target = await FindMemberAsync(groupId, targetId);
         if (target is null || target.IsBanned) return GroupActionResult.NotFound;
         if (target.Role == StudyGroupMemberRole.Owner) return GroupActionResult.Forbidden;
         target.Role = moderator ? StudyGroupMemberRole.Moderator : StudyGroupMemberRole.Member;
@@ -400,7 +400,7 @@ public sealed class StudyGroupService
         var actor = await _db.StudyGroupMembers.AsNoTracking()
             .FirstOrDefaultAsync(member => member.GroupId == groupId && member.UserId == actorId && !member.IsBanned);
         if (actor is null || actor.Role < StudyGroupMemberRole.Moderator) return GroupActionResult.Forbidden;
-        var target = await _db.StudyGroupMembers.FindAsync(groupId, targetId);
+        var target = await FindMemberAsync(groupId, targetId);
         if (target is null || target.IsBanned) return GroupActionResult.NotFound;
         if (target.Role >= actor.Role) return GroupActionResult.Forbidden;
         target.IsBanned = true;
@@ -413,7 +413,7 @@ public sealed class StudyGroupService
     public async Task<GroupActionResult> UnbanAsync(int groupId, string actorId, string targetId)
     {
         if (!await IsManagerAsync(groupId, actorId)) return GroupActionResult.Forbidden;
-        var target = await _db.StudyGroupMembers.FindAsync(groupId, targetId);
+        var target = await FindMemberAsync(groupId, targetId);
         if (target is null || !target.IsBanned) return GroupActionResult.NotFound;
         _db.StudyGroupMembers.Remove(target);
         await _db.SaveChangesAsync();
@@ -422,7 +422,7 @@ public sealed class StudyGroupService
 
     public async Task<GroupActionResult> LeaveAsync(int groupId, string userId)
     {
-        var member = await _db.StudyGroupMembers.FindAsync(groupId, userId);
+        var member = await FindMemberAsync(groupId, userId);
         if (member is null || member.IsBanned) return GroupActionResult.NotFound;
         if (member.Role == StudyGroupMemberRole.Owner) return GroupActionResult.Forbidden;
         _db.StudyGroupMembers.Remove(member);
@@ -471,9 +471,13 @@ public sealed class StudyGroupService
             sender.AvatarUrl, content, message.SentAt);
     }
 
+    private Task<StudyGroupMember?> FindMemberAsync(int groupId, string userId) =>
+        _db.StudyGroupMembers.FirstOrDefaultAsync(member =>
+            member.GroupId == groupId && member.UserId == userId);
+
     public async Task<bool> MarkReadAsync(int groupId, string userId, int lastMessageId)
     {
-        var member = await _db.StudyGroupMembers.FindAsync(groupId, userId);
+        var member = await FindMemberAsync(groupId, userId);
         if (member is null || member.IsBanned) return false;
         if (!await _db.GroupMessages.AnyAsync(message => message.GroupId == groupId && message.Id == lastMessageId))
             return false;

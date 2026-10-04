@@ -71,6 +71,12 @@ BEGIN
     DELETE FROM "QuestionReports"
     WHERE "UserId" = ANY (seed_user_ids) OR "QuestionId" = ANY (seed_question_ids);
 
+    -- Chat: demo accounts may have joined or posted in groups other people created; those rows go,
+    -- the groups stay. Groups the demo accounts created go with all their members and messages.
+    DELETE FROM "GroupMessages" WHERE "SenderUserId" = ANY (seed_user_ids);
+    DELETE FROM "StudyGroupMembers" WHERE "UserId" = ANY (seed_user_ids);
+    DELETE FROM "StudyGroups" WHERE "CreatedByUserId" = ANY (seed_user_ids);
+
     DELETE FROM "LoginAttempts"
     WHERE "UserId" = ANY (seed_user_ids) OR "Email" = ANY (seed_emails);
 

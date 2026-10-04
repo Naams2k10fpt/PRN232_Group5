@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessObjects.Migrations
 {
     /// <inheritdoc />
-    public partial class AddStudyGroupAccess : Migration
+    public partial class AddStudyGroupAccessAfterChat : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -18,6 +18,13 @@ namespace DataAccessObjects.Migrations
                 nullable: false,
                 defaultValue: 0);
 
+            migrationBuilder.Sql("""
+                ALTER TABLE "StudyGroupMembers" ALTER COLUMN "Role" DROP DEFAULT;
+                ALTER TABLE "StudyGroupMembers" ALTER COLUMN "Role" TYPE integer
+                    USING CASE "Role" WHEN 'Owner' THEN 2 WHEN 'Moderator' THEN 1 ELSE 0 END;
+                ALTER TABLE "StudyGroupMembers" ALTER COLUMN "Role" SET DEFAULT 0;
+                """);
+
             migrationBuilder.AddColumn<bool>(
                 name: "IsBanned",
                 table: "StudyGroupMembers",
@@ -26,11 +33,10 @@ namespace DataAccessObjects.Migrations
                 defaultValue: false);
 
             migrationBuilder.AddColumn<int>(
-                name: "Role",
+                name: "LastReadMessageId",
                 table: "StudyGroupMembers",
                 type: "integer",
-                nullable: false,
-                defaultValue: 0);
+                nullable: true);
 
             migrationBuilder.CreateTable(
                 name: "StudyGroupInvitations",
@@ -89,10 +95,10 @@ namespace DataAccessObjects.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            // Preserve every existing room and make its creator the owner.
+            // Existing rooms retain their creator as owner.
             migrationBuilder.Sql("""
-                INSERT INTO "StudyGroupMembers" ("GroupId", "UserId", "JoinedAt", "Role")
-                SELECT "Id", "CreatedByUserId", "CreatedAt", 2 FROM "StudyGroups"
+                INSERT INTO "StudyGroupMembers" ("GroupId", "UserId", "Role", "JoinedAt")
+                SELECT "Id", "CreatedByUserId", 2, "CreatedAt" FROM "StudyGroups"
                 ON CONFLICT ("GroupId", "UserId") DO UPDATE SET "Role" = 2;
                 """);
 
@@ -141,8 +147,15 @@ namespace DataAccessObjects.Migrations
                 table: "StudyGroupMembers");
 
             migrationBuilder.DropColumn(
-                name: "Role",
+                name: "LastReadMessageId",
                 table: "StudyGroupMembers");
+
+            migrationBuilder.Sql("""
+                ALTER TABLE "StudyGroupMembers" ALTER COLUMN "Role" DROP DEFAULT;
+                ALTER TABLE "StudyGroupMembers" ALTER COLUMN "Role" TYPE character varying(20)
+                    USING CASE "Role" WHEN 2 THEN 'Owner' WHEN 1 THEN 'Moderator' ELSE 'Member' END;
+                ALTER TABLE "StudyGroupMembers" ALTER COLUMN "Role" SET DEFAULT 'Member';
+                """);
         }
     }
 }

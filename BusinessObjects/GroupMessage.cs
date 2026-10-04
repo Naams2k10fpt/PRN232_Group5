@@ -6,7 +6,7 @@ public sealed class GroupMessage
     public int GroupId { get; set; }
     public string SenderUserId { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
-    public DateTime SentAt { get; set; }
+    public DateTime SentAt { get; set; } = DateTime.UtcNow;
     public StudyGroup Group { get; set; } = null!;
     public User SenderUser { get; set; } = null!;
 }

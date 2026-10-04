@@ -9,9 +9,10 @@ public enum StudyGroupMemberRole
 
 public sealed class StudyGroupMember
 {
+    public int Id { get; set; }
     public int GroupId { get; set; }
     public string UserId { get; set; } = string.Empty;
-    public DateTime JoinedAt { get; set; }
+    public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
     public int? LastReadMessageId { get; set; }
     public StudyGroupMemberRole Role { get; set; }
     public bool IsBanned { get; set; }

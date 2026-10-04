@@ -118,6 +118,12 @@ public class DemoSeedPostgresTests
             Assert.Equal(2, Scalar(database, "SELECT COUNT(*) FROM \"LoginAttempts\" WHERE \"Email\" = 'user.demo@quiz.local'"));
             Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"LoginAttempts\" WHERE \"Email\" = 'unknown.demo@quiz.local'"));
             Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"LoginAttempts\" WHERE \"Email\" = 'outside@test.local'"));
+            // The demo rooms are recreated; unrelated rooms and their own messages remain.
+            Assert.Equal(13, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroups\" WHERE \"CreatedByUserId\" = 'seed-mentor-001'"));
+            Assert.Equal(19, Scalar(database, "SELECT COUNT(*) FROM \"GroupMessages\" m JOIN \"StudyGroups\" g ON g.\"Id\" = m.\"GroupId\" WHERE g.\"CreatedByUserId\" LIKE 'seed-%'"));
+            Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroups\" WHERE \"CreatedByUserId\" = 'outside-user'"));
+            Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"StudyGroupMembers\" m JOIN \"StudyGroups\" g ON g.\"Id\" = m.\"GroupId\" WHERE g.\"CreatedByUserId\" = 'outside-user'"));
+            Assert.Equal(1, Scalar(database, "SELECT COUNT(*) FROM \"GroupMessages\" WHERE \"SenderUserId\" = 'outside-user'"));
         }
         finally
         {
@@ -159,6 +165,18 @@ public class DemoSeedPostgresTests
             WHERE s."UserId" = 'seed-mentor-001'
             ORDER BY d."Id"
             LIMIT 1;
+
+            WITH outside_group AS (
+                INSERT INTO "StudyGroups" ("Name", "CreatedByUserId") VALUES ('Outside group', 'outside-user')
+                RETURNING "Id"
+            ), members AS (
+                INSERT INTO "StudyGroupMembers" ("GroupId", "UserId", "Role")
+                SELECT "Id", member, role FROM outside_group
+                CROSS JOIN (VALUES ('outside-user', 2), ('seed-user-001', 0)) AS m (member, role)
+            )
+            INSERT INTO "GroupMessages" ("GroupId", "SenderUserId", "Content")
+            SELECT "Id", sender, 'hello' FROM outside_group
+            CROSS JOIN (VALUES ('outside-user'), ('seed-user-001')) AS s (sender);
             """, database).ExecuteNonQuery();
     }
 

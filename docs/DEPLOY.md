@@ -85,6 +85,7 @@ Render gói Free chặn các cổng SMTP 25/465/587, nên ứng dụng gửi ema
    | `App__PublicBaseUrl` | `https://quiz-management.onrender.com` (hoặc URL Render cấp, xem bước 4) |
    | `Email__ApiKey` | API key Brevo |
    | `Email__FromAddress` | Email sender đã xác minh trên Brevo |
+   | `Jwt__SigningKey` | Khóa ký JWT cho mobile API: chuỗi ngẫu nhiên ≥ 32 byte. `render.yaml` để Render tự sinh (`generateValue`); với service đã tạo trước đó, thêm thủ công trong tab **Environment** (nút **Generate**). Đổi khóa sẽ đăng xuất mọi người dùng mobile |
 
    Các biến còn lại đã có sẵn trong `render.yaml`:
 
@@ -95,6 +96,7 @@ Render gói Free chặn các cổng SMTP 25/465/587, nên ứng dụng gửi ema
    | `Database__MigrateOnStartup` | `true` | Tự áp dụng migration mới khi deploy |
    | `Email__Provider` | `BrevoApi` | Gửi email qua Brevo API |
    | `Email__FromName` | `Quiz Management` | Tên người gửi |
+   | `Swagger__Enabled` | `true` | Mở Swagger UI tại `/swagger` cho nhóm mobile; đặt `false` để ẩn |
 
 3. **Apply** → Render build `Dockerfile` và deploy (lần đầu khoảng 5–10 phút).
 4. Nếu tên `quiz-management` đã bị người khác dùng, Render thêm hậu tố vào URL. Khi đó sửa `App__PublicBaseUrl` theo URL thật trong tab **Environment** → **Save, rebuild, and deploy**. Cập nhật link ở mục 1.

@@ -39,6 +39,17 @@ public static class StartupConfigValidator
             errors.Add("App:PublicBaseUrl phải là URL tuyệt đối http(s).");
         }
 
+        var jwtSigningKey = configuration[$"{JwtOptions.SectionName}:SigningKey"];
+        if (string.IsNullOrWhiteSpace(jwtSigningKey))
+        {
+            if (!isDevelopment)
+                errors.Add("Jwt:SigningKey là bắt buộc ngoài Development (chuỗi bí mật ngẫu nhiên, tối thiểu 32 byte).");
+        }
+        else if (System.Text.Encoding.UTF8.GetByteCount(jwtSigningKey) < JwtOptions.MinimumSigningKeyBytes)
+        {
+            errors.Add($"Jwt:SigningKey phải dài tối thiểu {JwtOptions.MinimumSigningKeyBytes} byte.");
+        }
+
         var email = configuration.GetSection("Email").Get<EmailOptions>() ?? new EmailOptions();
         switch (email.ResolveProvider())
         {
