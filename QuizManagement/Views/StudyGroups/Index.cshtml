@@ -237,6 +237,7 @@
 @section Scripts {
     <script>
         const createGroupModal = document.getElementById('createGroupModal');
+        document.body.appendChild(createGroupModal);
         if (createGroupModal.dataset.openOnLoad === 'true') {
             bootstrap.Modal.getOrCreateInstance(createGroupModal).show();
         }
