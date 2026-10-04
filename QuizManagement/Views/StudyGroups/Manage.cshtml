@@ -1,0 +1,133 @@
+@model BusinessObjects.StudyGroup
+@using BusinessObjects
+@using QuizManagement.Services
+@{
+    ViewData["Title"] = "Quản lý nhóm";
+    var members = ViewBag.Members as List<GroupMemberSummary> ?? new();
+    var requests = ViewBag.Requests as List<GroupJoinRequestSummary> ?? new();
+    var banned = ViewBag.Banned as List<GroupBanSummary> ?? new();
+    var isOwner = ViewBag.IsOwner is true;
+    var myRole = members.FirstOrDefault(member => member.UserId == (string)ViewBag.UserId)?.Role
+        ?? StudyGroupMemberRole.Member;
+    string ModeLabel(StudyGroupAccessMode mode) => mode switch
+    {
+        StudyGroupAccessMode.PublicOpen => "Công khai · vào ngay",
+        StudyGroupAccessMode.PublicApproval => "Công khai · cần duyệt",
+        _ => "Private · chỉ được mời"
+    };
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <a asp-action="Room" asp-route-id="@Model.Id" class="btn btn-outline-secondary">← Phòng chat</a>
+    <h1 class="h4 mb-0">Quản lý · @Model.Name</h1>
+</div>
+
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (isOwner)
+{
+    <section class="card p-3 mb-4">
+        <h2 class="h5">Quyền tham gia</h2>
+        <p class="text-muted small">Đổi chế độ sẽ hủy các yêu cầu và lời mời đang chờ. Thành viên hiện tại vẫn ở trong nhóm.</p>
+        <form asp-action="ChangeAccess" asp-route-id="@Model.Id" method="post" class="d-flex gap-2">
+            @Html.AntiForgeryToken()
+            <select name="accessMode" class="form-select" aria-label="Quyền tham gia">
+                @foreach (var mode in Enum.GetValues<StudyGroupAccessMode>())
+                {
+                    <option value="@mode" selected="@(mode == Model.AccessMode)">@ModeLabel(mode)</option>
+                }
+            </select>
+            <button type="submit" class="btn btn-primary">Lưu</button>
+        </form>
+    </section>
+}
+
+<section class="card p-3 mb-4">
+    <h2 class="h5">Mời thành viên</h2>
+    <p class="text-muted small">Nhập email của tài khoản đã xác minh. Lời mời hiển thị trong trang Nhóm học tập và hết hạn sau 7 ngày.</p>
+    <form asp-action="Invite" asp-route-id="@Model.Id" method="post" class="d-flex gap-2">
+        @Html.AntiForgeryToken()
+        <input name="email" type="email" required maxlength="320" class="form-control" placeholder="email@example.com" aria-label="Email cần mời" />
+        <button type="submit" class="btn btn-primary">Mời</button>
+    </form>
+</section>
+
+@if (Model.AccessMode == StudyGroupAccessMode.PublicApproval)
+{
+    <section class="card p-3 mb-4">
+        <h2 class="h5">Yêu cầu tham gia (@requests.Count)</h2>
+        @foreach (var request in requests)
+        {
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="me-auto">@request.Username · @request.RequestedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                <form asp-action="ReviewRequest" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="userId" value="@request.UserId" />
+                    <button class="btn btn-sm btn-primary" name="approve" value="true">Duyệt</button>
+                    <button class="btn btn-sm btn-outline-danger" name="approve" value="false">Từ chối</button>
+                </form>
+            </div>
+        }
+        @if (requests.Count == 0) { <p class="text-muted mb-0">Không có yêu cầu đang chờ.</p> }
+    </section>
+}
+
+<section class="card p-3 mb-4">
+    <h2 class="h5">Thành viên (@members.Count)</h2>
+    @foreach (var member in members)
+    {
+        <div class="d-flex align-items-center flex-wrap gap-2 border-bottom py-2">
+            <span class="me-auto">@member.Username · @(member.Role switch {
+                StudyGroupMemberRole.Owner => "Chủ phòng",
+                StudyGroupMemberRole.Moderator => "Người quản lý",
+                _ => "Thành viên"
+            })</span>
+            @if (isOwner && member.Role != StudyGroupMemberRole.Owner)
+            {
+                <form asp-action="SetModerator" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="userId" value="@member.UserId" />
+                    <button class="btn btn-sm btn-outline-primary" name="moderator" value="@(member.Role != StudyGroupMemberRole.Moderator)">@(member.Role == StudyGroupMemberRole.Moderator ? "Bỏ quyền quản lý" : "Cho quyền quản lý")</button>
+                </form>
+                <form asp-action="TransferOwnership" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="userId" value="@member.UserId" />
+                    <button class="btn btn-sm btn-outline-warning" type="submit">Chuyển chủ phòng</button>
+                </form>
+            }
+            @if (member.UserId != (string)ViewBag.UserId && member.Role < myRole)
+            {
+                <form asp-action="RemoveMember" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="userId" value="@member.UserId" />
+                    <button class="btn btn-sm btn-outline-danger" type="submit">Loại khỏi nhóm</button>
+                </form>
+            }
+        </div>
+    }
+</section>
+
+@if (banned.Count > 0)
+{
+    <section class="card p-3 mb-4">
+        <h2 class="h5">Tài khoản bị chặn</h2>
+        @foreach (var user in banned)
+        {
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="me-auto">@user.Username</span>
+                <form asp-action="Unban" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="userId" value="@user.UserId" />
+                    <button class="btn btn-sm btn-outline-primary">Bỏ chặn</button>
+                </form>
+            </div>
+        }
+    </section>
+}

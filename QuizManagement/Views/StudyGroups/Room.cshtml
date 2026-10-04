@@ -1,15 +1,29 @@
 @model BusinessObjects.StudyGroup
+@using BusinessObjects
 @using QuizManagement.Services
 @using System.Text.Json
 @{
     ViewData["Title"] = Model.Name;
     var messages = ViewBag.Messages as List<ChatMessage> ?? new();
     var userId = (string)ViewBag.UserId;
+    var members = ViewBag.Members as List<GroupMemberSummary> ?? new();
+    var myRole = members.FirstOrDefault(member => member.UserId == userId)?.Role ?? StudyGroupMemberRole.Member;
 }
 
 <div class="d-flex align-items-center gap-3 mb-3">
     <a asp-action="Index" class="btn btn-outline-secondary">← Nhóm</a>
-    <div><h1 class="h4 mb-0">@Model.Name</h1><small class="text-muted">@Model.Description</small></div>
+    <div class="me-auto"><h1 class="h4 mb-0">@Model.Name</h1><small class="text-muted">@Model.Description</small></div>
+    @if (myRole >= StudyGroupMemberRole.Moderator)
+    {
+        <a asp-action="Manage" asp-route-id="@Model.Id" class="btn btn-outline-primary">Quản lý</a>
+    }
+    @if (myRole != StudyGroupMemberRole.Owner)
+    {
+        <form asp-action="Leave" asp-route-id="@Model.Id" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline-danger">Rời nhóm</button>
+        </form>
+    }
 </div>
 <div class="card p-3">
     <button id="loadOlder" type="button" class="btn btn-sm btn-outline-secondary align-self-center mb-2">Tải tin cũ</button>
@@ -92,8 +106,12 @@
         });
 
         connection.on('ReceiveMessage', async message => {
+            if (message.groupId !== groupId) return;
             addMessage(message);
             await markLatestRead();
+        });
+        connection.on('GroupAccessRevoked', revokedGroupId => {
+            if (revokedGroupId === groupId) window.location.href = '/StudyGroups';
         });
         connection.onreconnecting(() => status.textContent = 'Đang kết nối lại...');
         connection.onreconnected(async () => {
