@@ -59,6 +59,7 @@ namespace DataAccessObjects
         {
             var progress = context.FlashcardProgresses
                 .SingleOrDefault(item => item.UserId == userId && item.QuestionId == questionId);
+            var isFirstReview = progress is null;
             if (progress is null)
             {
                 progress = new FlashcardProgress { UserId = userId, QuestionId = questionId };
@@ -66,7 +67,23 @@ namespace DataAccessObjects
             }
 
             progress.Review(remembered, reviewedAtUtc);
-            context.SaveChanges();
+
+            try
+            {
+                context.SaveChanges();
+            }
+            catch (DbUpdateException exception)
+                when (isFirstReview && DbExceptionClassifier.IsUniqueViolation(exception))
+            {
+                // Another request (e.g. a double tap) created this user's row for the question first:
+                // drop the duplicate insert and apply the review to the row that won.
+                context.Entry(progress).State = EntityState.Detached;
+                progress = context.FlashcardProgresses
+                    .Single(item => item.UserId == userId && item.QuestionId == questionId);
+                progress.Review(remembered, reviewedAtUtc);
+                context.SaveChanges();
+            }
+
             return progress;
         }
 

@@ -54,6 +54,7 @@ builder.Services.AddScoped<IAdminRepository, AdminRepository>();
 builder.Services.AddScoped<IQuestionReportRepository, QuestionReportRepository>();
 builder.Services.AddScoped<ILoginAttemptRepository, LoginAttemptRepository>();
 builder.Services.AddScoped<IKahootRepository, KahootRepository>();
+builder.Services.AddScoped<ICatalogRepository, CatalogRepository>();
 
 // 3. Services
 builder.Services.AddSingleton(TimeProvider.System);
@@ -72,6 +73,8 @@ builder.Services.AddScoped<StudyGroupService>();
 builder.Services.AddSingleton<RoomPresence>();
 builder.Services.AddSingleton<PresenceBroadcaster>();
 builder.Services.AddHostedService<PresenceExpirationService>();
+builder.Services.AddScoped<ICatalogService, CatalogService>();
+builder.Services.AddScoped<IFlashcardService, FlashcardService>();
 
 // 4. Infrastructure (web-tier)
 builder.Services.AddSignalR();
