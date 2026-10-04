@@ -13,7 +13,7 @@ public sealed record GroupDiscoverPage(List<GroupSummary> Groups, int TotalCount
     public int PageCount => (int)Math.Ceiling((double)TotalCount / PageSize);
 }
 public sealed record ChatMessage(int Id, int GroupId, string SenderUserId, string SenderName,
-    string? SenderAvatarUrl, string Content, DateTime SentAt);
+    string? SenderAvatarUrl, string Content, DateTime SentAt, GroupMessageKind Kind);
 public sealed record GroupInvitationSummary(int GroupId, string GroupName, DateTime ExpiresAt);
 public sealed record GroupMemberSummary(string UserId, string Username, StudyGroupMemberRole Role);
 public sealed record GroupJoinRequestSummary(string UserId, string Username, DateTime RequestedAt);
@@ -117,6 +117,7 @@ public sealed class StudyGroupService
                     .Select(member => member.User.Username).FirstOrDefault(),
                 group.Members.Count(member => !member.IsBanned),
                 group.Messages.Count(message =>
+                    message.Kind == GroupMessageKind.Chat &&
                     group.Members.Any(member => member.UserId == userId && !member.IsBanned
                         && (member.LastReadMessageId == null || message.Id > member.LastReadMessageId)
                         && message.SenderUserId != userId)),
@@ -438,6 +439,18 @@ public sealed class StudyGroupService
                 && !member.User.IsDisabled && member.User.EmailConfirmed)
             .Select(member => member.UserId).ToListAsync();
 
+    public Task<List<int>> GroupIdsForUserAsync(string userId) =>
+        _db.StudyGroupMembers.AsNoTracking()
+            .Where(member => member.UserId == userId && !member.IsBanned
+                && !member.User.IsDisabled && member.User.EmailConfirmed)
+            .Select(member => member.GroupId).ToListAsync();
+
+    public Task<List<string>> EligibleViewerIdsAsync(int groupId, string[] viewerIds) =>
+        _db.StudyGroupMembers.AsNoTracking()
+            .Where(member => member.GroupId == groupId && viewerIds.Contains(member.UserId)
+                && !member.IsBanned && !member.User.IsDisabled && member.User.EmailConfirmed)
+            .Select(member => member.UserId).ToListAsync();
+
     public async Task<List<ChatMessage>?> MessagesAsync(int groupId, string userId,
         int? beforeId = null, int limit = 30)
     {
@@ -449,7 +462,7 @@ public sealed class StudyGroupService
             .Take(limit)
             .Select(message => new ChatMessage(message.Id, message.GroupId,
                 message.SenderUserId, message.SenderUser.Username,
-                message.SenderUser.AvatarUrl, message.Content, message.SentAt))
+                message.SenderUser.AvatarUrl, message.Content, message.SentAt, message.Kind))
             .ToListAsync();
         messages.Reverse();
         return messages;
@@ -470,7 +483,27 @@ public sealed class StudyGroupService
         await _db.SaveChangesAsync();
         var sender = await _db.Users.AsNoTracking().FirstAsync(user => user.Id == userId);
         return new ChatMessage(message.Id, groupId, userId, sender.Username,
-            sender.AvatarUrl, content, message.SentAt);
+            sender.AvatarUrl, content, message.SentAt, GroupMessageKind.Chat);
+    }
+
+    public async Task<ChatMessage> RecordMembershipEventAsync(int groupId, string userId,
+        GroupMessageKind kind)
+    {
+        if (kind is not (GroupMessageKind.Joined or GroupMessageKind.Left))
+            throw new ArgumentOutOfRangeException(nameof(kind));
+        var sender = await _db.Users.AsNoTracking().FirstAsync(user => user.Id == userId);
+        var message = new GroupMessage
+        {
+            GroupId = groupId,
+            SenderUserId = userId,
+            Content = string.Empty,
+            Kind = kind,
+            SentAt = _clock.GetUtcNow().UtcDateTime
+        };
+        _db.GroupMessages.Add(message);
+        await _db.SaveChangesAsync();
+        return new ChatMessage(message.Id, groupId, userId, sender.Username,
+            sender.AvatarUrl, string.Empty, message.SentAt, kind);
     }
 
     private Task<StudyGroupMember?> FindMemberAsync(int groupId, string userId) =>

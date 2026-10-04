@@ -63,6 +63,43 @@ public sealed class StudyGroupPostgresTests
 
     [Fact]
     [Trait("Category", "PostgresIntegration")]
+    public async Task MembershipEvents_AppearInHistoryWithoutIncreasingUnreadChatCount()
+    {
+        var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
+        var options = new DbContextOptionsBuilder<QuizManagementDbContext>()
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName)).Options;
+        await using var db = new QuizManagementDbContext(options);
+        try
+        {
+            await db.Database.MigrateAsync();
+            db.Users.AddRange(
+                new User { Id = "alice", Username = "Alice", Email = "alice@test.local",
+                    EmailConfirmed = true, Role = AppRoles.User, CreatedAt = DateTime.UtcNow },
+                new User { Id = "bob", Username = "Bob", Email = "bob@test.local",
+                    EmailConfirmed = true, Role = AppRoles.User, CreatedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+            var chat = new StudyGroupService(db, TimeProvider.System);
+            var group = (await chat.CreateAsync("alice", "Ôn tập", null, null))!;
+
+            Assert.Equal(GroupJoinResult.Joined, await chat.JoinAsync(group.Id, "bob"));
+            var joined = await chat.RecordMembershipEventAsync(group.Id, "bob", GroupMessageKind.Joined);
+            Assert.Equal(0, Assert.Single(await chat.ListAsync("alice")).UnreadCount);
+            Assert.Equal(GroupActionResult.Success, await chat.LeaveAsync(group.Id, "bob"));
+            var left = await chat.RecordMembershipEventAsync(group.Id, "bob", GroupMessageKind.Left);
+
+            var history = (await chat.MessagesAsync(group.Id, "alice"))!;
+            Assert.Equal([GroupMessageKind.Joined, GroupMessageKind.Left], history.Select(message => message.Kind));
+            Assert.Equal([joined.Id, left.Id], history.Select(message => message.Id));
+            Assert.Equal(0, Assert.Single(await chat.ListAsync("alice")).UnreadCount);
+        }
+        finally
+        {
+            await db.Database.EnsureDeletedAsync();
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "PostgresIntegration")]
     public async Task RestrictedRooms_RequireApprovalOrInvitationAndStopDeliveringAfterRemoval()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";

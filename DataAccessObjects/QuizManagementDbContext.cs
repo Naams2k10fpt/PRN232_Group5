@@ -466,6 +466,7 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Content).IsRequired();
+            entity.Property(e => e.Kind).HasConversion<int>().HasDefaultValue(GroupMessageKind.Chat);
             entity.Property(e => e.SentAt).HasDefaultValueSql("now()");
             entity.HasIndex(e => new { e.GroupId, e.SentAt });
             entity.HasIndex(e => e.SenderUserId);

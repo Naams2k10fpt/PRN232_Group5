@@ -176,6 +176,11 @@ namespace DataAccessObjects.Migrations
                     b.Property<int>("GroupId")
                         .HasColumnType("integer");
 
+                    b.Property<int>("Kind")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<string>("SenderUserId")
                         .IsRequired()
                         .HasColumnType("text");

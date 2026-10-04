@@ -60,6 +60,7 @@ public sealed class StudyGroupsController : Controller
             TempData["CreateGroupAccessMode"] = accessMode.ToString();
             return RedirectToAction(nameof(Index));
         }
+        await NotifyMembershipEventAsync(group.Id, UserId(), GroupMessageKind.Joined);
         return RedirectToAction(nameof(Room), new { id = group.Id });
     }
 
@@ -69,7 +70,14 @@ public sealed class StudyGroupsController : Controller
     {
         var result = await _groups.JoinAsync(id, UserId());
         if (result is GroupJoinResult.Joined or GroupJoinResult.AlreadyMember)
+        {
+            if (result == GroupJoinResult.Joined)
+            {
+                await NotifyMembershipEventAsync(id, UserId(), GroupMessageKind.Joined);
+                await NotifyRoomRosterChangedAsync(id);
+            }
             return RedirectToAction(nameof(Room), new { id });
+        }
         if (result == GroupJoinResult.PendingApproval)
         {
             TempData["SuccessMessage"] = "Đã gửi yêu cầu tham gia. Hãy chờ người quản lý duyệt.";
@@ -90,8 +98,14 @@ public sealed class StudyGroupsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RespondInvitation(int id, bool accept)
     {
+        var wasMember = accept && await _groups.IsMemberAsync(id, UserId());
         var result = await _groups.RespondInvitationAsync(id, UserId(), accept);
         if (result != GroupActionResult.Success) return NotFound();
+        if (accept && !wasMember)
+        {
+            await NotifyMembershipEventAsync(id, UserId(), GroupMessageKind.Joined);
+            await NotifyRoomRosterChangedAsync(id);
+        }
         return accept ? RedirectToAction(nameof(Room), new { id }) : RedirectToAction(nameof(Index));
     }
 
@@ -123,7 +137,13 @@ public sealed class StudyGroupsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ReviewRequest(int id, string userId, bool approve)
     {
+        var wasMember = approve && await _groups.IsMemberAsync(id, userId);
         var result = await _groups.ReviewRequestAsync(id, UserId(), userId, approve);
+        if (result == GroupActionResult.Success && approve && !wasMember)
+        {
+            await NotifyMembershipEventAsync(id, userId, GroupMessageKind.Joined);
+            await NotifyRoomRosterChangedAsync(id);
+        }
         return result == GroupActionResult.Success
             ? RedirectToAction(nameof(Manage), new { id }) : NotFound();
     }
@@ -153,6 +173,7 @@ public sealed class StudyGroupsController : Controller
     public async Task<IActionResult> SetModerator(int id, string userId, bool moderator)
     {
         var result = await _groups.SetModeratorAsync(id, UserId(), userId, moderator);
+        if (result == GroupActionResult.Success) await NotifyRoomRosterChangedAsync(id);
         return result == GroupActionResult.Success
             ? RedirectToAction(nameof(Manage), new { id }) : NotFound();
     }
@@ -162,6 +183,7 @@ public sealed class StudyGroupsController : Controller
     public async Task<IActionResult> TransferOwnership(int id, string userId)
     {
         var result = await _groups.TransferOwnershipAsync(id, UserId(), userId);
+        if (result == GroupActionResult.Success) await NotifyRoomRosterChangedAsync(id);
         return result == GroupActionResult.Success
             ? RedirectToAction(nameof(Room), new { id }) : NotFound();
     }
@@ -173,6 +195,8 @@ public sealed class StudyGroupsController : Controller
         var result = await _groups.RemoveMemberAsync(id, UserId(), userId);
         if (result != GroupActionResult.Success) return NotFound();
         await _hub.Clients.User(userId).SendAsync("GroupAccessRevoked", id);
+        await NotifyMembershipEventAsync(id, userId, GroupMessageKind.Left);
+        await NotifyRoomRosterChangedAsync(id);
         return RedirectToAction(nameof(Manage), new { id });
     }
 
@@ -192,7 +216,22 @@ public sealed class StudyGroupsController : Controller
         var result = await _groups.LeaveAsync(id, UserId());
         if (result != GroupActionResult.Success) return NotFound();
         await _hub.Clients.User(UserId()).SendAsync("GroupAccessRevoked", id);
+        await NotifyMembershipEventAsync(id, UserId(), GroupMessageKind.Left);
+        await NotifyRoomRosterChangedAsync(id);
         return RedirectToAction(nameof(Index));
+    }
+
+    private async Task NotifyMembershipEventAsync(int groupId, string userId, GroupMessageKind kind)
+    {
+        var message = await _groups.RecordMembershipEventAsync(groupId, userId, kind);
+        var recipients = await _groups.RecipientIdsAsync(groupId);
+        await _hub.Clients.Users(recipients).SendAsync("ReceiveMessage", message);
+    }
+
+    private async Task NotifyRoomRosterChangedAsync(int groupId)
+    {
+        var recipients = await _groups.RecipientIdsAsync(groupId);
+        await _hub.Clients.Users(recipients).SendAsync("RoomRosterChanged", groupId);
     }
 
     private string UserId() => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
