@@ -4,6 +4,7 @@ using Repositories;
 using Services;
 using DataAccessObjects;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using QuizManagement.Infrastructure;
 using QuizManagement.Hubs;
@@ -147,7 +148,15 @@ builder.Services.AddAuthorization(options =>
 
 });
 
-// 7. Cookie Authentication với SecurityStamp + IsDisabled validation
+// 7. Authentication: cookie cho web MVC (mặc định), JWT bearer cho mobile API (/api/*) và SignalR.
+// Cả hai dùng chung SignedInUserValidator: user bị xóa/khóa/chưa xác minh email hoặc đã đổi
+// SecurityStamp (đổi mật khẩu/role) sẽ bị đăng xuất ở mọi nơi.
+var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+var jwtSigningKey = JwtTokenService.CreateSigningKey(jwtOptions.SigningKey);
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+builder.Services.AddSingleton(jwtSigningKey);
+builder.Services.AddSingleton<JwtTokenService>();
+
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -166,23 +175,50 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                 if (userId is null) return Task.CompletedTask;
 
                 var userService = context.HttpContext.RequestServices.GetRequiredService<IUserService>();
-                var user = userService.GetById(userId);
-
-                // Reject if user deleted or disabled
-                if (user is null || user.IsDisabled || !user.EmailConfirmed)
-                {
+                if (!SignedInUserValidator.IsStillValid(userService.GetById(userId), context.Principal))
                     context.RejectPrincipal();
-                    return Task.CompletedTask;
-                }
-
-                // Reject if SecurityStamp has changed (password changed / role changed)
-                var stampInCookie = context.Principal?.FindFirstValue("SecurityStamp");
-                if (user.SecurityStamp is not null && user.SecurityStamp != stampInCookie)
-                {
-                    context.RejectPrincipal();
-                }
 
                 return Task.CompletedTask;
+            }
+        };
+    })
+    .AddJwtBearer(options =>
+    {
+        // Giữ nguyên claim type (ClaimTypes.*) như cookie để controller đọc giống nhau.
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters = JwtTokenService.CreateValidationParameters(jwtOptions, jwtSigningKey);
+
+        options.Events = new JwtBearerEvents
+        {
+            // SignalR client không gửi được header qua WebSocket nên gửi token qua query string.
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                    context.Token = accessToken;
+
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = context =>
+            {
+                var userId = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                var userService = context.HttpContext.RequestServices.GetRequiredService<IUserService>();
+                if (userId is null || !SignedInUserValidator.IsStillValid(userService.GetById(userId), context.Principal))
+                    context.Fail("Token không còn hiệu lực.");
+
+                return Task.CompletedTask;
+            },
+            OnChallenge = async context =>
+            {
+                context.HandleResponse();
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.Headers.WWWAuthenticate = JwtBearerDefaults.AuthenticationScheme;
+                await context.Response.WriteAsJsonAsync(new ApiError("unauthorized", "Bạn cần đăng nhập."));
+            },
+            OnForbidden = async context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsJsonAsync(new ApiError("forbidden", "Bạn không có quyền thực hiện thao tác này."));
             }
         };
     });

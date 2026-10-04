@@ -30,3 +30,7 @@ services:
         sync: false
       - key: Email__FromAddress
         sync: false
+      # Signs the mobile API's bearer tokens. Render generates a random value; rotating it signs every
+      # mobile user out.
+      - key: Jwt__SigningKey
+        generateValue: true
