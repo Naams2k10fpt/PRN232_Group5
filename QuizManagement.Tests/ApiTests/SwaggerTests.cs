@@ -21,5 +21,8 @@ public class SwaggerTests : IDisposable
 
         foreach (var catalogPath in new[] { "/api/subjects", "/api/subjects/{id}", "/api/subjects/{subjectId}/decks", "/api/decks/{id}" })
             Assert.True(paths.GetProperty(catalogPath).GetProperty("get").TryGetProperty("security", out _), catalogPath);
+
+        Assert.True(paths.GetProperty("/api/decks/{deckId}/flashcards").GetProperty("get").TryGetProperty("security", out _));
+        Assert.True(paths.GetProperty("/api/flashcards/progress").GetProperty("post").TryGetProperty("security", out _));
     }
 }

@@ -20,6 +20,8 @@ REST API for the PRM393 mobile app, next to the web app.
 | `GET /api/subjects/{id}` | One subject |
 | `GET /api/subjects/{subjectId}/decks` | Decks of a subject with the user's flashcard progress (`dueCount`, `learnedCount`, `nextReviewAtUtc`) |
 | `GET /api/decks/{id}` | One deck with the user's flashcard progress |
+| `GET /api/decks/{deckId}/flashcards?mode=due` | Flashcards to study: new and due cards (`mode=all` for every card); `content`/`explanation` are Markdown |
+| `POST /api/flashcards/progress` | Saves one review `{ deckId, questionId, remembered }` and returns the card's next review time |
 
 Postman: import `docs/postman/QuizManagement.postman_collection.json`, set `baseUrl`, run **Auth / Login** first.
 

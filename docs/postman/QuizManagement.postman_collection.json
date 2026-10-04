@@ -21,6 +21,10 @@
     {
       "key": "deckId",
       "value": ""
+    },
+    {
+      "key": "questionId",
+      "value": ""
     }
   ],
   "item": [
@@ -469,6 +473,103 @@
               ]
             },
             "description": "404 deck_not_found when the deck does not exist or was deleted.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flashcards",
+      "item": [
+        {
+          "name": "List flashcards",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/decks/{{deckId}}/flashcards?mode=due",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "decks",
+                "{{deckId}}",
+                "flashcards"
+              ],
+              "query": [
+                {
+                  "key": "mode",
+                  "value": "due"
+                }
+              ]
+            },
+            "description": "`mode=due` (default): new cards and cards whose review time has passed; `mode=all`: every card. `content` and `explanation` are Markdown; `progress` is null for a card never reviewed. 400 validation_failed for another mode, 404 deck_not_found. Stores the first card's id as `questionId`.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 && pm.response.json().cards.length > 0) {",
+                  "  pm.collectionVariables.set('questionId', pm.response.json().cards[0].questionId);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save review progress",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/flashcards/progress",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "flashcards",
+                "progress"
+              ]
+            },
+            "description": "Saves whether the user remembered the card and returns its next review time. 400 validation_failed for a missing/invalid field, 404 question_not_found when the question is not in the deck.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deckId\": {{deckId}},\n  \"questionId\": {{questionId}},\n  \"remembered\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "auth": {
               "type": "bearer",
               "bearer": [
