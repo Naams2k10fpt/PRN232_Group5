@@ -7,13 +7,6 @@
     var createGroupAccessMode = TempData["CreateGroupAccessMode"]?.ToString();
 }
 
-<div class="page-header">
-    <div class="page-header-left">
-        <h1>Nhóm học tập</h1>
-        <p>Học cùng bạn bè và khám phá các phòng thảo luận công khai.</p>
-    </div>
-</div>
-
 @if (TempData["SuccessMessage"] is string successMessage)
 {
     <div class="alert alert-success" role="status">@successMessage</div>
