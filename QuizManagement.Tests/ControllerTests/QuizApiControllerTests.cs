@@ -53,6 +53,16 @@ public sealed class QuizApiControllerTests
                 [new QuizAnswerRequest(11, [-2])])));
     }
 
+    [Fact]
+    public void Start_RejectsMoreThanFiveHundredQuestionsBeforeCreatingAttempt()
+    {
+        var quiz = new QuizServiceFake { AvailableQuestionCount = 501 };
+        var controller = new QuizApiController(new DeckServiceFake(), quiz);
+
+        Assert.IsType<BadRequestObjectResult>(controller.Start(new StartQuizRequest(7, 501)));
+        Assert.Null(quiz.StartedUserId);
+    }
+
     private sealed class DeckServiceFake : IDeckService
     {
         public Deck? GetDeckForStudy(int id) => new()
@@ -70,9 +80,10 @@ public sealed class QuizApiControllerTests
 
     private sealed class QuizServiceFake : IQuizService
     {
+        public int AvailableQuestionCount { get; init; } = 1;
         public string? StartedUserId { get; private set; }
         public IReadOnlyList<int>? StartedQuestionIds { get; private set; }
-        public int GetAvailableQuestionCount(int deckId) => 1;
+        public int GetAvailableQuestionCount(int deckId) => AvailableQuestionCount;
         public List<Question> GetQuestionsForQuiz(int deckId, int questionCount) =>
         [
             new Question

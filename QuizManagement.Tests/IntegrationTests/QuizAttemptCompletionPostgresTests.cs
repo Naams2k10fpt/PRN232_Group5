@@ -111,7 +111,7 @@ public class QuizAttemptCompletionPostgresTests
 
     [Fact]
     [Trait("Category", "PostgresIntegration")]
-    public void CompleteQuizAttempt_RejectsForeignAndExpiredAndRollsBackFailedInsert()
+    public void CompleteQuizAttempt_AllowsShortDelayButRejectsForeignAndExpiredAndRollsBackFailedInsert()
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
         var options = CreateOptions(databaseName);
@@ -147,6 +147,14 @@ public class QuizAttemptCompletionPostgresTests
             context.ChangeTracker.Clear();
             Assert.Null(context.QuizAttempts.Single().CompletedAtUtc);
             Assert.Empty(context.TestHistories);
+
+            var delayed = repository.CompleteQuizAttempt(
+                attempt.Id,
+                deckId,
+                userId,
+                Now.AddMinutes(1).AddSeconds(5),
+                CreateHistory(userId, deckId));
+            Assert.NotNull(delayed);
         }
         finally
         {

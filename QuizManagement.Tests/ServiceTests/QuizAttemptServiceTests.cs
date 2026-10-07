@@ -270,6 +270,30 @@ public class QuizAttemptServiceTests
         Assert.Equal(0, repository.CompleteCalls);
     }
 
+    [Theory]
+    [InlineData(5, true)]
+    [InlineData(10, true)]
+    [InlineData(11, false)]
+    public void SubmitQuizAttempt_AllowsOnlyShortNetworkDelayAfterExpiry(
+        int secondsAfterExpiry, bool shouldComplete)
+    {
+        var attempt = CreateAttempt(timeLimitMinutes: 30);
+        var repository = new QuizRepositoryFake
+        {
+            Attempt = attempt,
+            Questions = [CreateSingleChoiceQuestion(3, 31), CreateSingleChoiceQuestion(2, 21)]
+        };
+        var service = new QuizService(repository,
+            new FixedTimeProvider(Now.AddMinutes(30).AddSeconds(secondsAfterExpiry)));
+
+        var result = service.SubmitQuizAttempt(attempt.Id, attempt.DeckId, attempt.UserId,
+            new Dictionary<int, List<int>> { [3] = [31] });
+
+        Assert.Equal(shouldComplete, result is not null);
+        Assert.Equal(shouldComplete ? 1 : 0, repository.CompleteCalls);
+        Assert.Null(service.GetValidQuizAttempt(attempt.Id, attempt.DeckId, attempt.UserId));
+    }
+
     private static Question CreateSingleChoiceQuestion(int questionId, int correctAnswerId)
     {
         return new Question

@@ -75,10 +75,11 @@ namespace QuizManagement.Controllers
                 return View("Config", config);
             }
 
-            if (config.QuestionCount < 1 || config.QuestionCount > availableCount)
+            var maxQuestionCount = Math.Min(availableCount, QuizAttempt.MaxQuestions);
+            if (config.QuestionCount < 1 || config.QuestionCount > maxQuestionCount)
             {
                 ModelState.AddModelError(nameof(config.QuestionCount),
-                    $"Số câu hỏi phải từ 1 đến {availableCount}.");
+                    $"Số câu hỏi phải từ 1 đến {maxQuestionCount}.");
                 return View("Config", config);
             }
 

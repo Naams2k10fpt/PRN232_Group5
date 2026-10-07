@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using QuizManagement.Infrastructure;
 using QuizManagement.ViewModels.Quiz;
 using Services;
 using System.Security.Claims;
@@ -8,7 +8,7 @@ namespace QuizManagement.Controllers;
 
 [ApiController]
 [Route("api/quiz")]
-[Authorize(Policy = "StudyContent")]
+[ApiAuthorize(Policy = "StudyContent")]
 public sealed class QuizApiController : ControllerBase
 {
     private readonly IDeckService _decks;
@@ -24,18 +24,19 @@ public sealed class QuizApiController : ControllerBase
     public IActionResult Start([FromBody] StartQuizRequest request)
     {
         if (request.DeckId <= 0)
-            return BadRequest(new { message = "Bộ đề không hợp lệ." });
+            return BadRequest(new ApiError("invalid_deck", "Bộ đề không hợp lệ."));
         var deck = _decks.GetDeckForStudy(request.DeckId);
-        if (deck is null) return NotFound(new { message = "Bộ đề không tồn tại." });
+        if (deck is null) return NotFound(new ApiError("deck_not_found", "Bộ đề không tồn tại."));
 
         var available = _quiz.GetAvailableQuestionCount(request.DeckId);
         var count = request.QuestionCount ?? Math.Min(10, available);
-        if (count < 1 || count > available || deck.TimeLimitMinutes is < 0 or > 180)
-            return BadRequest(new { message = "Số câu hỏi hoặc thời gian làm bài không hợp lệ." });
+        if (count < 1 || count > Math.Min(available, BusinessObjects.QuizAttempt.MaxQuestions)
+            || deck.TimeLimitMinutes is < 0 or > 180)
+            return BadRequest(new ApiError("invalid_quiz_config", "Số câu hỏi hoặc thời gian làm bài không hợp lệ."));
 
         var questions = _quiz.GetQuestionsForQuiz(request.DeckId, count);
         if (questions.Count != count)
-            return Conflict(new { message = "Bộ đề vừa thay đổi. Vui lòng thử lại." });
+            return Conflict(new ApiError("quiz_changed", "Bộ đề vừa thay đổi. Vui lòng thử lại."));
 
         var attempt = _quiz.StartQuizAttempt(request.DeckId, UserId(),
             questions.Select(question => question.Id).ToList(), deck.TimeLimitMinutes);
@@ -55,14 +56,14 @@ public sealed class QuizApiController : ControllerBase
     public IActionResult GetAttempt(Guid attemptId, [FromQuery] int deckId)
     {
         if (attemptId == Guid.Empty || deckId <= 0)
-            return BadRequest(new { message = "Lượt làm bài không hợp lệ." });
+            return BadRequest(new ApiError("invalid_attempt", "Lượt làm bài không hợp lệ."));
         var attempt = _quiz.GetValidQuizAttempt(attemptId, deckId, UserId());
-        if (attempt is null) return NotFound(new { message = "Lượt làm bài không còn hiệu lực." });
+        if (attempt is null) return NotFound(new ApiError("attempt_not_found", "Lượt làm bài không còn hiệu lực."));
         var deck = _decks.GetDeckForStudy(deckId);
-        if (deck is null) return NotFound(new { message = "Bộ đề không tồn tại." });
+        if (deck is null) return NotFound(new ApiError("deck_not_found", "Bộ đề không tồn tại."));
         var questions = _quiz.GetQuestionsForAttempt(deckId, attempt.QuestionIds);
         if (questions.Count != attempt.QuestionIds.Count)
-            return Conflict(new { message = "Câu hỏi của bộ đề đã thay đổi." });
+            return Conflict(new ApiError("quiz_changed", "Câu hỏi của bộ đề đã thay đổi."));
 
         return Ok(new
         {
@@ -83,7 +84,7 @@ public sealed class QuizApiController : ControllerBase
             || request.Answers.Any(answer => answer is null || answer.QuestionId <= 0
                 || answer.SelectedAnswerIds is null || answer.SelectedAnswerIds.Count > 100
                 || answer.SelectedAnswerIds.Any(id => id <= 0)))
-            return BadRequest(new { message = "Lượt làm bài không hợp lệ." });
+            return BadRequest(new ApiError("invalid_submission", "Lượt làm bài không hợp lệ."));
 
         var answers = request.Answers
             .GroupBy(answer => answer.QuestionId)
@@ -91,7 +92,7 @@ public sealed class QuizApiController : ControllerBase
                 group => group.SelectMany(answer => answer.SelectedAnswerIds ?? []).Distinct().ToList());
         var history = _quiz.SubmitQuizAttempt(request.AttemptId, request.DeckId, UserId(), answers);
         if (history is null)
-            return Conflict(new { message = "Lượt làm bài đã hết hạn hoặc không còn hiệu lực." });
+            return Conflict(new ApiError("attempt_expired", "Lượt làm bài đã hết hạn hoặc không còn hiệu lực."));
 
         return Ok(QuizResultViewModel.FromHistory(
             _quiz.GetTestHistoryById(history.Id, UserId()) ?? history));

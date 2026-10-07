@@ -66,7 +66,8 @@ namespace Services
                 throw new ArgumentOutOfRangeException(nameof(timeLimitMinutes));
 
             var normalizedQuestionIds = questionIds.Distinct().ToList();
-            if (normalizedQuestionIds.Count is < 1 or > 500 || normalizedQuestionIds.Any(id => id <= 0))
+            if (normalizedQuestionIds.Count < 1 || normalizedQuestionIds.Count > QuizAttempt.MaxQuestions
+                || normalizedQuestionIds.Any(id => id <= 0))
                 throw new ArgumentException("Danh sách câu hỏi không hợp lệ.", nameof(questionIds));
 
             var now = _timeProvider.GetUtcNow();
@@ -83,6 +84,10 @@ namespace Services
         }
 
         public ValidQuizAttempt? GetValidQuizAttempt(Guid attemptId, int deckId, string userId)
+            => GetValidQuizAttempt(attemptId, deckId, userId, forSubmission: false);
+
+        private ValidQuizAttempt? GetValidQuizAttempt(
+            Guid attemptId, int deckId, string userId, bool forSubmission)
         {
             var attempt = _repository.GetQuizAttempt(attemptId, deckId, userId);
             if (attempt is null || attempt.CompletedAtUtc.HasValue)
@@ -101,8 +106,11 @@ namespace Services
             else
             {
                 var expectedExpiry = attempt.StartedAtUtc.AddMinutes(attempt.TimeLimitMinutes);
+                var latestAllowed = forSubmission
+                    ? expectedExpiry.AddSeconds(QuizAttempt.SubmissionGraceSeconds)
+                    : expectedExpiry;
                 if (attempt.ExpiresAtUtc != expectedExpiry
-                    || now > expectedExpiry)
+                    || now > latestAllowed)
                     return null;
 
                 remainingSeconds = Math.Max(
@@ -124,7 +132,7 @@ namespace Services
             }
 
             if (questionIds is null
-                || questionIds.Count is < 1 or > 500
+                || questionIds.Count < 1 || questionIds.Count > QuizAttempt.MaxQuestions
                 || questionIds.Any(id => id <= 0)
                 || questionIds.Distinct().Count() != questionIds.Count)
                 return null;
@@ -143,7 +151,7 @@ namespace Services
             string userId,
             IReadOnlyDictionary<int, List<int>> selectedAnswerIdsByQuestion)
         {
-            var attempt = GetValidQuizAttempt(attemptId, deckId, userId);
+            var attempt = GetValidQuizAttempt(attemptId, deckId, userId, forSubmission: true);
             if (attempt is null)
                 return _repository.GetTestHistoryByQuizAttempt(attemptId, deckId, userId);
 

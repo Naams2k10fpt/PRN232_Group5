@@ -73,6 +73,22 @@ public class QuizControllerAttemptTests
     }
 
     [Fact]
+    public void Take_RejectsMoreThanFiveHundredQuestionsOnWeb()
+    {
+        var quizService = new QuizServiceFake { AvailableQuestionCount = 501 };
+        var controller = BuildController(
+            new DeckServiceFake { Deck = CreateDeck(timeLimitMinutes: 30) },
+            quizService,
+            new EphemeralDataProtectionProvider());
+
+        var result = controller.Take(new QuizConfigViewModel { DeckId = 7, QuestionCount = 501 });
+
+        Assert.Equal("Config", Assert.IsType<ViewResult>(result).ViewName);
+        Assert.False(controller.ModelState.IsValid);
+        Assert.Equal(0, quizService.StartCalls);
+    }
+
+    [Fact]
     public void Submit_RedirectsWithoutResultWhenServiceRejectsAttempt()
     {
         var provider = new EphemeralDataProtectionProvider();
@@ -192,6 +208,7 @@ public class QuizControllerAttemptTests
 
     private sealed class QuizServiceFake : IQuizService
     {
+        public int AvailableQuestionCount { get; init; } = 1;
         public int StartCalls { get; private set; }
         public int StartedDeckId { get; private set; }
         public string? StartedUserId { get; private set; }
@@ -220,7 +237,7 @@ public class QuizControllerAttemptTests
             ];
         }
 
-        public int GetAvailableQuestionCount(int deckId) => 1;
+        public int GetAvailableQuestionCount(int deckId) => AvailableQuestionCount;
 
         public List<Question> GetQuestionsForAttempt(int deckId, IReadOnlyList<int> questionIds)
         {
