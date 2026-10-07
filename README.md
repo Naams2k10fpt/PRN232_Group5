@@ -23,5 +23,7 @@ REST API for the PRM393 mobile app, next to the web app.
 
 Postman: import `docs/postman/QuizManagement.postman_collection.json`, set `baseUrl`, run **Auth / Login** first.
 
+Quiz cá nhân và Group Chat: xem [hợp đồng API TV3](docs/tv3-quiz-chat-api.md).
+
 New `/api/*` controllers: add `[ApiController]` and `[ApiAuthorize]` (bearer only, 401/403 as JSON); see
 `Controllers/Api/ProfileApiController.cs`.

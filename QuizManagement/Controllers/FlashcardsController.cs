@@ -39,7 +39,6 @@ namespace QuizManagement.Controllers
                     Content = card.Content,
                     Explanation = card.Explanation,
                     QuestionType = card.QuestionType,
-                    CorrectAnswers = card.CorrectAnswers.ToList(),
                     AllAnswers = card.Options
                         .Select(option => new FlashcardAnswerOption
                         {

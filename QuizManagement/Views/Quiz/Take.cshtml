@@ -86,7 +86,7 @@
     </div>
 
     <div class="sticky-action-bar">
-        <button type="button" class="btn btn-primary btn-lg px-5" onclick="submitQuiz()">
+        <button type="button" id="submitQuizButton" class="btn btn-primary btn-lg px-5" onclick="submitQuiz()">
             Nộp bài
         </button>
     </div>
@@ -95,6 +95,16 @@
 @section Scripts {
     <script>
         var totalQuestions = @Model.Questions.Count;
+        var isSubmitting = false;
+
+        function postQuiz() {
+            if (isSubmitting) return;
+            isSubmitting = true;
+            var button = document.getElementById('submitQuizButton');
+            button.disabled = true;
+            button.textContent = 'Đang nộp bài...';
+            document.getElementById('quizForm').submit();
+        }
 
         function updateProgress() {
             var answered = 0;
@@ -120,7 +130,7 @@
             var msg = unanswered > 0
                 ? 'Bạn còn ' + unanswered + ' câu chưa trả lời. Bạn có chắc muốn nộp bài?'
                 : 'Bạn có chắc muốn nộp bài?';
-            if (confirm(msg)) document.getElementById('quizForm').submit();
+            if (confirm(msg)) postQuiz();
         }
 
         // ── Timer ──────────────────────────────────────────────
@@ -145,8 +155,7 @@
                 }
                 if (remaining <= 0) {
                     timerEl.textContent = '00:00';
-                    alert('Hết thời gian! Bài làm sẽ được nộp tự động.');
-                    document.getElementById('quizForm').submit();
+                    postQuiz();
                     return;
                 }
                 setTimeout(tickTimer, 250);

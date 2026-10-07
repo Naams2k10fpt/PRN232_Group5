@@ -1,6 +1,8 @@
 using BusinessObjects;
 using DataAccessObjects;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 
 namespace QuizManagement.Services;
 
@@ -15,6 +17,10 @@ public sealed record GroupDiscoverPage(List<GroupSummary> Groups, int TotalCount
 public sealed record ChatMessage(int Id, int GroupId, string SenderUserId, string SenderName,
     string? SenderAvatarUrl, string Content, DateTime SentAt, GroupMessageKind Kind);
 public sealed record GroupInvitationSummary(int GroupId, string GroupName, DateTime ExpiresAt);
+public sealed record GroupInviteLinkPreview(int GroupId, string GroupName, DateTime? ExpiresAt);
+public enum GroupInviteLinkFailure { Unknown, Expired, Revoked }
+public sealed record GroupInviteLinkSummary(int Id, string CreatedByName, DateTime CreatedAt,
+    DateTime? ExpiresAt, DateTime? RevokedAt, string? Token);
 public sealed record GroupMemberSummary(string UserId, string Username, StudyGroupMemberRole Role);
 public sealed record GroupJoinRequestSummary(string UserId, string Username, DateTime RequestedAt);
 public sealed record GroupBanSummary(string UserId, string Username);
@@ -26,11 +32,14 @@ public sealed class StudyGroupService
 {
     private readonly QuizManagementDbContext _db;
     private readonly TimeProvider _clock;
+    private readonly IDataProtector _inviteLinkProtector;
 
-    public StudyGroupService(QuizManagementDbContext db, TimeProvider clock)
+    public StudyGroupService(QuizManagementDbContext db, TimeProvider clock,
+        IDataProtectionProvider protectionProvider)
     {
         _db = db;
         _clock = clock;
+        _inviteLinkProtector = protectionProvider.CreateProtector("QuizManagement.StudyGroupInviteLink.v1");
     }
 
     public Task<bool> IsMemberAsync(int groupId, string userId) =>
@@ -338,6 +347,131 @@ public sealed class StudyGroupService
         return GroupActionResult.Success;
     }
 
+    public async Task<string?> CreateInviteLinkAsync(int groupId, string actorId, int durationDays)
+    {
+        if (!await IsOwnerAsync(groupId, actorId) || durationDays is not (0 or 1 or 7 or 30))
+            return null;
+        var now = _clock.GetUtcNow().UtcDateTime;
+        var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+        _db.StudyGroupInviteLinks.Add(new StudyGroupInviteLink
+        {
+            GroupId = groupId,
+            TokenHash = HashInviteToken(token),
+            ProtectedToken = _inviteLinkProtector.Protect(token),
+            CreatedByUserId = actorId,
+            CreatedAt = now,
+            ExpiresAt = durationDays == 0 ? null : now.AddDays(durationDays)
+        });
+        await _db.SaveChangesAsync();
+        return token;
+    }
+
+    public async Task<List<GroupInviteLinkSummary>> InviteLinksAsync(int groupId, string actorId)
+    {
+        if (!await IsOwnerAsync(groupId, actorId)) return [];
+        var now = _clock.GetUtcNow().UtcDateTime;
+        var links = await _db.StudyGroupInviteLinks.AsNoTracking()
+            .Where(link => link.GroupId == groupId)
+            .OrderByDescending(link => link.CreatedAt)
+            .Select(link => new { link.Id, CreatedByName = link.CreatedByUser.Username,
+                link.CreatedAt, link.ExpiresAt, link.RevokedAt, link.ProtectedToken })
+            .ToListAsync();
+        return links.Select(link => new GroupInviteLinkSummary(link.Id, link.CreatedByName,
+            link.CreatedAt, link.ExpiresAt, link.RevokedAt,
+            link.RevokedAt is null && (link.ExpiresAt is null || link.ExpiresAt > now)
+                ? TryUnprotectInviteToken(link.ProtectedToken) : null)).ToList();
+    }
+
+    public async Task<GroupActionResult> RevokeInviteLinkAsync(int groupId, int linkId, string actorId)
+    {
+        if (!await IsOwnerAsync(groupId, actorId)) return GroupActionResult.Forbidden;
+        var link = await _db.StudyGroupInviteLinks.FirstOrDefaultAsync(candidate =>
+            candidate.Id == linkId && candidate.GroupId == groupId);
+        if (link is null || link.RevokedAt is not null) return GroupActionResult.NotFound;
+        link.RevokedAt = _clock.GetUtcNow().UtcDateTime;
+        await _db.SaveChangesAsync();
+        return GroupActionResult.Success;
+    }
+
+    public async Task<GroupInviteLinkPreview?> InviteLinkPreviewAsync(string token)
+    {
+        var hash = TryHashInviteToken(token);
+        if (hash is null) return null;
+        var now = _clock.GetUtcNow().UtcDateTime;
+        return await _db.StudyGroupInviteLinks.AsNoTracking()
+            .Where(link => link.TokenHash == hash && link.RevokedAt == null
+                && (link.ExpiresAt == null || link.ExpiresAt > now))
+            .Select(link => new GroupInviteLinkPreview(link.GroupId, link.Group.Name, link.ExpiresAt))
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<GroupInviteLinkFailure> InviteLinkFailureAsync(string token)
+    {
+        var hash = TryHashInviteToken(token);
+        if (hash is null) return GroupInviteLinkFailure.Unknown;
+        var link = await _db.StudyGroupInviteLinks.AsNoTracking()
+            .Where(candidate => candidate.TokenHash == hash)
+            .Select(candidate => new { candidate.ExpiresAt, candidate.RevokedAt })
+            .FirstOrDefaultAsync();
+        if (link is null) return GroupInviteLinkFailure.Unknown;
+        if (link.RevokedAt is not null) return GroupInviteLinkFailure.Revoked;
+        return link.ExpiresAt <= _clock.GetUtcNow().UtcDateTime
+            ? GroupInviteLinkFailure.Expired : GroupInviteLinkFailure.Unknown;
+    }
+
+    public async Task<GroupJoinResult> JoinWithInviteLinkAsync(string token, string userId)
+    {
+        var hash = TryHashInviteToken(token);
+        if (hash is null) return GroupJoinResult.NotFound;
+        var now = _clock.GetUtcNow().UtcDateTime;
+        var link = await _db.StudyGroupInviteLinks.AsNoTracking()
+            .FirstOrDefaultAsync(candidate => candidate.TokenHash == hash
+                && candidate.RevokedAt == null
+                && (candidate.ExpiresAt == null || candidate.ExpiresAt > now));
+        if (link is null) return GroupJoinResult.NotFound;
+        if (!await _db.Users.AnyAsync(user => user.Id == userId && !user.IsDisabled && user.EmailConfirmed))
+            return GroupJoinResult.NotFound;
+        var member = await FindMemberAsync(link.GroupId, userId);
+        if (member?.IsBanned == true) return GroupJoinResult.Banned;
+        if (member is not null) return GroupJoinResult.AlreadyMember;
+        _db.StudyGroupMembers.Add(new StudyGroupMember
+        {
+            GroupId = link.GroupId, UserId = userId, JoinedAt = now
+        });
+        var request = await _db.StudyGroupJoinRequests.FindAsync(link.GroupId, userId);
+        if (request?.Status == StudyGroupRequestStatus.Pending)
+            _db.StudyGroupJoinRequests.Remove(request);
+        var invitation = await _db.StudyGroupInvitations.FindAsync(link.GroupId, userId);
+        if (invitation?.Status == StudyGroupInvitationStatus.Pending)
+        {
+            invitation.Status = StudyGroupInvitationStatus.Accepted;
+            invitation.RespondedAt = now;
+        }
+        try { await _db.SaveChangesAsync(); }
+        catch (DbUpdateException exception) when (DbExceptionClassifier.IsUniqueViolation(exception))
+        {
+            _db.ChangeTracker.Clear();
+            return GroupJoinResult.AlreadyMember;
+        }
+        return GroupJoinResult.Joined;
+    }
+
+    private static string HashInviteToken(string token) =>
+        Convert.ToHexString(SHA256.HashData(Convert.FromHexString(token)));
+
+    private static string? TryHashInviteToken(string token)
+    {
+        if (token?.Length != 64) return null;
+        try { return HashInviteToken(token); }
+        catch (FormatException) { return null; }
+    }
+
+    private string? TryUnprotectInviteToken(string protectedToken)
+    {
+        try { return _inviteLinkProtector.Unprotect(protectedToken); }
+        catch (CryptographicException) { return null; }
+    }
+
     public async Task<GroupActionResult> ChangeAccessModeAsync(int groupId, string actorId,
         StudyGroupAccessMode mode)
     {
@@ -362,6 +496,9 @@ public sealed class StudyGroupService
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(invitation => invitation.Status, StudyGroupInvitationStatus.Revoked)
                 .SetProperty(invitation => invitation.RespondedAt, now));
+        await _db.StudyGroupInviteLinks
+            .Where(link => link.GroupId == groupId && link.RevokedAt == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(link => link.RevokedAt, now));
         await _db.SaveChangesAsync();
         await transaction.CommitAsync();
         _db.ChangeTracker.Clear();

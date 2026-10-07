@@ -3,7 +3,11 @@ using DataAccessObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using QuizManagement.Services;
+using QuizManagement.Controllers;
 using Xunit;
 
 namespace QuizManagement.Tests.IntegrationTests;
@@ -30,7 +34,7 @@ public sealed class StudyGroupPostgresTests
                     EmailConfirmed = true, Role = AppRoles.User, CreatedAt = DateTime.UtcNow });
             await db.SaveChangesAsync();
 
-            var chat = new StudyGroupService(db, TimeProvider.System);
+            var chat = new StudyGroupService(db, TimeProvider.System, new EphemeralDataProtectionProvider());
             var group = await chat.CreateAsync("alice", "Ôn tập", null, null);
             Assert.NotNull(group);
             Assert.Single(await chat.ListAsync("alice"));
@@ -78,7 +82,7 @@ public sealed class StudyGroupPostgresTests
                 new User { Id = "bob", Username = "Bob", Email = "bob@test.local",
                     EmailConfirmed = true, Role = AppRoles.User, CreatedAt = DateTime.UtcNow });
             await db.SaveChangesAsync();
-            var chat = new StudyGroupService(db, TimeProvider.System);
+            var chat = new StudyGroupService(db, TimeProvider.System, new EphemeralDataProtectionProvider());
             var group = (await chat.CreateAsync("alice", "Ôn tập", null, null))!;
 
             Assert.Equal(GroupJoinResult.Joined, await chat.JoinAsync(group.Id, "bob"));
@@ -118,7 +122,7 @@ public sealed class StudyGroupPostgresTests
                     EmailConfirmed = true, Role = AppRoles.User, CreatedAt = DateTime.UtcNow });
             await db.SaveChangesAsync();
 
-            var chat = new StudyGroupService(db, TimeProvider.System);
+            var chat = new StudyGroupService(db, TimeProvider.System, new EphemeralDataProtectionProvider());
             var approval = (await chat.CreateAsync("owner", "Cần duyệt", null, null,
                 StudyGroupAccessMode.PublicApproval))!;
             Assert.Equal(GroupJoinResult.PendingApproval, await chat.JoinAsync(approval.Id, "member"));
@@ -217,7 +221,7 @@ public sealed class StudyGroupPostgresTests
             db.Subjects.Add(subject);
             await db.SaveChangesAsync();
 
-            var chat = new StudyGroupService(db, TimeProvider.System);
+            var chat = new StudyGroupService(db, TimeProvider.System, new EphemeralDataProtectionProvider());
             Assert.Null(await chat.CreateAsync("visitor", "Không hợp lệ", null, subject.Id));
             var open = (await chat.CreateAsync("owner", "Đại số", "Ôn công thức", subject.Id))!;
             var approval = (await chat.CreateAsync("owner", "Hình học", "Bài tập toán", subject.Id,
@@ -278,6 +282,115 @@ public sealed class StudyGroupPostgresTests
             Assert.Equal(StudyGroupAccessMode.PublicOpen, group.AccessMode);
             Assert.Equal(StudyGroupMemberRole.Owner, member.Role);
             Assert.False(member.IsBanned);
+        }
+        finally
+        {
+            await db.Database.EnsureDeletedAsync();
+        }
+    }
+    [Fact]
+    [Trait("Category", "PostgresIntegration")]
+    public async Task InviteLinks_OfferFourDurationsAndOwnerCanManageEachLink()
+    {
+        var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
+        var options = new DbContextOptionsBuilder<QuizManagementDbContext>()
+            .UseNpgsql(PostgresTestConnection.ForDatabase(databaseName)).Options;
+        await using var db = new QuizManagementDbContext(options);
+        try
+        {
+            await db.Database.MigrateAsync();
+            db.Users.AddRange(
+                new User { Id = "owner", Username = "Owner", Email = "owner@test.local",
+                    EmailConfirmed = true, Role = AppRoles.User, CreatedAt = DateTime.UtcNow },
+                new User { Id = "member", Username = "Member", Email = "member@test.local",
+                    EmailConfirmed = true, Role = AppRoles.User, CreatedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+            var protectionProvider = new EphemeralDataProtectionProvider();
+            var chat = new StudyGroupService(db, TimeProvider.System, protectionProvider);
+            var group = (await chat.CreateAsync("owner", "Nhóm riêng", null, null,
+                StudyGroupAccessMode.PrivateInviteOnly))!;
+
+            Assert.Null(await chat.CreateInviteLinkAsync(group.Id, "member", 7));
+            Assert.Null(await chat.CreateInviteLinkAsync(group.Id, "owner", 2));
+            var tokens = new List<string>();
+            foreach (var days in new[] { 1, 7, 30, 0 })
+            {
+                var token = await chat.CreateInviteLinkAsync(group.Id, "owner", days);
+                Assert.NotNull(token);
+                tokens.Add(token);
+                var preview = await chat.InviteLinkPreviewAsync(token);
+                Assert.NotNull(preview);
+                if (days == 0) Assert.Null(preview.ExpiresAt);
+                else Assert.InRange((preview.ExpiresAt!.Value - DateTime.UtcNow).TotalDays,
+                    days - 0.01, days + 0.01);
+            }
+
+            var links = await chat.InviteLinksAsync(group.Id, "owner");
+            Assert.Equal(4, links.Count);
+            Assert.Equal(tokens.Order(), links.Select(link => link.Token!).Order());
+            await using (var refreshedDb = new QuizManagementDbContext(options))
+            {
+                var refreshedChat = new StudyGroupService(refreshedDb, TimeProvider.System,
+                    protectionProvider);
+                Assert.Equal(tokens.Order(), (await refreshedChat.InviteLinksAsync(group.Id, "owner"))
+                    .Select(link => link.Token!).Order());
+            }
+            Assert.Empty(await chat.InviteLinksAsync(group.Id, "member"));
+            Assert.All(await db.StudyGroupInviteLinks.ToListAsync(), link =>
+                Assert.DoesNotContain(link.ProtectedToken, tokens));
+
+            var firstLinkId = links.Single(link => link.Token == tokens[0]).Id;
+            Assert.Equal(GroupActionResult.Forbidden,
+                await chat.RevokeInviteLinkAsync(group.Id, firstLinkId, "member"));
+            Assert.Equal(GroupActionResult.Success,
+                await chat.RevokeInviteLinkAsync(group.Id, firstLinkId, "owner"));
+            Assert.Null(await chat.InviteLinkPreviewAsync(tokens[0]));
+            Assert.Equal(GroupInviteLinkFailure.Revoked,
+                await chat.InviteLinkFailureAsync(tokens[0]));
+            var revokedController = new StudyGroupsController(chat, null!)
+            {
+                ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+            };
+            var revokedPage = Assert.IsType<ViewResult>(await revokedController.InviteLink(tokens[0]));
+            Assert.Equal("InviteLinkUnavailable", revokedPage.ViewName);
+            Assert.Equal(GroupInviteLinkFailure.Revoked, revokedPage.Model);
+            Assert.Equal(StatusCodes.Status410Gone, revokedController.Response.StatusCode);
+            Assert.NotNull(await chat.InviteLinkPreviewAsync(tokens[1]));
+
+            Assert.Equal(GroupJoinResult.Joined,
+                await chat.JoinWithInviteLinkAsync(tokens[2], "member"));
+            Assert.Equal(GroupJoinResult.AlreadyMember,
+                await chat.JoinWithInviteLinkAsync(tokens[2], "member"));
+            Assert.True(await chat.IsMemberAsync(group.Id, "member"));
+            Assert.Equal(GroupActionResult.Success,
+                await chat.RemoveMemberAsync(group.Id, "owner", "member"));
+            Assert.Equal(GroupJoinResult.Banned,
+                await chat.JoinWithInviteLinkAsync(tokens[3], "member"));
+
+            var expiringLinkId = links.Single(item => item.Token == tokens[1]).Id;
+            var expiringLink = await db.StudyGroupInviteLinks.SingleAsync(link =>
+                link.Id == expiringLinkId);
+            expiringLink.ExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+            await db.SaveChangesAsync();
+            Assert.Null(await chat.InviteLinkPreviewAsync(tokens[1]));
+            Assert.Equal(GroupInviteLinkFailure.Expired,
+                await chat.InviteLinkFailureAsync(tokens[1]));
+            var controller = new StudyGroupsController(chat, null!)
+            {
+                ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+            };
+            var expiredPage = Assert.IsType<ViewResult>(await controller.InviteLink(tokens[1]));
+            Assert.Equal("InviteLinkUnavailable", expiredPage.ViewName);
+            Assert.Equal(GroupInviteLinkFailure.Expired, expiredPage.Model);
+            Assert.Equal(StatusCodes.Status410Gone, controller.Response.StatusCode);
+            Assert.Equal(GroupInviteLinkFailure.Unknown,
+                await chat.InviteLinkFailureAsync("invalid-token"));
+            Assert.NotNull(await chat.InviteLinkPreviewAsync(tokens[3]));
+            Assert.Equal(GroupActionResult.Success,
+                await chat.ChangeAccessModeAsync(group.Id, "owner", StudyGroupAccessMode.PublicApproval));
+            Assert.Null(await chat.InviteLinkPreviewAsync(tokens[3]));
+            Assert.Equal(GroupInviteLinkFailure.Revoked,
+                await chat.InviteLinkFailureAsync(tokens[3]));
         }
         finally
         {

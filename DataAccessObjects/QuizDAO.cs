@@ -88,12 +88,13 @@ namespace DataAccessObjects
             using var transaction = context.Database.BeginTransaction();
             try
             {
+                var earliestAcceptedExpiry = completedAtUtc.AddSeconds(-QuizAttempt.SubmissionGraceSeconds);
                 var claimed = context.QuizAttempts
                     .Where(attempt => attempt.Id == attemptId
                         && attempt.DeckId == deckId
                         && attempt.UserId == userId
                         && attempt.CompletedAtUtc == null
-                        && (attempt.ExpiresAtUtc == null || completedAtUtc <= attempt.ExpiresAtUtc))
+                        && (attempt.ExpiresAtUtc == null || earliestAcceptedExpiry <= attempt.ExpiresAtUtc))
                     .ExecuteUpdate(setters => setters
                         .SetProperty(attempt => attempt.CompletedAtUtc, completedAtUtc));
 

@@ -1,5 +1,7 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using QuizManagement.Hubs;
+using QuizManagement.Infrastructure;
 using QuizManagement.Services;
 using System.Security.Claims;
 using BusinessObjects;
@@ -8,12 +10,17 @@ namespace QuizManagement.Controllers;
 
 [ApiController]
 [Route("api/groups")]
-[Authorize]
+[ApiAuthorize]
 public sealed class StudyGroupsApiController : ControllerBase
 {
     private readonly StudyGroupService _groups;
+    private readonly IHubContext<ChatHub> _hub;
 
-    public StudyGroupsApiController(StudyGroupService groups) => _groups = groups;
+    public StudyGroupsApiController(StudyGroupService groups, IHubContext<ChatHub> hub)
+    {
+        _groups = groups;
+        _hub = hub;
+    }
 
     [HttpGet]
     public async Task<IActionResult> Mine() => Ok(await _groups.ListAsync(UserId()));
@@ -26,17 +33,19 @@ public sealed class StudyGroupsApiController : ControllerBase
     {
         var group = await _groups.CreateAsync(UserId(), request.Name ?? "", request.Description,
             request.SubjectId, request.AccessMode);
-        return group is null
-            ? BadRequest(new { message = "Tên, mô tả hoặc môn học không hợp lệ." })
-            : Created($"/api/groups/{group.Id}", new { group.Id, group.Name });
+        if (group is null)
+            return BadRequest(new ApiError("invalid_group", "Tên, mô tả hoặc môn học không hợp lệ."));
+        await NotifyMembershipEventAsync(group.Id, UserId());
+        return Created($"/api/groups/{group.Id}", new { group.Id, group.Name });
     }
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> Detail(int id)
     {
-        if (!await _groups.IsMemberAsync(id, UserId())) return NotFound();
+        if (!await _groups.IsMemberAsync(id, UserId()))
+            return NotFound(new ApiError("group_not_found", "Không tìm thấy nhóm."));
         var group = await _groups.GetAsync(id);
-        return group is null ? NotFound() : Ok(new
+        return group is null ? NotFound(new ApiError("group_not_found", "Không tìm thấy nhóm.")) : Ok(new
         {
             group.Id, group.Name, group.Description, group.SubjectId, group.CreatedAt, group.AccessMode
         });
@@ -46,34 +55,49 @@ public sealed class StudyGroupsApiController : ControllerBase
     public async Task<IActionResult> Join(int id)
     {
         var result = await _groups.JoinAsync(id, UserId());
+        if (result == GroupJoinResult.Joined)
+        {
+            await NotifyMembershipEventAsync(id, UserId());
+            await _hub.Clients.Users(await _groups.RecipientIdsAsync(id))
+                .SendAsync("RoomRosterChanged", id);
+        }
         return result switch
         {
             GroupJoinResult.Joined or GroupJoinResult.AlreadyMember => NoContent(),
             GroupJoinResult.PendingApproval => Accepted(),
             GroupJoinResult.Banned => Forbid(),
-            _ => NotFound()
+            _ => NotFound(new ApiError("group_not_found", "Không tìm thấy nhóm."))
         };
     }
 
     [HttpDelete("{id:int}/join-request")]
     public async Task<IActionResult> CancelJoinRequest(int id) =>
         await _groups.CancelRequestAsync(id, UserId()) == GroupActionResult.Success
-            ? NoContent() : NotFound();
+            ? NoContent() : NotFound(new ApiError("request_not_found", "Không tìm thấy yêu cầu tham gia."));
 
     [HttpGet("{id:int}/messages")]
     public async Task<IActionResult> Messages(int id, [FromQuery] int? beforeId, [FromQuery] int limit = 30)
     {
         var messages = await _groups.MessagesAsync(id, UserId(), beforeId, limit);
-        return messages is null ? NotFound() : Ok(messages);
+        return messages is null
+            ? NotFound(new ApiError("group_not_found", "Không tìm thấy nhóm."))
+            : Ok(messages);
     }
 
     [HttpPost("{id:int}/read")]
     public async Task<IActionResult> MarkRead(int id, [FromBody] MarkGroupReadRequest request) =>
         await _groups.MarkReadAsync(id, UserId(), request.LastMessageId)
             ? NoContent()
-            : BadRequest(new { message = "Tin nhắn hoặc nhóm không hợp lệ." });
+            : BadRequest(new ApiError("invalid_read_position", "Tin nhắn hoặc nhóm không hợp lệ."));
 
     private string UserId() => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+    private async Task NotifyMembershipEventAsync(int groupId, string userId)
+    {
+        var message = await _groups.RecordMembershipEventAsync(groupId, userId, GroupMessageKind.Joined);
+        await _hub.Clients.Users(await _groups.RecipientIdsAsync(groupId))
+            .SendAsync("ReceiveMessage", message);
+    }
 }
 
 public sealed record CreateStudyGroupRequest(string? Name, string? Description, int? SubjectId,

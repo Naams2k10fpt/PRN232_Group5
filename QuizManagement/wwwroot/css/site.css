@@ -932,38 +932,37 @@ textarea.form-control { resize: vertical; min-height: 90px; }
 .flashcard-side-label { color: var(--text-muted); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.75rem; letter-spacing: 0.5px; }
 .flashcard-question { font-size: 1.35rem; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; margin-bottom: 1.25rem; }
 
-/* 3D Flip Card */
+/* Card transitions */
 .fc-scene {
-  perspective: 1200px;
   margin-bottom: 0.5rem;
-  transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.25s ease-out;
+  transition: transform 0.14s ease-out, opacity 0.14s ease-out;
   transform-origin: center bottom;
 }
 .fc-scene.fc-swipe-right {
-  transform: translate3d(120%, -20px, 0) rotate(15deg);
+  transform: translate3d(30%, 0, 0);
   opacity: 0;
 }
 .fc-scene.fc-swipe-left {
-  transform: translate3d(-120%, -20px, 0) rotate(-15deg);
+  transform: translate3d(-30%, 0, 0);
   opacity: 0;
 }
 .fc-scene.fc-swipe-enter-left {
-  transform: translate3d(-100%, 10px, 0) rotate(-10deg);
+  transform: translate3d(-30%, 0, 0);
   opacity: 0;
 }
 .fc-scene.fc-swipe-enter-right {
-  transform: translate3d(100%, 10px, 0) rotate(10deg);
+  transform: translate3d(30%, 0, 0);
   opacity: 0;
 }
 .fc-scene.no-transition {
   transition: none !important;
 }
-.fc-scene.fc-swipe-right .fc-face {
+.fc-scene.fc-scene--review.fc-swipe-right .fc-face {
   background-color: rgba(25, 135, 84, 0.15) !important;
   border-color: var(--success) !important;
   box-shadow: 0 0 20px rgba(25, 135, 84, 0.4);
 }
-.fc-scene.fc-swipe-left .fc-face {
+.fc-scene.fc-scene--review.fc-swipe-left .fc-face {
   background-color: rgba(220, 53, 69, 0.15) !important;
   border-color: var(--danger) !important;
   box-shadow: 0 0 20px rgba(220, 53, 69, 0.4);
@@ -997,22 +996,22 @@ textarea.form-control { resize: vertical; min-height: 90px; }
   color: var(--danger);
 }
 .fc-card {
-  position: relative;
+  display: grid;
   width: 100%;
   min-height: 420px;
   cursor: pointer;
   outline: none;
-  transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
-  transform-style: preserve-3d;
+  transition: transform 0.12s ease-in-out, opacity 0.12s ease-in-out;
+  transform-origin: center;
 }
-.fc-card--flipped {
-  transform: rotateX(180deg);
+.fc-card--turning {
+  transform: scaleY(0.08);
+  opacity: 0.45;
 }
 .fc-face {
-  position: absolute;
-  inset: 0;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+  position: relative;
+  grid-area: 1 / 1;
+  min-width: 0;
   border: 1.5px solid var(--border);
   border-radius: var(--r-lg);
   background: var(--bg-surface);
@@ -1020,18 +1019,30 @@ textarea.form-control { resize: vertical; min-height: 90px; }
   padding: 2rem;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: visible;
 }
 .fc-face:hover {
   border-color: var(--border-hover);
   box-shadow: var(--shadow-lg);
 }
 .fc-face--front {
-  z-index: 2;
-  transform: rotateX(0deg);
+  z-index: 1;
 }
 .fc-face--back {
-  transform: rotateX(180deg);
+  z-index: 0;
+  visibility: hidden;
+}
+.fc-card--flipped .fc-face--front {
+  z-index: 0;
+  visibility: hidden;
+}
+.fc-card--flipped .fc-face--back {
+  z-index: 1;
+  visibility: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-scene, .fc-card { transition: none; }
 }
 
 /* Front side - Answer Options */

@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using QuizManagement.Infrastructure;
 using QuizManagement.ViewModels.Quiz;
 using Services;
 using System.Security.Claims;
@@ -8,7 +8,7 @@ namespace QuizManagement.Controllers;
 
 [ApiController]
 [Route("api/history")]
-[Authorize(Policy = "StudyContent")]
+[ApiAuthorize(Policy = "StudyContent")]
 public sealed class HistoryApiController : ControllerBase
 {
     private readonly IQuizService _quiz;
@@ -41,7 +41,9 @@ public sealed class HistoryApiController : ControllerBase
     public IActionResult Detail(int id)
     {
         var history = _quiz.GetTestHistoryById(id, UserId());
-        return history is null ? NotFound() : Ok(QuizResultViewModel.FromHistory(history));
+        return history is null
+            ? NotFound(new ApiError("history_not_found", "Không tìm thấy lịch sử bài làm."))
+            : Ok(QuizResultViewModel.FromHistory(history));
     }
 
     private string UserId() => User.FindFirstValue(ClaimTypes.NameIdentifier)!;

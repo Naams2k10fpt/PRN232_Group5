@@ -120,9 +120,25 @@ public sealed class StudyGroupsController : Controller
         return View(group);
     }
 
+    [HttpGet]
+    public async Task<IActionResult> Messages(int id, int? beforeId, int limit = 30)
+    {
+        var messages = await _groups.MessagesAsync(id, UserId(), beforeId, limit);
+        return messages is null ? NotFound() : Ok(messages);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> MarkRead(int id, int lastMessageId) =>
+        await _groups.MarkReadAsync(id, UserId(), lastMessageId)
+            ? NoContent()
+            : BadRequest();
+
     public async Task<IActionResult> Manage(int id)
     {
         if (!await _groups.IsManagerAsync(id, UserId())) return NotFound();
+        Response.Headers.CacheControl = "no-store";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
         var group = await _groups.GetAsync(id);
         if (group is null) return NotFound();
         ViewBag.Members = await _groups.MembersAsync(id, UserId());
@@ -130,6 +146,7 @@ public sealed class StudyGroupsController : Controller
         ViewBag.Banned = await _groups.BannedUsersAsync(id, UserId());
         ViewBag.IsOwner = await _groups.IsOwnerAsync(id, UserId());
         ViewBag.UserId = UserId();
+        ViewBag.InviteLinks = await _groups.InviteLinksAsync(id, UserId());
         return View(group);
     }
 
@@ -157,6 +174,65 @@ public sealed class StudyGroupsController : Controller
             result == GroupActionResult.Success ? "Đã gửi lời mời trong ứng dụng."
             : "Không thể mời tài khoản này. Kiểm tra email và trạng thái thành viên.";
         return RedirectToAction(nameof(Manage), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateInviteLink(int id, int durationDays)
+    {
+        var token = await _groups.CreateInviteLinkAsync(id, UserId(), durationDays);
+        if (token is null) return NotFound();
+        TempData["SuccessMessage"] = "Đã tạo link mời.";
+        return RedirectToAction(nameof(Manage), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RevokeInviteLink(int id, int linkId)
+    {
+        var result = await _groups.RevokeInviteLinkAsync(id, linkId, UserId());
+        if (result != GroupActionResult.Success) return NotFound();
+        TempData["SuccessMessage"] = "Đã thu hồi link mời.";
+        return RedirectToAction(nameof(Manage), new { id });
+    }
+
+    [HttpGet("groups/invite/{token}")]
+    public async Task<IActionResult> InviteLink(string token)
+    {
+        Response.Headers.CacheControl = "no-store";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
+        var preview = await _groups.InviteLinkPreviewAsync(token);
+        if (preview is null) return await UnavailableInviteLinkAsync(token);
+        ViewBag.Token = token;
+        ViewBag.IsMember = await _groups.IsMemberAsync(preview.GroupId, UserId());
+        return View(preview);
+    }
+
+    [HttpPost("groups/invite/{token}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AcceptInviteLink(string token)
+    {
+        var preview = await _groups.InviteLinkPreviewAsync(token);
+        if (preview is null) return await UnavailableInviteLinkAsync(token);
+        var result = await _groups.JoinWithInviteLinkAsync(token, UserId());
+        if (result == GroupJoinResult.Joined)
+        {
+            await NotifyMembershipEventAsync(preview.GroupId, UserId(), GroupMessageKind.Joined);
+            await NotifyRoomRosterChangedAsync(preview.GroupId);
+        }
+        if (result is GroupJoinResult.Joined or GroupJoinResult.AlreadyMember)
+            return RedirectToAction(nameof(Room), new { id = preview.GroupId });
+        return result == GroupJoinResult.Banned ? Forbid() : await UnavailableInviteLinkAsync(token);
+    }
+
+    private async Task<IActionResult> UnavailableInviteLinkAsync(string token)
+    {
+        var reason = await _groups.InviteLinkFailureAsync(token);
+        if (reason == GroupInviteLinkFailure.Unknown) return NotFound();
+        Response.StatusCode = StatusCodes.Status410Gone;
+        Response.Headers.CacheControl = "no-store";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
+        return View("InviteLinkUnavailable", reason);
     }
 
     [HttpPost]

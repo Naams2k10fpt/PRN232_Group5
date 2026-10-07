@@ -2,6 +2,10 @@ namespace BusinessObjects;
 
 public class QuizAttempt
 {
+    public const int MaxQuestions = 500;
+    // The web timer submits at zero; allow a small transport delay without reopening the quiz.
+    public const int SubmissionGraceSeconds = 10;
+
     public Guid Id { get; set; }
 
     public string UserId { get; set; } = null!;
