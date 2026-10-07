@@ -22,4 +22,5 @@ public sealed class StudyGroup
     public ICollection<GroupMessage> Messages { get; set; } = new List<GroupMessage>();
     public ICollection<StudyGroupJoinRequest> JoinRequests { get; set; } = new List<StudyGroupJoinRequest>();
     public ICollection<StudyGroupInvitation> Invitations { get; set; } = new List<StudyGroupInvitation>();
+    public ICollection<StudyGroupInviteLink> InviteLinks { get; set; } = new List<StudyGroupInviteLink>();
 }

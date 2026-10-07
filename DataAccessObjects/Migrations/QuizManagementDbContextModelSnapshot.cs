@@ -630,6 +630,51 @@ namespace DataAccessObjects.Migrations
                     b.ToTable("StudyGroupInvitations");
                 });
 
+            modelBuilder.Entity("BusinessObjects.StudyGroupInviteLink", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedByUserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProtectedToken")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("StudyGroupInviteLinks");
+                });
+
             modelBuilder.Entity("BusinessObjects.StudyGroupJoinRequest", b =>
                 {
                     b.Property<int>("GroupId")
@@ -1181,6 +1226,25 @@ namespace DataAccessObjects.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("BusinessObjects.StudyGroupInviteLink", b =>
+                {
+                    b.HasOne("BusinessObjects.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObjects.StudyGroup", "Group")
+                        .WithMany("InviteLinks")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Group");
+                });
+
             modelBuilder.Entity("BusinessObjects.StudyGroupJoinRequest", b =>
                 {
                     b.HasOne("BusinessObjects.StudyGroup", "Group")
@@ -1325,6 +1389,8 @@ namespace DataAccessObjects.Migrations
             modelBuilder.Entity("BusinessObjects.StudyGroup", b =>
                 {
                     b.Navigation("Invitations");
+
+                    b.Navigation("InviteLinks");
 
                     b.Navigation("JoinRequests");
 

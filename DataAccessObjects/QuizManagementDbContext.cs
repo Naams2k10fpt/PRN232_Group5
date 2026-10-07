@@ -49,6 +49,7 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
     public virtual DbSet<GroupMessage> GroupMessages { get; set; }
     public virtual DbSet<StudyGroupJoinRequest> StudyGroupJoinRequests { get; set; }
     public virtual DbSet<StudyGroupInvitation> StudyGroupInvitations { get; set; }
+    public virtual DbSet<StudyGroupInviteLink> StudyGroupInviteLinks { get; set; }
 
     // ASP.NET Core Data Protection keys (auth cookies, email/reset tokens) must outlive the
     // container: Render's free-tier disk is wiped on every deploy and idle sleep.
@@ -500,6 +501,19 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
                 .HasForeignKey(e => e.GroupId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.User).WithMany()
                 .HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StudyGroupInviteLink>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TokenHash).HasMaxLength(64).IsRequired();
+            entity.Property(e => e.ProtectedToken).IsRequired();
+            entity.HasIndex(e => e.TokenHash).IsUnique();
+            entity.HasIndex(e => e.GroupId);
+            entity.HasOne(e => e.Group).WithMany(e => e.InviteLinks)
+                .HasForeignKey(e => e.GroupId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.CreatedByUser).WithMany()
+                .HasForeignKey(e => e.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
         OnModelCreatingPartial(modelBuilder);

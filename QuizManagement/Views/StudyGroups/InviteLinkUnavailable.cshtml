@@ -1,0 +1,23 @@
+@model QuizManagement.Services.GroupInviteLinkFailure
+@{
+    var revoked = Model == QuizManagement.Services.GroupInviteLinkFailure.Revoked;
+    ViewData["Title"] = revoked ? "Link mời đã bị thu hồi" : "Link mời đã hết hạn";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 text-center">
+        <div class="display-1 text-danger mb-3">410</div>
+        <h2 class="mb-3">@ViewData["Title"]</h2>
+        <p class="text-muted mb-4">
+            @if (revoked)
+            {
+                <text>Chủ phòng đã thu hồi link mời này. Hãy liên hệ chủ phòng để nhận link mới.</text>
+            }
+            else
+            {
+                <text>Link mời này đã hết hạn. Hãy liên hệ chủ phòng để nhận link mới.</text>
+            }
+        </p>
+        <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Về trang chủ</a>
+    </div>
+</div>

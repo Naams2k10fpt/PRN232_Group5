@@ -1,0 +1,29 @@
+@model QuizManagement.Services.GroupInviteLinkPreview
+@{
+    ViewData["Title"] = "Lời mời vào nhóm";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card p-4">
+            <h1 class="h4">Lời mời vào nhóm</h1>
+            <p>Bạn được mời tham gia <strong>@Model.GroupName</strong>.</p>
+            <p class="text-muted small">
+                @(Model.ExpiresAt is DateTime expiresAt
+                    ? $"Link hết hạn lúc {expiresAt.ToLocalTime():dd/MM/yyyy HH:mm}."
+                    : "Link không hết hạn.")
+            </p>
+            @if (ViewBag.IsMember is true)
+            {
+                <a asp-action="Room" asp-route-id="@Model.GroupId" class="btn btn-primary">Mở phòng chat</a>
+            }
+            else
+            {
+                <form asp-action="AcceptInviteLink" asp-route-token="@ViewBag.Token" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-primary">Tham gia nhóm</button>
+                </form>
+            }
+        </div>
+    </div>
+</div>
