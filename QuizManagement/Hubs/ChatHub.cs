@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using QuizManagement.Services;
@@ -5,7 +8,8 @@ using System.Security.Claims;
 
 namespace QuizManagement.Hubs;
 
-[Authorize]
+[Authorize(AuthenticationSchemes =
+    CookieAuthenticationDefaults.AuthenticationScheme + "," + JwtBearerDefaults.AuthenticationScheme)]
 public sealed class ChatHub : Hub
 {
     private readonly StudyGroupService _groups;
@@ -22,7 +26,9 @@ public sealed class ChatHub : Hub
     public override async Task OnConnectedAsync()
     {
         var userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId is not null && _presence.WebJoin(userId, Context.ConnectionId))
+        var hasWebCookie = Context.GetHttpContext() is { } httpContext
+            && (await httpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme)).Succeeded;
+        if (userId is not null && hasWebCookie && _presence.WebJoin(userId, Context.ConnectionId))
             await _broadcaster.BroadcastWebsiteChangeAsync(userId);
         await base.OnConnectedAsync();
     }
