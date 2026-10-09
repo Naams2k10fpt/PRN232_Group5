@@ -16,6 +16,7 @@ REST API for the PRM393 mobile app, next to the web app.
 
 | Endpoint | Returns |
 | --- | --- |
+| `GET /api/health` | Public JSON status (`Healthy`, `Degraded`, or `Unhealthy`); HTTP 503 when the app or database is unhealthy |
 | `GET /api/subjects?search=&page=1&pageSize=20` | Subjects with deck and question counts (paged, `pageSize` ≤ 100) |
 | `GET /api/subjects/{id}` | One subject |
 | `GET /api/subjects/{subjectId}/decks` | Decks of a subject with the user's flashcard progress (`dueCount`, `learnedCount`, `nextReviewAtUtc`) |
@@ -25,5 +26,5 @@ Postman: import `docs/postman/QuizManagement.postman_collection.json`, set `base
 
 Quiz cá nhân và Group Chat: xem [hợp đồng API TV3](docs/tv3-quiz-chat-api.md).
 
-New `/api/*` controllers: add `[ApiController]` and `[ApiAuthorize]` (bearer only, 401/403 as JSON); see
+Protected `/api/*` controllers: add `[ApiController]` and `[ApiAuthorize]` (bearer only, 401/403 as JSON); see
 `Controllers/Api/ProfileApiController.cs`.
