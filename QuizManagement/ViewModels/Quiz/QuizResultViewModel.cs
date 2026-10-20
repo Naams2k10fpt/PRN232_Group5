@@ -9,6 +9,7 @@ namespace QuizManagement.ViewModels.Quiz
     public class QuizResultViewModel
     {
         public int TestHistoryId { get; set; }
+        public int DeckId { get; set; }
 
         public string DeckName { get; set; } = string.Empty;
 
@@ -116,6 +117,7 @@ namespace QuizManagement.ViewModels.Quiz
             return new QuizResultViewModel
             {
                 TestHistoryId = history.Id,
+                DeckId = history.DeckId,
                 DeckName = deckName,
                 SubjectName = subjectName,
                 Score = history.Score,
