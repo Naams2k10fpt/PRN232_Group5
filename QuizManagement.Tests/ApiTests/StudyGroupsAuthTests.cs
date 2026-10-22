@@ -12,7 +12,9 @@ public class StudyGroupsAuthTests
     [InlineData("/api/groups/invitations")]
     [InlineData("/api/groups/1/management")]
     [InlineData("/api/groups/invite/invalid")]
-    public async Task ReadEndpoints_RequireBearerAuthentication(string url)
+    [InlineData("/api/groups/1/channels")]
+    [InlineData("/api/chat/attachments/11111111-1111-1111-1111-111111111111")]
+    public async Task ReadEndpoints_RequireAuthentication(string url)
     {
         using var host = new ApiTestHost();
         using var client = host.CreateClient(new() { AllowAutoRedirect = false });

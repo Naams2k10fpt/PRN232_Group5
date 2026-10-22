@@ -115,7 +115,6 @@ public sealed class StudyGroupsController : Controller
         var group = await _groups.GetAsync(id);
         if (group is null) return NotFound();
         ViewBag.UserId = UserId();
-        ViewBag.Messages = await _groups.MessagesAsync(id, UserId());
         ViewBag.Members = await _groups.MembersAsync(id, UserId());
         return View(group);
     }

@@ -70,6 +70,7 @@ builder.Services.AddScoped<ILoginAttemptLogService, LoginAttemptLogService>();
 builder.Services.AddSingleton<IDeckExportService, DeckExportService>();
 builder.Services.AddScoped<IKahootService, KahootService>();
 builder.Services.AddScoped<StudyGroupService>();
+builder.Services.AddScoped<ChatService>();
 builder.Services.AddSingleton<RoomPresence>();
 builder.Services.AddSingleton<PresenceBroadcaster>();
 builder.Services.AddHostedService<PresenceExpirationService>();

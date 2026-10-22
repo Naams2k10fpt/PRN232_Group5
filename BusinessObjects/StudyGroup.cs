@@ -20,6 +20,7 @@ public sealed class StudyGroup
     public User CreatedByUser { get; set; } = null!;
     public ICollection<StudyGroupMember> Members { get; set; } = new List<StudyGroupMember>();
     public ICollection<GroupMessage> Messages { get; set; } = new List<GroupMessage>();
+    public ICollection<ChatChannel> Channels { get; set; } = new List<ChatChannel>();
     public ICollection<StudyGroupJoinRequest> JoinRequests { get; set; } = new List<StudyGroupJoinRequest>();
     public ICollection<StudyGroupInvitation> Invitations { get; set; } = new List<StudyGroupInvitation>();
     public ICollection<StudyGroupInviteLink> InviteLinks { get; set; } = new List<StudyGroupInviteLink>();

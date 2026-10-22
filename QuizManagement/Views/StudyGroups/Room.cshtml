@@ -5,317 +5,60 @@
 @{
     ViewData["Title"] = Model.Name;
     ViewData["UsesChatHub"] = true;
-    var messages = ViewBag.Messages as List<ChatMessage> ?? new();
-    var userId = (string)ViewBag.UserId;
     var members = ViewBag.Members as List<GroupMemberSummary> ?? new();
-    var myRole = members.FirstOrDefault(member => member.UserId == userId)?.Role ?? StudyGroupMemberRole.Member;
+    var userId = (string)ViewBag.UserId;
+    var role = (int)(members.FirstOrDefault(member => member.UserId == userId)?.Role ?? StudyGroupMemberRole.Member);
 }
-
-<div class="d-flex align-items-center gap-3 mb-3">
-    <a asp-action="Index" class="btn btn-outline-secondary">← Nhóm</a>
-    <div class="me-auto"><h1 class="h4 mb-0">@Model.Name</h1><small class="text-muted">@Model.Description</small></div>
-    @if (myRole >= StudyGroupMemberRole.Moderator)
-    {
-        <a asp-action="Manage" asp-route-id="@Model.Id" class="btn btn-outline-primary">Quản lý</a>
-    }
-    @if (myRole != StudyGroupMemberRole.Owner)
-    {
-        <form asp-action="Leave" asp-route-id="@Model.Id" method="post">
-            @Html.AntiForgeryToken()
-            <button type="submit" class="btn btn-outline-danger">Rời nhóm</button>
-        </form>
-    }
+<link rel="stylesheet" href="~/css/channel-chat.css" asp-append-version="true" />
+<div id="channelChat" class="channel-chat" data-group-id="@Model.Id" data-user-id="@userId" data-role="@role">
+    <aside class="cc-sidebar" aria-label="Các kênh trong nhóm">
+        <a class="cc-back" asp-action="Index">← Nhóm học</a>
+        <div class="cc-server"><div class="cc-server-mark">@Model.Name[..1].ToUpper()</div><div><h1>@Model.Name</h1><p>@Model.Description</p></div></div>
+        <div class="cc-section-heading"><span>KÊNH TRÒ CHUYỆN</span><button id="createChannel" type="button" class="cc-icon" title="Tạo kênh" aria-label="Tạo kênh" hidden="@(role < 1)">+</button></div>
+        <nav id="channelList" class="cc-channels" aria-label="Danh sách kênh"></nav>
+        <div class="cc-server-footer">
+            @if (role >= 1) { <a asp-action="Manage" asp-route-id="@Model.Id">Quản lý nhóm ↗</a> }
+            <span>@members.Count thành viên · Nhóm học tập</span>
+        </div>
+    </aside>
+    <section class="cc-main" aria-label="Nội dung kênh chat">
+        <header class="cc-header"><span class="cc-hash">#</span><div class="cc-channel-title"><h2 id="channelTitle">Đang tải kênh…</h2><p id="channelTopic"></p></div>
+            <button id="editChannel" class="cc-icon" title="Sửa kênh" type="button" hidden="@(role < 1)">⚙</button>
+            <button id="toggleMembers" class="cc-icon" title="Thành viên" type="button" aria-controls="chatMembers" aria-expanded="false">☷</button>
+        </header>
+        <div id="chatAlert" class="cc-alert" role="alert" hidden></div>
+        <div id="connectionStatus" class="cc-connection" role="status">Đang kết nối…</div>
+        <div class="cc-timeline-wrap">
+            <div id="chatTimeline" class="cc-timeline" role="log" aria-label="Tin nhắn">
+                <div class="cc-welcome"><span>#</span><h3>Chào mừng đến với nhóm!</h3><p>Chia sẻ kiến thức, đặt câu hỏi và cùng nhau học tập.</p></div>
+            </div>
+            <button id="newMessages" type="button" class="cc-new" hidden>↓ Tin nhắn mới</button>
+        </div>
+        <div class="cc-compose-area">
+            <div id="composerContext" class="cc-context" hidden><span id="composerContextText"></span><button id="cancelContext" type="button" class="cc-icon" aria-label="Hủy trả lời hoặc chỉnh sửa">×</button></div>
+            <div id="pendingFiles" class="cc-pending"></div>
+            <form id="channelMessageForm" class="cc-composer">
+                @Html.AntiForgeryToken()
+                <input id="chatFiles" type="file" multiple hidden accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.csv,.zip,.docx,.xlsx,.pptx" />
+                <button id="attachFile" type="button" class="cc-attach" title="Đính kèm ảnh/file" aria-label="Đính kèm ảnh/file">+</button>
+                <textarea id="chatInput" rows="1" maxlength="2000" placeholder="Nhắn vào kênh…" aria-label="Nội dung tin nhắn"></textarea>
+                <button id="sendMessage" type="submit" class="cc-send" aria-label="Gửi tin nhắn">Gửi ↗</button>
+            </form>
+            <div class="cc-compose-hint"><span>Enter để gửi · Shift + Enter để xuống dòng</span><span>3 file / tin · 5 MB / file</span></div>
+        </div>
+    </section>
+    <aside id="chatMembers" class="cc-members" aria-label="Thành viên"><h3>THÀNH VIÊN <span id="memberCount">@members.Count</span></h3><p id="presenceStatus">Đang đồng bộ trạng thái…</p><div id="memberList"></div></aside>
 </div>
-<div class="chat-room-layout chat-room-layout--three-columns">
-<aside class="card p-3 chat-room-activity" aria-label="Hoạt động nhóm">
-    <h2 class="h6 mb-1">Hoạt động nhóm</h2>
-    <p class="small text-muted mb-3">Thành viên tham gia và rời nhóm</p>
-    <div id="roomEvents" class="chat-room-events" aria-live="polite">
-        @foreach (var message in messages.Where(message => message.Kind != GroupMessageKind.Chat))
-        {
-            <div class="chat-system-event" data-message-id="@message.Id">
-                <span>@message.SenderName @(message.Kind == GroupMessageKind.Joined ? "đã vào phòng chat." : "đã rời phòng chat.")</span>
-                <time datetime="@message.SentAt.ToString("O")">@message.SentAt.ToLocalTime().ToString("HH:mm")</time>
-            </div>
-        }
-    </div>
-    <p id="roomEventsEmpty" class="small text-muted mb-0 @(messages.Any(message => message.Kind != GroupMessageKind.Chat) ? "d-none" : "")">Chưa có hoạt động nào.</p>
-</aside>
-<section class="card p-3 chat-room-main" aria-label="Nội dung phòng chat">
-    <form id="chatReadToken" class="d-none">@Html.AntiForgeryToken()</form>
-    <button id="loadOlder" type="button" class="btn btn-sm btn-outline-secondary align-self-center mb-2">Tải tin cũ</button>
-    <div id="chatMessages" class="d-flex flex-column gap-2 mb-3 chat-room-messages" aria-live="polite">
-        @foreach (var message in messages.Where(message => message.Kind == GroupMessageKind.Chat))
-        {
-            <div class="chat-message @(message.SenderUserId == userId ? "align-self-end" : "align-self-start")"
-                 data-message-id="@message.Id" style="max-width:80%;">
-                <div class="small text-muted">@message.SenderName · @message.SentAt.ToLocalTime().ToString("HH:mm")</div>
-                <div class="rounded-3 p-2 @(message.SenderUserId == userId ? "bg-primary text-white" : "bg-secondary text-white")"
-                     style="white-space:pre-wrap; overflow-wrap:anywhere;">@message.Content</div>
-            </div>
-        }
-    </div>
-    <form id="chatForm" class="d-flex gap-2">
-        <input id="chatInput" class="form-control" maxlength="2000" required placeholder="Nhập tin nhắn..." autocomplete="off" />
-        <button type="submit" class="btn btn-primary">Gửi</button>
+<dialog id="channelEditor" class="cc-dialog">
+    <form id="channelEditorForm"><h2 id="channelEditorTitle">Tạo kênh</h2>
+        <label for="channelName">Tên kênh</label><input id="channelName" class="form-control" required maxlength="40" placeholder="ví dụ: bài-tập" />
+        <label for="channelDescription">Chủ đề</label><input id="channelDescription" class="form-control" maxlength="200" placeholder="Kênh này dành cho nội dung gì?" />
+        <p id="channelEditorError" class="text-danger small" role="alert"></p>
+        <div class="cc-dialog-actions"><button id="archiveChannel" type="button" class="btn btn-outline-danger" hidden>Lưu trữ kênh</button><button id="cancelChannelEditor" type="button" class="btn btn-outline-secondary">Hủy</button><button class="btn btn-primary" type="submit">Lưu kênh</button></div>
     </form>
-    <small id="chatStatus" class="text-muted mt-2">Đang kết nối...</small>
-</section>
-<aside class="card p-3 chat-room-members" aria-label="Danh sách thành viên">
-    <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
-        <h2 class="h6 mb-0">Thành viên</h2>
-        <span id="memberCount" class="small text-muted">@members.Count</span>
-    </div>
-    <p id="onlineCount" class="small text-muted mb-3">Đang kết nối...</p>
-    <div id="memberList" class="chat-member-list"></div>
-</aside>
-</div>
-
+</dialog>
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
-    <script>
-        const groupId = @Model.Id;
-        const currentUserId = @Html.Raw(JsonSerializer.Serialize(userId));
-        const initialMembers = @Html.Raw(JsonSerializer.Serialize(members, JsonSerializerOptions.Web));
-        const box = document.getElementById('chatMessages');
-        const eventBox = document.getElementById('roomEvents');
-        const status = document.getElementById('chatStatus');
-        const input = document.getElementById('chatInput');
-        const readToken = document.querySelector('#chatReadToken input').value;
-        const messagesUrl = '@Url.Action("Messages", "StudyGroups", new { id = Model.Id })';
-        const markReadUrl = '@Url.Action("MarkRead", "StudyGroups", new { id = Model.Id })';
-        const memberList = document.getElementById('memberList');
-        let roomMembers = initialMembers;
-        let onlineUserIds = new Set();
-        let webUserIds = new Set();
-        let presenceVersion = -1;
-        let websiteVersionByUser = new Map();
-        let roomJoined = false;
-        let visibilityTimer;
-        let visibilityQueue = Promise.resolve();
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl('/hubs/chat').withAutomaticReconnect().build();
-
-        function renderMembers() {
-            memberList.replaceChildren();
-            document.getElementById('memberCount').textContent = roomMembers.length;
-            const onlineCount = roomMembers.filter(member => onlineUserIds.has(member.userId)).length;
-            const waitingCount = roomMembers.filter(member =>
-                !onlineUserIds.has(member.userId) && webUserIds.has(member.userId)).length;
-            document.getElementById('onlineCount').textContent =
-                `${onlineCount} online · ${waitingCount} chờ`;
-
-            for (const [role, label] of [[2, 'Chủ phòng'], [1, 'Người quản lý'], [0, 'Thành viên']]) {
-                const people = roomMembers.filter(member => member.role === role);
-                if (people.length === 0) continue;
-                const heading = document.createElement('h3');
-                heading.className = 'chat-member-group-heading';
-                heading.textContent = `${label} — ${people.length}`;
-                memberList.append(heading);
-
-                for (const member of people) {
-                    const active = onlineUserIds.has(member.userId);
-                    const waiting = !active && webUserIds.has(member.userId);
-                    const activity = active ? 'Online' : waiting ? 'Chờ' : 'Ngoại tuyến';
-                    const activityClass = active ? 'is-online' : waiting ? 'is-waiting' : '';
-                    const row = document.createElement('div');
-                    row.className = 'chat-member-row';
-                    const avatar = document.createElement('span');
-                    avatar.className = 'chat-member-avatar';
-                    avatar.textContent = member.username.trim().charAt(0).toUpperCase() || '?';
-                    const details = document.createElement('span');
-                    details.className = 'chat-member-details';
-                    const name = document.createElement('span');
-                    name.className = 'chat-member-name';
-                    name.textContent = member.username;
-                    const roleText = document.createElement('span');
-                    roleText.className = 'chat-member-role';
-                    roleText.textContent = label;
-                    const activityText = document.createElement('span');
-                    activityText.className = `chat-member-activity ${activityClass}`;
-                    activityText.textContent = activity;
-                    details.append(name, roleText, activityText);
-                    const state = document.createElement('span');
-                    state.className = `chat-member-state ${activityClass}`;
-                    state.title = activity;
-                    state.setAttribute('aria-label', state.title);
-                    row.append(avatar, details, state);
-                    memberList.append(row);
-                }
-            }
-        }
-
-        function applyPresence(snapshot) {
-            if (snapshot.groupId !== groupId || snapshot.version < presenceVersion) return;
-            presenceVersion = snapshot.version;
-            onlineUserIds = new Set(snapshot.onlineUserIds);
-            renderMembers();
-        }
-
-        function applyWebsite(snapshot) {
-            if (snapshot.groupId !== groupId) return;
-            const connected = new Set(snapshot.connectedUserIds);
-            for (const member of roomMembers) {
-                const previousVersion = websiteVersionByUser.get(member.userId) ?? -1;
-                if (snapshot.version < previousVersion) continue;
-                websiteVersionByUser.set(member.userId, snapshot.version);
-                if (connected.has(member.userId)) webUserIds.add(member.userId);
-                else webUserIds.delete(member.userId);
-            }
-            renderMembers();
-        }
-
-        function applyWebsiteChange(change) {
-            if (change.groupId !== groupId ||
-                change.version < (websiteVersionByUser.get(change.userId) ?? -1)) return;
-            websiteVersionByUser.set(change.userId, change.version);
-            if (change.connected) webUserIds.add(change.userId);
-            else webUserIds.delete(change.userId);
-            renderMembers();
-        }
-
-        async function refreshRoster() {
-            const roster = await connection.invoke('GetRoomRoster', groupId);
-            roomMembers = roster.members;
-            applyPresence(roster.presence);
-            applyWebsite(roster.website);
-            renderMembers();
-        }
-
-        function syncRoomViewing() {
-            visibilityQueue = visibilityQueue.catch(() => {}).then(async () => {
-                if (connection.state !== signalR.HubConnectionState.Connected) return;
-                if (!document.hidden && !roomJoined) {
-                    applyPresence(await connection.invoke('JoinGroup', groupId));
-                    roomJoined = true;
-                    await refreshRoster();
-                    await markLatestRead();
-                } else if (document.hidden && roomJoined) {
-                    await connection.invoke('LeaveGroup', groupId);
-                    roomJoined = false;
-                }
-            });
-            return visibilityQueue;
-        }
-
-        function addMessage(message, prepend = false) {
-            const isEvent = message.kind === 1 || message.kind === 2;
-            const target = isEvent ? eventBox : box;
-            if (target.querySelector(`[data-message-id="${message.id}"]`)) return;
-            const outer = document.createElement('div');
-            outer.dataset.messageId = message.id;
-            const time = new Date(message.sentAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-            if (isEvent) {
-                outer.className = 'chat-system-event';
-                const text = document.createElement('span');
-                text.textContent = `${message.senderName} đã ${message.kind === 1 ? 'vào' : 'rời'} phòng chat.`;
-                const timestamp = document.createElement('time');
-                timestamp.dateTime = message.sentAt;
-                timestamp.textContent = time;
-                outer.append(text, timestamp);
-            } else {
-                const own = message.senderUserId === currentUserId;
-                outer.className = `chat-message ${own ? 'align-self-end' : 'align-self-start'}`;
-                outer.style.maxWidth = '80%';
-                const meta = document.createElement('div');
-                meta.className = 'small text-muted';
-                meta.textContent = `${message.senderName} · ${time}`;
-                const body = document.createElement('div');
-                body.className = `rounded-3 p-2 ${own ? 'bg-primary' : 'bg-secondary'} text-white`;
-                body.style.whiteSpace = 'pre-wrap';
-                body.style.overflowWrap = 'anywhere';
-                body.textContent = message.content;
-                outer.append(meta, body);
-            }
-            if (prepend) target.prepend(outer);
-            else {
-                target.append(outer);
-                target.scrollTop = target.scrollHeight;
-            }
-            if (isEvent) document.getElementById('roomEventsEmpty').classList.add('d-none');
-        }
-
-        async function markLatestRead() {
-            if (document.hidden) return;
-            const last = box.querySelector('[data-message-id]:last-child')?.dataset.messageId;
-            if (!last) return;
-            await fetch(markReadUrl, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'RequestVerificationToken': readToken },
-                body: new URLSearchParams({ lastMessageId: Number(last) })
-            });
-        }
-
-        async function refreshMessages() {
-            const response = await fetch(`${messagesUrl}?limit=50`);
-            if (!response.ok) return;
-            for (const message of await response.json()) addMessage(message);
-            await markLatestRead();
-        }
-
-        document.getElementById('loadOlder').addEventListener('click', async () => {
-            const first = Math.min(...[box, eventBox]
-                .map(container => Number(container.querySelector('[data-message-id]')?.dataset.messageId))
-                .filter(Number.isFinite).filter(id => id > 0));
-            if (!Number.isFinite(first)) return;
-            const response = await fetch(`${messagesUrl}?beforeId=${first}&limit=30`);
-            if (!response.ok) return;
-            const messages = await response.json();
-            for (const message of messages.reverse()) addMessage(message, true);
-            if (messages.length === 0) document.getElementById('loadOlder').disabled = true;
-        });
-
-        connection.on('ReceiveMessage', async message => {
-            if (message.groupId !== groupId) return;
-            addMessage(message);
-            await markLatestRead();
-        });
-        connection.on('RoomPresenceChanged', snapshot => applyPresence(snapshot));
-        connection.on('WebsitePresenceDelta', change => applyWebsiteChange(change));
-        connection.on('RoomRosterChanged', changedGroupId => {
-            if (changedGroupId === groupId) refreshRoster().catch(() => {});
-        });
-        connection.on('GroupAccessRevoked', revokedGroupId => {
-            if (revokedGroupId === groupId) window.location.href = '/StudyGroups';
-        });
-        connection.onreconnecting(() => {
-            status.textContent = 'Đang kết nối lại...';
-            roomJoined = false;
-            presenceVersion = -1;
-            websiteVersionByUser.clear();
-        });
-        connection.onreconnected(async () => {
-            await syncRoomViewing();
-            await refreshMessages();
-            if (!roomJoined) await refreshRoster();
-            status.textContent = 'Đã kết nối';
-        });
-        connection.start().then(async () => {
-            await syncRoomViewing();
-            await refreshMessages();
-            if (!roomJoined) await refreshRoster();
-            status.textContent = 'Đã kết nối';
-        }).catch(error => status.textContent = `Không kết nối được: ${error}`);
-        document.addEventListener('visibilitychange', () => {
-            window.clearTimeout(visibilityTimer);
-            visibilityTimer = window.setTimeout(() => {
-                syncRoomViewing().catch(error => status.textContent = `Không cập nhật được trạng thái: ${error}`);
-            }, document.hidden ? 400 : 0);
-        });
-        renderMembers();
-        box.scrollTop = box.scrollHeight;
-        eventBox.scrollTop = eventBox.scrollHeight;
-        document.getElementById('chatForm').addEventListener('submit', async event => {
-            event.preventDefault();
-            const content = input.value.trim();
-            if (!content) return;
-            try {
-                await connection.invoke('SendMessage', groupId, content);
-                input.value = '';
-            } catch (error) {
-                status.textContent = `Gửi thất bại: ${error}`;
-            }
-        });
-    </script>
+    <script>window.channelChatMembers = @Html.Raw(JsonSerializer.Serialize(members, JsonSerializerOptions.Web));</script>
+    <script src="~/js/channel-chat.js" asp-append-version="true"></script>
 }

@@ -393,6 +393,8 @@ BEGIN
             group_seed.owner_id, group_seed.access_mode, now() - make_interval(days => group_seed.age_days))
         RETURNING "Id" INTO group_id;
         INSERT INTO seed_group_map (code, id) VALUES (group_seed.code, group_id);
+        INSERT INTO "ChatChannels" ("GroupId", "Name", "IsDefault", "IsArchived", "CreatedAt")
+        VALUES (group_id, 'chung', true, false, now());
     END LOOP;
 
     INSERT INTO "StudyGroupMembers" ("GroupId", "UserId", "Role", "JoinedAt")
@@ -414,14 +416,16 @@ BEGIN
     FROM seed_group_map m
     WHERE m.code IN ('career', 'general');
 
-    INSERT INTO "GroupMessages" ("GroupId", "SenderUserId", "Content", "SentAt")
-    SELECT m.id, g."CreatedByUserId", 'Chào mừng bạn đến với ' || g."Name" || '! Hãy giới thiệu bản thân và đặt câu hỏi.',
-           g."CreatedAt" + interval '1 hour'
-    FROM seed_group_map m JOIN "StudyGroups" g ON g."Id" = m.id;
+    INSERT INTO "GroupMessages" ("GroupId", "ChannelId", "SenderUserId", "Content", "SentAt", "Revision")
+    SELECT m.id, c."Id", g."CreatedByUserId", 'Chào mừng bạn đến với ' || g."Name" || '! Hãy giới thiệu bản thân và đặt câu hỏi.',
+           g."CreatedAt" + interval '1 hour', 0
+    FROM seed_group_map m JOIN "StudyGroups" g ON g."Id" = m.id
+    JOIN "ChatChannels" c ON c."GroupId" = m.id AND c."IsDefault";
 
-    INSERT INTO "GroupMessages" ("GroupId", "SenderUserId", "Content", "SentAt")
-    SELECT m.id, user_id, 'Mình đang ôn phần này. Mọi người có tài liệu hoặc ví dụ nào hay không?', now() - interval '12 hours'
-    FROM seed_group_map m WHERE m.code IN ('asp-mvc', 'ef-query', 'mentor-private');
+    INSERT INTO "GroupMessages" ("GroupId", "ChannelId", "SenderUserId", "Content", "SentAt", "Revision")
+    SELECT m.id, c."Id", user_id, 'Mình đang ôn phần này. Mọi người có tài liệu hoặc ví dụ nào hay không?', now() - interval '12 hours', 0
+    FROM seed_group_map m JOIN "ChatChannels" c ON c."GroupId" = m.id AND c."IsDefault"
+    WHERE m.code IN ('asp-mvc', 'ef-query', 'mentor-private');
 
     INSERT INTO "StudyGroupJoinRequests" ("GroupId", "UserId", "Status", "RequestedAt")
     SELECT m.id, user_id, 0, now() - interval '3 hours'
