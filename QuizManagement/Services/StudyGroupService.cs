@@ -15,7 +15,9 @@ public sealed record GroupDiscoverPage(List<GroupSummary> Groups, int TotalCount
     public int PageCount => (int)Math.Ceiling((double)TotalCount / PageSize);
 }
 public sealed record ChatMessage(int Id, int GroupId, string SenderUserId, string SenderName,
-    string? SenderAvatarUrl, string Content, DateTime SentAt, GroupMessageKind Kind);
+    string? SenderAvatarUrl, string Content, DateTime SentAt, GroupMessageKind Kind,
+    int ChannelId = 0, int Revision = 0, DateTime? EditedAt = null, DateTime? DeletedAt = null,
+    ChatReply? Reply = null, List<ChatFile>? Attachments = null, List<ReactionSummary>? Reactions = null);
 public sealed record GroupInvitationSummary(int GroupId, string GroupName, DateTime ExpiresAt);
 public sealed record GroupInviteLinkPreview(int GroupId, string GroupName, DateTime? ExpiresAt);
 public enum GroupInviteLinkFailure { Unknown, Expired, Revoked }
@@ -126,9 +128,9 @@ public sealed class StudyGroupService
                     .Select(member => member.User.Username).FirstOrDefault(),
                 group.Members.Count(member => !member.IsBanned),
                 group.Messages.Count(message =>
-                    message.Kind == GroupMessageKind.Chat &&
+                    message.Kind == GroupMessageKind.Chat && message.DeletedAt == null && !message.Channel.IsArchived &&
                     group.Members.Any(member => member.UserId == userId && !member.IsBanned
-                        && (member.LastReadMessageId == null || message.Id > member.LastReadMessageId)
+                        && !message.Channel.Reads.Any(read => read.UserId == userId && read.LastReadMessageId >= message.Id)
                         && message.SenderUserId != userId)),
                 group.Members.Any(member => member.UserId == userId && !member.IsBanned),
                 group.AccessMode,
@@ -174,6 +176,7 @@ public sealed class StudyGroupService
             JoinedAt = group.CreatedAt,
             Role = StudyGroupMemberRole.Owner
         });
+        group.Channels.Add(new ChatChannel { Name = "chung", IsDefault = true, CreatedAt = group.CreatedAt });
         _db.StudyGroups.Add(group);
         await _db.SaveChangesAsync();
         return group;
@@ -593,14 +596,10 @@ public sealed class StudyGroupService
     {
         if (!await IsMemberAsync(groupId, userId)) return null;
         limit = Math.Clamp(limit, 1, 50);
-        var query = _db.GroupMessages.AsNoTracking().Where(message => message.GroupId == groupId);
+        var channelId = await DefaultChannelIdAsync(groupId);
+        var query = _db.GroupMessages.AsNoTracking().Where(message => message.GroupId == groupId && message.ChannelId == channelId);
         if (beforeId.HasValue) query = query.Where(message => message.Id < beforeId.Value);
-        var messages = await query.OrderByDescending(message => message.Id)
-            .Take(limit)
-            .Select(message => new ChatMessage(message.Id, message.GroupId,
-                message.SenderUserId, message.SenderUser.Username,
-                message.SenderUser.AvatarUrl, message.Content, message.SentAt, message.Kind))
-            .ToListAsync();
+        var messages = await ChatService.Project(query.OrderByDescending(message => message.Id).Take(limit)).ToListAsync();
         messages.Reverse();
         return messages;
     }
@@ -612,6 +611,7 @@ public sealed class StudyGroupService
         var message = new GroupMessage
         {
             GroupId = groupId,
+            ChannelId = await DefaultChannelIdAsync(groupId),
             SenderUserId = userId,
             Content = content,
             SentAt = _clock.GetUtcNow().UtcDateTime
@@ -620,7 +620,7 @@ public sealed class StudyGroupService
         await _db.SaveChangesAsync();
         var sender = await _db.Users.AsNoTracking().FirstAsync(user => user.Id == userId);
         return new ChatMessage(message.Id, groupId, userId, sender.Username,
-            sender.AvatarUrl, content, message.SentAt, GroupMessageKind.Chat);
+            sender.AvatarUrl, content, message.SentAt, GroupMessageKind.Chat, message.ChannelId);
     }
 
     public async Task<ChatMessage> RecordMembershipEventAsync(int groupId, string userId,
@@ -632,6 +632,7 @@ public sealed class StudyGroupService
         var message = new GroupMessage
         {
             GroupId = groupId,
+            ChannelId = await DefaultChannelIdAsync(groupId),
             SenderUserId = userId,
             Content = string.Empty,
             Kind = kind,
@@ -640,12 +641,15 @@ public sealed class StudyGroupService
         _db.GroupMessages.Add(message);
         await _db.SaveChangesAsync();
         return new ChatMessage(message.Id, groupId, userId, sender.Username,
-            sender.AvatarUrl, string.Empty, message.SentAt, kind);
+            sender.AvatarUrl, string.Empty, message.SentAt, kind, message.ChannelId);
     }
 
     private Task<StudyGroupMember?> FindMemberAsync(int groupId, string userId) =>
         _db.StudyGroupMembers.FirstOrDefaultAsync(member =>
             member.GroupId == groupId && member.UserId == userId);
+
+    public Task<int> DefaultChannelIdAsync(int groupId) => _db.ChatChannels
+        .Where(channel => channel.GroupId == groupId && channel.IsDefault).Select(channel => channel.Id).SingleAsync();
 
     public async Task<bool> MarkReadAsync(int groupId, string userId, int lastMessageId)
     {
@@ -653,6 +657,9 @@ public sealed class StudyGroupService
         if (member is null || member.IsBanned) return false;
         if (!await _db.GroupMessages.AnyAsync(message => message.GroupId == groupId && message.Id == lastMessageId))
             return false;
+        var channelId = await _db.GroupMessages.Where(message => message.Id == lastMessageId)
+            .Select(message => message.ChannelId).SingleAsync();
+        await ChatService.AdvanceReadAsync(_db, channelId, userId, lastMessageId);
         if (member.LastReadMessageId is null || lastMessageId > member.LastReadMessageId)
         {
             member.LastReadMessageId = lastMessageId;

@@ -47,6 +47,117 @@ namespace DataAccessObjects.Migrations
                     b.ToTable("Answers");
                 });
 
+            modelBuilder.Entity("BusinessObjects.ChatAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("character varying(180)");
+
+                    b.Property<int>("MessageId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Size")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MessageId");
+
+                    b.ToTable("ChatAttachments");
+                });
+
+            modelBuilder.Entity("BusinessObjects.ChatChannel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Topic")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId")
+                        .IsUnique()
+                        .HasFilter("\"IsDefault\"");
+
+                    b.HasIndex("GroupId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("ChatChannels");
+                });
+
+            modelBuilder.Entity("BusinessObjects.ChatChannelRead", b =>
+                {
+                    b.Property<int>("ChannelId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("LastReadMessageId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("ChannelId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ChatChannelReads");
+                });
+
+            modelBuilder.Entity("BusinessObjects.ChatReaction", b =>
+                {
+                    b.Property<int>("MessageId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Emoji")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.HasKey("MessageId", "UserId", "Emoji");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ChatReactions");
+                });
+
             modelBuilder.Entity("BusinessObjects.Deck", b =>
                 {
                     b.Property<int>("Id")
@@ -169,9 +280,21 @@ namespace DataAccessObjects.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("ChannelId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("ClientMessageId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("EditedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("GroupId")
                         .HasColumnType("integer");
@@ -180,6 +303,12 @@ namespace DataAccessObjects.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
+
+                    b.Property<int?>("ReplyToMessageId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("integer");
 
                     b.Property<string>("SenderUserId")
                         .IsRequired()
@@ -192,9 +321,17 @@ namespace DataAccessObjects.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ReplyToMessageId");
+
                     b.HasIndex("SenderUserId");
 
+                    b.HasIndex("ChannelId", "Id");
+
                     b.HasIndex("GroupId", "SentAt");
+
+                    b.HasIndex("SenderUserId", "ClientMessageId")
+                        .IsUnique()
+                        .HasFilter("\"ClientMessageId\" IS NOT NULL");
 
                     b.ToTable("GroupMessages");
                 });
@@ -1001,6 +1138,66 @@ namespace DataAccessObjects.Migrations
                     b.Navigation("Question");
                 });
 
+            modelBuilder.Entity("BusinessObjects.ChatAttachment", b =>
+                {
+                    b.HasOne("BusinessObjects.GroupMessage", "Message")
+                        .WithMany("Attachments")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Message");
+                });
+
+            modelBuilder.Entity("BusinessObjects.ChatChannel", b =>
+                {
+                    b.HasOne("BusinessObjects.StudyGroup", "Group")
+                        .WithMany("Channels")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+                });
+
+            modelBuilder.Entity("BusinessObjects.ChatChannelRead", b =>
+                {
+                    b.HasOne("BusinessObjects.ChatChannel", "Channel")
+                        .WithMany("Reads")
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObjects.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Channel");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BusinessObjects.ChatReaction", b =>
+                {
+                    b.HasOne("BusinessObjects.GroupMessage", "Message")
+                        .WithMany("Reactions")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObjects.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Message");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BusinessObjects.Deck", b =>
                 {
                     b.HasOne("BusinessObjects.Subject", "Subject")
@@ -1036,12 +1233,23 @@ namespace DataAccessObjects.Migrations
 
             modelBuilder.Entity("BusinessObjects.GroupMessage", b =>
                 {
+                    b.HasOne("BusinessObjects.ChatChannel", "Channel")
+                        .WithMany("Messages")
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("BusinessObjects.StudyGroup", "Group")
                         .WithMany("Messages")
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("FK_GroupMessages_Groups");
+
+                    b.HasOne("BusinessObjects.GroupMessage", "ReplyToMessage")
+                        .WithMany()
+                        .HasForeignKey("ReplyToMessageId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("BusinessObjects.User", "SenderUser")
                         .WithMany()
@@ -1050,7 +1258,11 @@ namespace DataAccessObjects.Migrations
                         .IsRequired()
                         .HasConstraintName("FK_GroupMessages_Users");
 
+                    b.Navigation("Channel");
+
                     b.Navigation("Group");
+
+                    b.Navigation("ReplyToMessage");
 
                     b.Navigation("SenderUser");
                 });
@@ -1355,11 +1567,25 @@ namespace DataAccessObjects.Migrations
                     b.Navigation("TestResultDetails");
                 });
 
+            modelBuilder.Entity("BusinessObjects.ChatChannel", b =>
+                {
+                    b.Navigation("Messages");
+
+                    b.Navigation("Reads");
+                });
+
             modelBuilder.Entity("BusinessObjects.Deck", b =>
                 {
                     b.Navigation("Questions");
 
                     b.Navigation("TestHistories");
+                });
+
+            modelBuilder.Entity("BusinessObjects.GroupMessage", b =>
+                {
+                    b.Navigation("Attachments");
+
+                    b.Navigation("Reactions");
                 });
 
             modelBuilder.Entity("BusinessObjects.KahootParticipant", b =>
@@ -1388,6 +1614,8 @@ namespace DataAccessObjects.Migrations
 
             modelBuilder.Entity("BusinessObjects.StudyGroup", b =>
                 {
+                    b.Navigation("Channels");
+
                     b.Navigation("Invitations");
 
                     b.Navigation("InviteLinks");

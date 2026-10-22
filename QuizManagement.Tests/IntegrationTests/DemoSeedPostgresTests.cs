@@ -171,13 +171,16 @@ public class DemoSeedPostgresTests
             WITH outside_group AS (
                 INSERT INTO "StudyGroups" ("Name", "CreatedByUserId") VALUES ('Outside group', 'outside-user')
                 RETURNING "Id"
+            ), channels AS (
+                INSERT INTO "ChatChannels" ("GroupId", "Name", "IsDefault", "IsArchived", "CreatedAt")
+                SELECT "Id", 'chung', true, false, now() FROM outside_group RETURNING "Id", "GroupId"
             ), members AS (
                 INSERT INTO "StudyGroupMembers" ("GroupId", "UserId", "Role")
                 SELECT "Id", member, role FROM outside_group
                 CROSS JOIN (VALUES ('outside-user', 2), ('seed-user-001', 0)) AS m (member, role)
             )
-            INSERT INTO "GroupMessages" ("GroupId", "SenderUserId", "Content")
-            SELECT "Id", sender, 'hello' FROM outside_group
+            INSERT INTO "GroupMessages" ("GroupId", "ChannelId", "SenderUserId", "Content", "Revision")
+            SELECT "GroupId", "Id", sender, 'hello', 0 FROM channels
             CROSS JOIN (VALUES ('outside-user'), ('seed-user-001')) AS s (sender);
             """, database).ExecuteNonQuery();
     }

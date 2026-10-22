@@ -47,6 +47,10 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
     public virtual DbSet<StudyGroup> StudyGroups { get; set; }
     public virtual DbSet<StudyGroupMember> StudyGroupMembers { get; set; }
     public virtual DbSet<GroupMessage> GroupMessages { get; set; }
+    public virtual DbSet<ChatChannel> ChatChannels { get; set; }
+    public virtual DbSet<ChatChannelRead> ChatChannelReads { get; set; }
+    public virtual DbSet<ChatAttachment> ChatAttachments { get; set; }
+    public virtual DbSet<ChatReaction> ChatReactions { get; set; }
     public virtual DbSet<StudyGroupJoinRequest> StudyGroupJoinRequests { get; set; }
     public virtual DbSet<StudyGroupInvitation> StudyGroupInvitations { get; set; }
     public virtual DbSet<StudyGroupInviteLink> StudyGroupInviteLinks { get; set; }
@@ -471,12 +475,55 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
             entity.Property(e => e.SentAt).HasDefaultValueSql("now()");
             entity.HasIndex(e => new { e.GroupId, e.SentAt });
             entity.HasIndex(e => e.SenderUserId);
+            entity.HasIndex(e => new { e.ChannelId, e.Id });
+            entity.HasIndex(e => new { e.SenderUserId, e.ClientMessageId }).IsUnique()
+                .HasFilter("\"ClientMessageId\" IS NOT NULL");
+            entity.HasOne(e => e.Channel).WithMany(e => e.Messages)
+                .HasForeignKey(e => e.ChannelId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.ReplyToMessage).WithMany()
+                .HasForeignKey(e => e.ReplyToMessageId).OnDelete(DeleteBehavior.SetNull);
             entity.HasOne(e => e.Group).WithMany(e => e.Messages)
                 .HasForeignKey(e => e.GroupId).OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK_GroupMessages_Groups");
             entity.HasOne(e => e.SenderUser).WithMany()
                 .HasForeignKey(e => e.SenderUserId).OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_GroupMessages_Users");
+        });
+
+        modelBuilder.Entity<ChatChannel>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(40);
+            entity.Property(e => e.Topic).HasMaxLength(200);
+            entity.HasIndex(e => new { e.GroupId, e.Name }).IsUnique();
+            entity.HasIndex(e => e.GroupId).IsUnique().HasFilter("\"IsDefault\"");
+            entity.HasOne(e => e.Group).WithMany(e => e.Channels)
+                .HasForeignKey(e => e.GroupId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<ChatChannelRead>(entity =>
+        {
+            entity.HasKey(e => new { e.ChannelId, e.UserId });
+            entity.HasOne(e => e.Channel).WithMany(e => e.Reads)
+                .HasForeignKey(e => e.ChannelId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<ChatAttachment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FileName).HasMaxLength(180);
+            entity.Property(e => e.ContentType).HasMaxLength(100);
+            entity.HasOne(e => e.Message).WithMany(e => e.Attachments)
+                .HasForeignKey(e => e.MessageId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<ChatReaction>(entity =>
+        {
+            entity.HasKey(e => new { e.MessageId, e.UserId, e.Emoji });
+            entity.Property(e => e.Emoji).HasMaxLength(16);
+            entity.HasOne(e => e.Message).WithMany(e => e.Reactions)
+                .HasForeignKey(e => e.MessageId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<StudyGroupJoinRequest>(entity =>
