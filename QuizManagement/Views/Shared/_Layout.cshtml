@@ -13,6 +13,23 @@
     <link rel="stylesheet" href="~/QuizManagement.styles.css" asp-append-version="true" />
 </head>
 <body>
+    <!-- Academic Cyber Ambient Background System -->
+    <div class="quizms-ambient-bg" aria-hidden="true">
+        <div class="quizms-cyber-grid"></div>
+        <div class="quizms-glow-orb orb-1"></div>
+        <div class="quizms-glow-orb orb-2"></div>
+        <div class="quizms-glow-orb orb-3"></div>
+        <canvas id="quizms-ambient-canvas" class="quizms-ambient-canvas"></canvas>
+        <div class="quizms-floating-motifs">
+            <span class="quizms-motif" style="top:15%; left:6%; font-size:22px; animation-duration:14s;">✦</span>
+            <span class="quizms-motif" style="top:22%; right:10%; font-size:28px; animation-duration:18s; animation-delay:2s; color:rgba(124,109,248,0.25); font-weight:800;">?</span>
+            <span class="quizms-motif" style="top:62%; left:8%; font-size:24px; animation-duration:20s; animation-delay:4s; color:rgba(251,191,36,0.22);">⚡</span>
+            <span class="quizms-motif" style="top:72%; right:12%; font-size:24px; animation-duration:16s; animation-delay:1s; color:rgba(34,211,238,0.22);">✦</span>
+            <span class="quizms-motif" style="top:38%; right:20%; font-size:20px; animation-duration:22s; animation-delay:3s; color:rgba(124,109,248,0.2);">🧠</span>
+            <span class="quizms-motif" style="top:85%; left:22%; font-size:22px; animation-duration:24s; animation-delay:5s; color:rgba(251,191,36,0.2);">🏆</span>
+        </div>
+    </div>
+
     <header>
         <nav class="navbar navbar-expand-sm">
             <div class="container-fluid">
@@ -130,6 +147,7 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/gamification.js" asp-append-version="true"></script>
     @if (User.Identity?.IsAuthenticated == true && ViewData["UsesChatHub"] is not true)
     {
         <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
@@ -147,5 +165,112 @@
         </script>
     }
     @await RenderSectionAsync("Scripts", required: false)
+
+    <script>
+        (function() {
+            var canvas = document.getElementById('quizms-ambient-canvas');
+            if (!canvas) return;
+            var ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            var width = 0, height = 0;
+            var particles = [];
+            var particleCount = 42;
+            var mouse = { x: -1000, y: -1000, radius: 140 };
+
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize, { passive: true });
+            resize();
+
+            window.addEventListener('mousemove', function(e) {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+            }, { passive: true });
+
+            window.addEventListener('mouseleave', function() {
+                mouse.x = -1000;
+                mouse.y = -1000;
+            }, { passive: true });
+
+            for (var i = 0; i < particleCount; i++) {
+                particles.push({
+                    x: Math.random() * (width || window.innerWidth || 1200),
+                    y: Math.random() * (height || window.innerHeight || 800),
+                    vx: (Math.random() - 0.5) * 0.35,
+                    vy: (Math.random() - 0.5) * 0.35,
+                    radius: Math.random() * 1.5 + 0.8,
+                    color: i % 3 === 0 ? 'rgba(124, 109, 248, ' : (i % 3 === 1 ? 'rgba(34, 211, 238, ' : 'rgba(251, 191, 36, ')
+                });
+            }
+
+            var running = true;
+            document.addEventListener('visibilitychange', function() {
+                running = !document.hidden;
+                if (running) requestAnimationFrame(loop);
+            });
+
+            function loop() {
+                if (!running) return;
+                ctx.clearRect(0, 0, width, height);
+
+                // Draw constellation neural links
+                for (var i = 0; i < particles.length; i++) {
+                    var p1 = particles[i];
+                    for (var j = i + 1; j < particles.length; j++) {
+                        var p2 = particles[j];
+                        var dx = p1.x - p2.x;
+                        var dy = p1.y - p2.y;
+                        var dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 110) {
+                            var alpha = (1 - dist / 110) * 0.16;
+                            ctx.strokeStyle = 'rgba(124, 109, 248, ' + alpha + ')';
+                            ctx.lineWidth = 0.8;
+                            ctx.beginPath();
+                            ctx.moveTo(p1.x, p1.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.stroke();
+                        }
+                    }
+
+                    // Mouse interactive link
+                    var mdx = p1.x - mouse.x;
+                    var mdy = p1.y - mouse.y;
+                    var mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+                    if (mdist < mouse.radius) {
+                        var mAlpha = (1 - mdist / mouse.radius) * 0.28;
+                        ctx.strokeStyle = 'rgba(34, 211, 238, ' + mAlpha + ')';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(mouse.x, mouse.y);
+                        ctx.stroke();
+                    }
+                }
+
+                // Update and render particles
+                for (var k = 0; k < particles.length; k++) {
+                    var p = particles[k];
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    if (p.x < 0) p.x = width;
+                    else if (p.x > width) p.x = 0;
+                    if (p.y < 0) p.y = height;
+                    else if (p.y > height) p.y = 0;
+
+                    ctx.fillStyle = p.color + '0.65)';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                requestAnimationFrame(loop);
+            }
+            requestAnimationFrame(loop);
+        })();
+    </script>
 </body>
 </html>

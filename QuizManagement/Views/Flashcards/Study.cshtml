@@ -98,10 +98,10 @@ else
 
         <div class="flashcard-actions">
             <button type="button" id="againButton" class="btn btn-outline-danger d-none">
-                <span class="fc-key-badge">R</span> Cần học lại
+                <span class="fc-key-badge">R</span> Cần học lại <span class="badge bg-danger bg-opacity-25 text-danger ms-1 small" title="Chu kỳ lặp lại SM-2: 1 phút">1m</span>
             </button>
             <button type="button" id="knownButton" class="btn btn-outline-success d-none">
-                <span class="fc-key-badge">Enter</span> Đã nhớ
+                <span class="fc-key-badge">Enter</span> Đã nhớ <span class="badge bg-success bg-opacity-25 text-success ms-1 small" title="Chu kỳ lặp lại SM-2: 3 ngày">3d</span>
             </button>
             <button type="button" id="shuffleButton" class="btn btn-outline-secondary">Trộn thẻ</button>
         </div>
@@ -381,6 +381,15 @@ else
 
                 // Update counters immediately for instant visual feedback
                 updateCounters();
+
+                if (knownCount + againCount === cards.length && knownCount > 0) {
+                    if (window.QuizCelebration) {
+                        setTimeout(() => {
+                            window.QuizCelebration.confetti({ particleCount: 80 });
+                            window.QuizCelebration.playVictoryChime();
+                        }, 400);
+                    }
+                }
 
                 // Show stamp on the currently active face (front or back)
                 const activeFace = flipped 

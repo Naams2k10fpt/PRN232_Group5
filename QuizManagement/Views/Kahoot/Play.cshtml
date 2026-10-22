@@ -157,6 +157,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+<script src="~/js/gamification.js"></script>
 <script>
     const roomCode = "@Model.RoomCode";
     const nickname = "@nickname";
@@ -214,6 +215,9 @@
             resultText.innerText = "CHÍNH XÁC!";
             resultText.className = "display-4 fw-bolder text-success mb-2";
             resultScore.innerText = `+${res.scoreEarned} điểm`;
+            if (window.QuizCelebration) {
+                window.QuizCelebration.confetti({ particleCount: 35, duration: 1600 });
+            }
         } else {
             resultIcon.innerHTML = "❌";
             resultText.innerText = "CHƯA ĐÚNG!";
@@ -227,6 +231,10 @@
     connection.on("GameOver", function() {
         document.getElementById("finalScore").innerText = totalScore;
         showScreen("screenGameOver");
+        if (window.QuizCelebration) {
+            window.QuizCelebration.confetti({ particleCount: 120 });
+            window.QuizCelebration.playVictoryChime();
+        }
     });
 
     function submitChoice(colorIndex) {
