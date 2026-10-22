@@ -11,6 +11,12 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/QuizManagement.styles.css" asp-append-version="true" />
+    <script>
+        (function() {
+            var savedTheme = localStorage.getItem('quizms_theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+        })();
+    </script>
 </head>
 <body>
     <!-- Academic Cyber Ambient Background System -->
@@ -82,7 +88,13 @@
                             }
                         }
                     </ul>
-                    <ul class="navbar-nav">
+                    <ul class="navbar-nav align-items-center">
+                        <li class="nav-item me-2">
+                            <button id="quizms-theme-toggle" class="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center"
+                                    type="button" title="Chuyển chế độ Sáng / Tối" style="width: 36px; height: 36px; padding: 0;">
+                                <span id="theme-toggle-icon" style="font-size: 15px;">🌙</span>
+                            </button>
+                        </li>
                         @if (User.Identity?.IsAuthenticated == true)
                         {
                             <li class="nav-item dropdown">
@@ -270,6 +282,34 @@
                 requestAnimationFrame(loop);
             }
             requestAnimationFrame(loop);
+        })();
+
+        // Theme Mode Toggle Controller
+        (function() {
+            var toggleBtn = document.getElementById('quizms-theme-toggle');
+            var icon = document.getElementById('theme-toggle-icon');
+
+            function updateIcon(theme) {
+                if (icon) {
+                    icon.textContent = theme === 'light' ? '☀️' : '🌙';
+                }
+                if (toggleBtn) {
+                    toggleBtn.title = theme === 'light' ? 'Chuyển sang chế độ Tối (Dark Mode)' : 'Chuyển sang chế độ Sáng (Light Mode)';
+                }
+            }
+
+            var currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'dark';
+            updateIcon(currentTheme);
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    var cur = document.documentElement.getAttribute('data-bs-theme') || 'dark';
+                    var next = cur === 'dark' ? 'light' : 'dark';
+                    document.documentElement.setAttribute('data-bs-theme', next);
+                    localStorage.setItem('quizms_theme', next);
+                    updateIcon(next);
+                });
+            }
         })();
     </script>
 </body>

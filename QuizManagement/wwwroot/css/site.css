@@ -46,6 +46,43 @@
   --t: 0.18s cubic-bezier(0.4,0,0.2,1);
 }
 
+/* ===== LIGHT THEME DESIGN TOKENS ===== */
+:root[data-bs-theme="light"], [data-bs-theme="light"] {
+  --bg:          #f8fafc;
+  --bg-surface:  #ffffff;
+  --bg-elevated: #f1f5f9;
+  --bg-hover:    rgba(15,23,42,0.04);
+  --bg-active:   rgba(15,23,42,0.08);
+
+  --border:        rgba(15,23,42,0.10);
+  --border-hover:  rgba(15,23,42,0.20);
+  --border-strong: rgba(15,23,42,0.30);
+
+  --text:       #0f172a;
+  --text-muted: #475569;
+  --text-dim:   #94a3b8;
+
+  --accent:       #6366f1;
+  --accent-hover: #4f46e5;
+  --accent-light: rgba(99,102,241,0.12);
+
+  --cyan:      #0284c7;
+  --cyan-light: rgba(2,132,199,0.12);
+
+  --success:    #16a34a;
+  --success-bg: rgba(22,163,74,0.1);
+  --danger:     #dc2626;
+  --danger-bg:  rgba(220,38,38,0.1);
+  --warning:    #d97706;
+  --warning-bg: rgba(217,119,6,0.1);
+  --info:       #0284c7;
+  --info-bg:    rgba(2,132,199,0.1);
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow:    0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,0.12);
+}
+
 /* ===== BASE ===== */
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -192,6 +229,89 @@ body {
   --bs-link-hover-color: var(--accent-hover);
   --bs-secondary-color: var(--text-muted);
   --bs-emphasis-color: #fff;
+}
+
+/* ===== BOOTSTRAP LIGHT THEME VARS ===== */
+[data-bs-theme="light"] {
+  --bs-body-bg:        var(--bg);
+  --bs-body-color:     var(--text);
+  --bs-border-color:   var(--border);
+  --bs-card-bg:        var(--bg-surface);
+  --bs-link-color:     var(--accent);
+  --bs-link-hover-color: var(--accent-hover);
+  --bs-secondary-color: var(--text-muted);
+  --bs-emphasis-color: #0f172a;
+}
+
+/* Light mode specific background and frosted glass adjustments */
+[data-bs-theme="light"] .quizms-cyber-grid {
+  background-image:
+    radial-gradient(circle at center, rgba(99, 102, 241, 0.14) 1.25px, transparent 1.25px),
+    linear-gradient(to right, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+  opacity: 0.8;
+}
+
+[data-bs-theme="light"] .quizms-glow-orb.orb-1 {
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.14) 0%, rgba(99, 102, 241, 0.04) 45%, transparent 70%);
+}
+
+[data-bs-theme="light"] .quizms-glow-orb.orb-2 {
+  background: radial-gradient(circle, rgba(2, 132, 199, 0.12) 0%, rgba(2, 132, 199, 0.03) 45%, transparent 70%);
+}
+
+[data-bs-theme="light"] .quizms-glow-orb.orb-3 {
+  background: radial-gradient(circle, rgba(217, 119, 6, 0.10) 0%, transparent 60%);
+}
+
+[data-bs-theme="light"] .quizms-motif {
+  color: rgba(15, 23, 42, 0.15);
+  filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.25));
+}
+
+[data-bs-theme="light"] .navbar {
+  background: rgba(255, 255, 255, 0.88) !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+[data-bs-theme="light"] .card,
+[data-bs-theme="light"] .quizms-card {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(99, 102, 241, 0.15) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-bs-theme="light"] .form-control,
+[data-bs-theme="light"] .form-select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.15) !important;
+}
+
+[data-bs-theme="light"] .form-control:focus,
+[data-bs-theme="light"] .form-select:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+
+[data-bs-theme="light"] .table {
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+[data-bs-theme="light"] .dropdown-menu {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-bs-theme="light"] .dropdown-item {
+  color: var(--text) !important;
+}
+
+[data-bs-theme="light"] .dropdown-item:hover {
+  background-color: rgba(99, 102, 241, 0.08) !important;
 }
 
 a { color: var(--accent); text-decoration: none; transition: color var(--t); }
