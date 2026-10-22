@@ -119,15 +119,13 @@ body {
   position: absolute;
   inset: 0;
   background-image:
-    radial-gradient(circle at center, rgba(124, 109, 248, 0.22) 1.2px, transparent 1.2px),
-    radial-gradient(circle at center, rgba(34, 211, 238, 0.16) 1px, transparent 1px),
+    radial-gradient(circle at center, rgba(124, 109, 248, 0.16) 1.25px, transparent 1.25px),
     linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  background-size: 22px 22px, 44px 44px, 44px 44px, 44px 44px;
-  background-position: 0 0, 11px 11px, 0 0, 0 0;
-  mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, #000 45%, transparent 95%);
-  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, #000 45%, transparent 95%);
-  opacity: 0.95;
+  background-size: 32px 32px, 64px 64px, 64px 64px;
+  mask-image: radial-gradient(ellipse 75% 65% at 50% 35%, #000 35%, transparent 90%);
+  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 35%, #000 35%, transparent 90%);
+  opacity: 0.9;
 }
 
 .quizms-glow-orb {
@@ -250,13 +248,11 @@ body {
 /* Light mode specific background and frosted glass adjustments */
 [data-bs-theme="light"] .quizms-cyber-grid {
   background-image:
-    radial-gradient(circle at center, rgba(99, 102, 241, 0.20) 1.2px, transparent 1.2px),
-    radial-gradient(circle at center, rgba(14, 165, 233, 0.14) 1px, transparent 1px),
-    linear-gradient(to right, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
-  background-size: 22px 22px, 44px 44px, 44px 44px, 44px 44px;
-  background-position: 0 0, 11px 11px, 0 0, 0 0;
-  opacity: 0.9;
+    radial-gradient(circle at center, rgba(99, 102, 241, 0.14) 1.25px, transparent 1.25px),
+    linear-gradient(to right, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px, 64px 64px, 64px 64px;
+  opacity: 0.8;
 }
 
 [data-bs-theme="light"] .quizms-glow-orb.orb-1 {

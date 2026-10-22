@@ -197,7 +197,7 @@
 
             var width = 0, height = 0;
             var particles = [];
-            var particleCount = 125;
+            var particleCount = 240; // Rich starry animated particle field
             var mouse = { x: -1000, y: -1000, radius: 140 };
 
             function resize() {
@@ -218,14 +218,14 @@
             }, { passive: true });
 
             for (var i = 0; i < particleCount; i++) {
-                var isMinor = i >= 45; // Minor particles are smaller, subtler micro-dots
+                var isMinor = i >= 48; // Connectable constellation nodes limited to 48 for O(K^2) 60fps budget; 192 drifting micro-dots
                 particles.push({
                     x: Math.random() * (width || window.innerWidth || 1200),
                     y: Math.random() * (height || window.innerHeight || 800),
-                    vx: (Math.random() - 0.5) * (isMinor ? 0.25 : 0.35),
-                    vy: (Math.random() - 0.5) * (isMinor ? 0.25 : 0.35),
-                    radius: isMinor ? (Math.random() * 0.9 + 0.45) : (Math.random() * 1.5 + 0.8),
-                    alpha: isMinor ? (Math.random() * 0.35 + 0.25) : 0.65,
+                    vx: (Math.random() - 0.5) * (isMinor ? 0.3 : 0.38),
+                    vy: (Math.random() - 0.5) * (isMinor ? 0.3 : 0.38),
+                    radius: isMinor ? (Math.random() * 0.95 + 0.4) : (Math.random() * 1.5 + 0.8),
+                    alpha: isMinor ? (Math.random() * 0.45 + 0.22) : 0.65,
                     color: i % 4 === 0 ? 'rgba(124, 109, 248, ' : (i % 4 === 1 ? 'rgba(34, 211, 238, ' : (i % 4 === 2 ? 'rgba(251, 191, 36, ' : 'rgba(167, 139, 250, ')),
                     connectable: !isMinor
                 });
