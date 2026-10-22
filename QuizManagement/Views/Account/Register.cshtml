@@ -8,7 +8,9 @@
     <div class="auth-container">
 
         <div class="auth-brand">
-            <div class="auth-brand-logo">Q</div>
+            <div class="auth-brand-logo">
+                <partial name="_BrandLogo" view-data='@(new ViewDataDictionary(ViewData) { { "Size", 68 } })' />
+            </div>
             <h1>Tạo tài khoản</h1>
             <p>Bắt đầu hành trình học tập của bạn</p>
         </div>

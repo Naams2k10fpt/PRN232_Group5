@@ -40,7 +40,7 @@
         <nav class="navbar navbar-expand-sm">
             <div class="container-fluid">
                 <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
-                    QuizMS
+                    <partial name="_BrandLogo" view-data='@(new ViewDataDictionary(ViewData) { { "Size", 30 }, { "ShowText", true } })' />
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                         data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"

@@ -388,14 +388,23 @@ h1,h2,h3,h4,h5,h6 { color: var(--text); font-weight: 600; line-height: 1.3; }
 }
 
 .navbar-brand {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
   font-weight: 800 !important;
-  font-size: 1.1rem !important;
+  font-size: 1.15rem !important;
   letter-spacing: -0.3px !important;
+  padding: 0 !important;
+  text-decoration: none !important;
+  color: var(--text) !important;
+}
+
+.navbar-brand:not(:has(.quizms-brand-wrapper)),
+.navbar-brand .brand-text {
   background: linear-gradient(135deg, var(--accent) 0%, var(--cyan) 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
-  padding: 0 !important;
 }
 
 .navbar .nav-link {
@@ -935,16 +944,18 @@ textarea.form-control { resize: vertical; min-height: 90px; }
 .auth-brand-logo {
   display: inline-flex;
   align-items: center; justify-content: center;
-  width: 50px; height: 50px;
-  background: linear-gradient(135deg, var(--accent), var(--cyan));
-  border-radius: var(--r-lg);
-  font-size: 1.4rem;
-  font-weight: 900;
-  color: #fff;
-  -webkit-text-fill-color: #fff;
-  margin-bottom: 0.85rem;
-  box-shadow: 0 8px 20px rgba(124,109,248,0.3);
-  letter-spacing: -1px;
+  margin-bottom: 1rem;
+  transition: transform var(--t);
+}
+.auth-brand-logo:hover {
+  transform: translateY(-2px) scale(1.04);
+}
+.quizms-brand-emblem {
+  filter: drop-shadow(0 8px 24px rgba(124, 109, 248, 0.35));
+  transition: filter var(--t);
+}
+.quizms-brand-emblem:hover {
+  filter: drop-shadow(0 12px 30px rgba(34, 211, 238, 0.45));
 }
 .auth-brand h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 0.3rem; }
 .auth-brand p  { color: var(--text-muted); font-size: 0.875rem; margin: 0; }
