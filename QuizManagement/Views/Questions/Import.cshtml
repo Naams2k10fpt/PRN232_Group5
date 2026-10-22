@@ -95,7 +95,7 @@
                     @Model.SubjectName
                 </span>
             </div>
-            <h2 class="fw-bold mb-0 text-white">Import câu hỏi vào: @Model.DeckName</h2>
+            <h2 class="fw-bold mb-0">Import câu hỏi vào: @Model.DeckName</h2>
         </div>
         <div class="d-flex gap-2">
             <a asp-controller="Questions" asp-action="Index" asp-route-deckId="@Model.DeckId" class="btn btn-outline-secondary rounded-pill px-3 d-flex align-items-center gap-1">
@@ -108,7 +108,7 @@
     <div class="template-box mb-4">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
             <div>
-                <h5 class="fw-bold text-white mb-1 d-flex align-items-center gap-2">
+                <h5 class="fw-bold mb-1 d-flex align-items-center gap-2">
                     <span class="iconify text-warning" data-icon="radix-icons:download"></span>Tải mẫu nhập liệu câu hỏi chuẩn
                 </h5>
                 <p class="text-muted small mb-0">Tải file mẫu về máy, điền câu hỏi theo các cột/cú pháp rồi tải lên lại bên dưới để tránh lỗi định dạng.</p>
@@ -134,7 +134,7 @@
             <div class="col-lg-6">
                 <div class="import-panel">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h4 class="fw-bold text-white mb-0 d-flex align-items-center gap-2">
+                        <h4 class="fw-bold mb-0 d-flex align-items-center gap-2">
                             <span class="iconify text-success" data-icon="lucide:file-spreadsheet"></span> Cách 1: Tải file Excel
                         </h4>
                         <span class="badge bg-success bg-opacity-25 text-success">Khuyên dùng</span>
@@ -145,7 +145,7 @@
 
                     <div class="file-drop-zone my-auto">
                         <span class="iconify display-4 text-accent mb-3 d-block mx-auto" data-icon="radix-icons:upload" style="color:var(--accent);"></span>
-                        <label for="ExcelFile" class="form-label fw-bold text-white mb-2 cursor-pointer">
+                        <label for="ExcelFile" class="form-label fw-bold mb-2 cursor-pointer">
                             Nhấn vào đây để chọn file Excel từ máy
                         </label>
                         <input asp-for="ExcelFile" class="form-control" type="file" accept=".xlsx" style="background:var(--bg-surface); color:var(--text); border-color:var(--border);" />
@@ -160,7 +160,7 @@
             <div class="col-lg-6">
                 <div class="import-panel">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h4 class="fw-bold text-white mb-0 d-flex align-items-center gap-2">
+                        <h4 class="fw-bold mb-0 d-flex align-items-center gap-2">
                             <span class="iconify text-info" data-icon="radix-icons:text"></span> Cách 2: Dán nội dung Text
                         </h4>
                         <button type="button" class="btn btn-sm btn-outline-info rounded-pill d-flex align-items-center gap-1" onclick="insertSampleText()">
@@ -189,7 +189,7 @@
 
     <!-- Mẫu tham khảo dưới cùng -->
     <div class="mt-5 pt-3 border-top" style="border-color:var(--border)!important;">
-        <h5 class="fw-bold text-white mb-3 d-flex align-items-center gap-2">
+        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
             <span class="iconify text-muted" data-icon="radix-icons:code"></span>Cấu trúc cú pháp Text chi tiết:
         </h5>
         <pre class="p-3 rounded-4 text-wrap mb-0" style="background:var(--bg-elevated); color:var(--cyan); border:1px solid var(--border); font-family:monospace; font-size:0.9rem;" id="sampleTemplatePre">@Model.TextTemplate</pre>
