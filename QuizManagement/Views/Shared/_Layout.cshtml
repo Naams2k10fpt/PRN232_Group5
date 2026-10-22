@@ -28,14 +28,14 @@
         <div class="quizms-glow-orb orb-3"></div>
         <canvas id="quizms-ambient-canvas" class="quizms-ambient-canvas"></canvas>
         <div class="quizms-floating-motifs">
-            <span class="quizms-motif" style="top:12%; left:5%; font-size:26px; animation-duration:18s; color:rgba(124,109,248,0.22);">∫</span>
-            <span class="quizms-motif" style="top:20%; right:8%; font-size:26px; animation-duration:22s; animation-delay:2s; color:rgba(34,211,238,0.22);">∑</span>
-            <span class="quizms-motif" style="top:58%; left:6%; font-size:24px; animation-duration:24s; animation-delay:4s; color:rgba(124,109,248,0.20);">λ</span>
-            <span class="quizms-motif" style="top:74%; right:10%; font-size:24px; animation-duration:20s; animation-delay:1s; color:rgba(52,211,153,0.20);">π</span>
-            <span class="quizms-motif" style="top:35%; right:18%; font-size:22px; animation-duration:26s; animation-delay:3s; color:rgba(251,191,36,0.22);">√x</span>
-            <span class="quizms-motif" style="top:84%; left:18%; font-size:24px; animation-duration:25s; animation-delay:5s; color:rgba(34,211,238,0.20);">Δ</span>
-            <span class="quizms-motif" style="top:8%; left:45%; font-size:24px; animation-duration:21s; animation-delay:6s; color:rgba(167,139,250,0.18);">∞</span>
-            <span class="quizms-motif" style="top:88%; right:38%; font-size:24px; animation-duration:23s; animation-delay:2.5s; color:rgba(34,211,238,0.18);">∂</span>
+            <span class="quizms-motif" style="top:12%; left:5%; font-size:26px; animation-duration:24s; animation-delay:0s; color:rgba(102,58,243,0.22);">∫</span>
+            <span class="quizms-motif" style="top:20%; right:8%; font-size:26px; animation-duration:28s; animation-delay:4s; color:rgba(56,189,248,0.22);">∑</span>
+            <span class="quizms-motif" style="top:58%; left:6%; font-size:24px; animation-duration:32s; animation-delay:8s; color:rgba(102,58,243,0.20);">λ</span>
+            <span class="quizms-motif" style="top:74%; right:10%; font-size:24px; animation-duration:26s; animation-delay:2s; color:rgba(52,211,153,0.20);">π</span>
+            <span class="quizms-motif" style="top:35%; right:18%; font-size:22px; animation-duration:30s; animation-delay:6s; color:rgba(251,191,36,0.22);">√x</span>
+            <span class="quizms-motif" style="top:84%; left:18%; font-size:24px; animation-duration:34s; animation-delay:10s; color:rgba(56,189,248,0.20);">Δ</span>
+            <span class="quizms-motif" style="top:8%; left:45%; font-size:24px; animation-duration:27s; animation-delay:3s; color:rgba(167,139,250,0.18);">∞</span>
+            <span class="quizms-motif" style="top:88%; right:38%; font-size:24px; animation-duration:31s; animation-delay:7s; color:rgba(56,189,248,0.18);">∂</span>
         </div>
     </div>
 
@@ -197,8 +197,8 @@
 
             var width = 0, height = 0;
             var particles = [];
-            var particleCount = 240; // Rich starry animated particle field
-            var mouse = { x: -1000, y: -1000, radius: 140 };
+            var particleCount = 380; // Abundant celestial drifting micro-dots
+            var mouse = { x: -1000, y: -1000, radius: 150 };
 
             function resize() {
                 width = canvas.width = window.innerWidth;
@@ -218,15 +218,17 @@
             }, { passive: true });
 
             for (var i = 0; i < particleCount; i++) {
-                var isMinor = i >= 48; // Connectable constellation nodes limited to 48 for O(K^2) 60fps budget; 192 drifting micro-dots
+                var isMinor = i >= 45; // Only 45 primary constellation nodes calculate distance O(K^2)
                 particles.push({
                     x: Math.random() * (width || window.innerWidth || 1200),
                     y: Math.random() * (height || window.innerHeight || 800),
-                    vx: (Math.random() - 0.5) * (isMinor ? 0.3 : 0.38),
-                    vy: (Math.random() - 0.5) * (isMinor ? 0.3 : 0.38),
-                    radius: isMinor ? (Math.random() * 0.95 + 0.4) : (Math.random() * 1.5 + 0.8),
-                    alpha: isMinor ? (Math.random() * 0.45 + 0.22) : 0.65,
-                    color: i % 4 === 0 ? 'rgba(124, 109, 248, ' : (i % 4 === 1 ? 'rgba(34, 211, 238, ' : (i % 4 === 2 ? 'rgba(251, 191, 36, ' : 'rgba(167, 139, 250, ')),
+                    vx: (Math.random() - 0.5) * (isMinor ? 0.28 : 0.38),
+                    vy: (Math.random() - 0.5) * (isMinor ? 0.28 : 0.38),
+                    radius: isMinor ? (Math.random() * 0.95 + 0.35) : (Math.random() * 1.5 + 0.9),
+                    baseAlpha: isMinor ? (Math.random() * 0.35 + 0.15) : 0.65,
+                    twinkleSpeed: Math.random() * 0.03 + 0.015,
+                    twinklePhase: Math.random() * Math.PI * 2,
+                    color: i % 4 === 0 ? 'rgba(102, 58, 243, ' : (i % 4 === 1 ? 'rgba(56, 189, 248, ' : (i % 4 === 2 ? 'rgba(251, 191, 36, ' : 'rgba(167, 139, 250, ')),
                     connectable: !isMinor
                 });
             }
@@ -255,7 +257,7 @@
                         var dist = Math.sqrt(dx * dx + dy * dy);
                         if (dist < 110) {
                             var alpha = (1 - dist / 110) * 0.16;
-                            ctx.strokeStyle = 'rgba(124, 109, 248, ' + alpha + ')';
+                            ctx.strokeStyle = 'rgba(102, 58, 243, ' + alpha + ')';
                             ctx.lineWidth = 0.8;
                             ctx.beginPath();
                             ctx.moveTo(p1.x, p1.y);
@@ -270,7 +272,7 @@
                     var mdist = Math.sqrt(mdx * mdx + mdy * mdy);
                     if (mdist < mouse.radius) {
                         var mAlpha = (1 - mdist / mouse.radius) * 0.28;
-                        ctx.strokeStyle = 'rgba(34, 211, 238, ' + mAlpha + ')';
+                        ctx.strokeStyle = 'rgba(56, 189, 248, ' + mAlpha + ')';
                         ctx.lineWidth = 1;
                         ctx.beginPath();
                         ctx.moveTo(p1.x, p1.y);
@@ -279,7 +281,7 @@
                     }
                 }
 
-                // Update and render all particles (primary nodes + abundant micro dots)
+                // Update and render all particles (primary nodes + abundant micro dots with organic twinkle)
                 for (var k = 0; k < particles.length; k++) {
                     var p = particles[k];
                     p.x += p.vx;
@@ -290,7 +292,11 @@
                     if (p.y < 0) p.y = height;
                     else if (p.y > height) p.y = 0;
 
-                    ctx.fillStyle = p.color + (p.alpha || 0.65) + ')';
+                    p.twinklePhase += p.twinkleSpeed;
+                    var currentAlpha = p.baseAlpha + Math.sin(p.twinklePhase) * 0.12;
+                    if (currentAlpha < 0.05) currentAlpha = 0.05;
+
+                    ctx.fillStyle = p.color + currentAlpha + ')';
                     ctx.beginPath();
                     ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
                     ctx.fill();
