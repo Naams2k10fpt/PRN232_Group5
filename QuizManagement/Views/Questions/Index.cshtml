@@ -82,7 +82,7 @@ else
                         <div class="text-end flex-shrink-0">
                             <a asp-action="Edit" asp-route-id="@question.Id" class="btn btn-sm btn-outline-secondary">Sửa</a>
                             <form asp-action="Delete" asp-route-id="@question.Id" method="post" class="d-inline">
-                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa câu hỏi này?');">Xóa</button>
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return QuizModal.confirmAction(this, event, 'Xóa câu hỏi này?', 'Xác nhận xóa câu hỏi');">Xóa</button>
                             </form>
                         </div>
                     }

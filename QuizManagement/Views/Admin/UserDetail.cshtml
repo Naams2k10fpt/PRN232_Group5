@@ -105,14 +105,14 @@
                     @if (user.IsDisabled)
                     {
                         <button type="submit" class="btn btn-outline-success"
-                                onclick="return confirm('Kích hoạt lại tài khoản @user.Username?')">
+                                onclick="return QuizModal.confirmAction(this, event, 'Kích hoạt lại tài khoản @user.Username?', 'Xác nhận kích hoạt tài khoản', 'btn-success', 'Kích hoạt');">
                             Kích hoạt
                         </button>
                     }
                     else
                     {
                         <button type="submit" class="btn btn-outline-danger"
-                                onclick="return confirm('Vô hiệu hóa tài khoản @user.Username?')">
+                                onclick="return QuizModal.confirmAction(this, event, 'Vô hiệu hóa tài khoản @user.Username?', 'Xác nhận vô hiệu hóa tài khoản', 'btn-danger', 'Vô hiệu hóa');">
                             Vô hiệu hóa
                         </button>
                     }

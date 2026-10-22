@@ -66,7 +66,7 @@ else
                            class="btn btn-sm btn-outline-secondary">Sửa</a>
                         <form asp-action="Delete" asp-route-id="@deck.Id" method="post" class="d-inline">
                             <button type="submit" class="btn btn-sm btn-outline-danger"
-                                    onclick="return confirm('Xóa bộ đề này và ẩn các câu hỏi liên quan?');">Xóa</button>
+                                    onclick="return QuizModal.confirmAction(this, event, 'Xóa bộ đề này và ẩn các câu hỏi liên quan?', 'Xác nhận xóa bộ đề');">Xóa</button>
                         </form>
                     }
                 </div>

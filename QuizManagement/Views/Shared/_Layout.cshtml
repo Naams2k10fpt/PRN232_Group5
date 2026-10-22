@@ -312,5 +312,158 @@
             }
         })();
     </script>
+
+    <!-- Global Custom Modal System (replaces raw browser alert & confirm) -->
+    <div class="modal fade quizms-modal" id="quizms-global-modal" tabindex="-1" aria-labelledby="quizms-modal-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <div class="d-flex align-items-center gap-3">
+                        <div id="quizms-modal-icon-badge" class="quizms-modal-icon-badge mb-0">
+                            <span id="quizms-modal-icon">⚠️</span>
+                        </div>
+                        <h5 class="modal-title fw-bold fs-5 mb-0" id="quizms-modal-title">Xác nhận</h5>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-3">
+                    <div id="quizms-modal-message" class="fs-6" style="color:var(--text-muted); line-height:1.6;">
+                        Nội dung thông báo
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-sm btn-outline-secondary px-3" id="quizms-modal-cancel-btn" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="button" class="btn btn-sm btn-primary px-4 fw-semibold" id="quizms-modal-confirm-btn">Xác nhận</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Modal Controller Script -->
+    <script>
+        (function() {
+            var modalEl = document.getElementById('quizms-global-modal');
+            var iconEl = document.getElementById('quizms-modal-icon');
+            var titleEl = document.getElementById('quizms-modal-title');
+            var messageEl = document.getElementById('quizms-modal-message');
+            var confirmBtn = document.getElementById('quizms-modal-confirm-btn');
+            var cancelBtn = document.getElementById('quizms-modal-cancel-btn');
+
+            window.QuizModal = {
+                confirm: function(options) {
+                    options = options || {};
+                    return new Promise(function(resolve) {
+                        if (!modalEl || !window.bootstrap) {
+                            resolve(window.confirm(options.message || 'Bạn có chắc chắn?'));
+                            return;
+                        }
+                        iconEl.textContent = options.icon || '⚠️';
+                        titleEl.textContent = options.title || 'Xác nhận thao tác';
+                        messageEl.innerHTML = options.message || 'Bạn có chắc muốn thực hiện thao tác này?';
+
+                        confirmBtn.className = 'btn btn-sm px-4 fw-semibold ' + (options.confirmClass || 'btn-primary');
+                        confirmBtn.textContent = options.confirmText || 'Xác nhận';
+                        cancelBtn.textContent = options.cancelText || 'Hủy bỏ';
+                        cancelBtn.style.display = '';
+
+                        var bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                        var isConfirmed = false;
+
+                        function handleConfirm() {
+                            isConfirmed = true;
+                            bsModal.hide();
+                        }
+
+                        confirmBtn.onclick = handleConfirm;
+
+                        function handleHidden() {
+                            modalEl.removeEventListener('hidden.bs.modal', handleHidden);
+                            confirmBtn.onclick = null;
+                            resolve(isConfirmed);
+                        }
+
+                        modalEl.addEventListener('hidden.bs.modal', handleHidden);
+                        bsModal.show();
+                    });
+                },
+                alert: function(options) {
+                    var msg = typeof options === 'string' ? options : (options.message || '');
+                    var title = (typeof options === 'object' && options.title) ? options.title : 'Thông báo';
+                    var icon = (typeof options === 'object' && options.icon) ? options.icon : 'ℹ️';
+                    var btnText = (typeof options === 'object' && options.btnText) ? options.btnText : 'Đã hiểu';
+
+                    return new Promise(function(resolve) {
+                        if (!modalEl || !window.bootstrap) {
+                            window.alert(msg);
+                            resolve();
+                            return;
+                        }
+                        iconEl.textContent = icon;
+                        titleEl.textContent = title;
+                        messageEl.innerHTML = msg;
+
+                        confirmBtn.className = 'btn btn-sm btn-primary px-4 fw-semibold';
+                        confirmBtn.textContent = btnText;
+                        cancelBtn.style.display = 'none';
+
+                        var bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+                        function handleHidden() {
+                            cancelBtn.style.display = '';
+                            modalEl.removeEventListener('hidden.bs.modal', handleHidden);
+                            confirmBtn.onclick = null;
+                            resolve();
+                        }
+
+                        confirmBtn.onclick = function() {
+                            bsModal.hide();
+                        };
+
+                        modalEl.addEventListener('hidden.bs.modal', handleHidden);
+                        bsModal.show();
+                    });
+                },
+                confirmAction: function(element, event, message, title, confirmClass, confirmText) {
+                    if (element._isActionConfirmed) {
+                        element._isActionConfirmed = false;
+                        return true;
+                    }
+                    if (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    this.confirm({
+                        title: title || 'Xác nhận thao tác',
+                        message: message,
+                        confirmClass: confirmClass || 'btn-danger',
+                        confirmText: confirmText || 'Đồng ý',
+                        icon: '⚠️'
+                    }).then(function(confirmed) {
+                        if (confirmed) {
+                            element._isActionConfirmed = true;
+                            if (element.form) {
+                                element.form.requestSubmit ? element.form.requestSubmit(element) : element.form.submit();
+                            } else if (element.tagName === 'A' && element.href) {
+                                window.location.href = element.href;
+                            } else {
+                                element.click();
+                            }
+                        }
+                    });
+                    return false;
+                }
+            };
+
+            // Unobtrusive replacement of window.alert
+            var nativeAlert = window.alert;
+            window.alert = function(msg) {
+                if (modalEl && window.bootstrap) {
+                    window.QuizModal.alert(msg);
+                } else {
+                    nativeAlert(msg);
+                }
+            };
+        })();
+    </script>
 </body>
 </html>

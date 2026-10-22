@@ -53,7 +53,7 @@ else
                            class="btn btn-sm btn-outline-secondary">Sửa</a>
                         <form asp-action="Delete" asp-route-id="@subject.Id" method="post" class="d-inline">
                             <button type="submit" class="btn btn-sm btn-outline-danger"
-                                    onclick="return confirm('Xóa môn học này và ẩn các bộ đề liên quan?');">Xóa</button>
+                                    onclick="return QuizModal.confirmAction(this, event, 'Xóa môn học này và ẩn các bộ đề liên quan?', 'Xác nhận xóa môn học');">Xóa</button>
                         </form>
                     }
                 </div>

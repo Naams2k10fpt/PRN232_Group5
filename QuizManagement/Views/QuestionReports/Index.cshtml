@@ -76,7 +76,7 @@ else
                                         <form asp-action="Resolve" asp-route-id="@item.Id" method="post" class="d-inline">
                                             @Html.AntiForgeryToken()
                                             <button type="submit" class="btn btn-sm btn-outline-success"
-                                                    onclick="return confirm('Đánh dấu báo cáo này là đã xử lý?');">
+                                                    onclick="return QuizModal.confirmAction(this, event, 'Đánh dấu báo cáo này là đã xử lý?', 'Xác nhận xử lý báo cáo', 'btn-success', 'Đã xử lý');">
                                                 Đã xử lý
                                             </button>
                                         </form>

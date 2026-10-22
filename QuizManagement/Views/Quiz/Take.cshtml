@@ -128,9 +128,19 @@
             }
             var unanswered = totalQuestions - answered;
             var msg = unanswered > 0
-                ? 'Bạn còn ' + unanswered + ' câu chưa trả lời. Bạn có chắc muốn nộp bài?'
-                : 'Bạn có chắc muốn nộp bài?';
-            if (confirm(msg)) postQuiz();
+                ? 'Bạn còn <strong class="text-warning">' + unanswered + '</strong> câu chưa trả lời. Bạn có chắc chắn muốn nộp bài thi ngay bây giờ?'
+                : 'Bạn đã trả lời đầy đủ tất cả câu hỏi. Bạn có chắc muốn nộp bài và kết thúc lượt thi?';
+
+            QuizModal.confirm({
+                title: 'Nộp bài thi',
+                message: msg,
+                confirmText: 'Nộp bài ngay',
+                cancelText: 'Tiếp tục làm bài',
+                confirmClass: 'btn-primary',
+                icon: unanswered > 0 ? '⚠️' : '📝'
+            }).then(function(confirmed) {
+                if (confirmed) postQuiz();
+            });
         }
 
         // ── Timer ──────────────────────────────────────────────

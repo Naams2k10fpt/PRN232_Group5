@@ -420,7 +420,12 @@
             clearInterval(pollTimer);
 
             connection.invoke("StartGame", roomCode).catch(err => {
-                alert("Lỗi khởi động: " + err);
+                QuizModal.alert({
+                    title: 'Không thể khởi động trận đấu',
+                    message: 'Lỗi: ' + (err.message || err),
+                    icon: '⚠️',
+                    btnText: 'Đã hiểu'
+                });
                 btnStart.disabled = false;
                 btnStart.innerHTML = '<i class="bi bi-play-fill me-1"></i> BẮT ĐẦU TRẬN ĐẤU';
             });
