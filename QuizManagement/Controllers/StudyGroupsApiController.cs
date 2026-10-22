@@ -15,11 +15,13 @@ public sealed class StudyGroupsApiController : ControllerBase
 {
     private readonly StudyGroupService _groups;
     private readonly IHubContext<ChatHub> _hub;
+    private readonly VoiceRoomService _voice;
 
-    public StudyGroupsApiController(StudyGroupService groups, IHubContext<ChatHub> hub)
+    public StudyGroupsApiController(StudyGroupService groups, IHubContext<ChatHub> hub, VoiceRoomService voice)
     {
         _groups = groups;
         _hub = hub;
+        _voice = voice;
     }
 
     [HttpGet]
@@ -262,6 +264,7 @@ public sealed class StudyGroupsApiController : ControllerBase
 
     private async Task NotifyLeftAsync(int id, string userId)
     {
+        await _voice.RevokeAsync(id, userId);
         await _hub.Clients.User(userId).SendAsync("GroupAccessRevoked", id);
         var message = await _groups.RecordMembershipEventAsync(id, userId, GroupMessageKind.Left);
         await _hub.Clients.Users(await _groups.RecipientIdsAsync(id)).SendAsync("ReceiveMessage", message);

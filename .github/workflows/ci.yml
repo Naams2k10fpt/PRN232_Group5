@@ -41,6 +41,8 @@ jobs:
       - run: dotnet restore QuizManagementSystem.slnx
       - run: dotnet build QuizManagementSystem.slnx -c Release --no-restore
       - run: dotnet test QuizManagementSystem.slnx -c Release --no-build
+      - name: Test WebRTC negotiation
+        run: node --test QuizManagement.Tests/ClientTests/*.test.mjs
 
       # Build the production image and boot it the way Render does (env-var config only), so a
       # broken Dockerfile or startup config fails the PR instead of the deploy.

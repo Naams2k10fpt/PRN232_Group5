@@ -177,6 +177,8 @@ public sealed class StudyGroupService
             Role = StudyGroupMemberRole.Owner
         });
         group.Channels.Add(new ChatChannel { Name = "chung", IsDefault = true, CreatedAt = group.CreatedAt });
+        group.Channels.Add(new ChatChannel { Name = "phong-hoc", Kind = ChatChannelKind.Voice,
+            Topic = "Cùng học qua mic và camera", IsDefault = true, CreatedAt = group.CreatedAt });
         _db.StudyGroups.Add(group);
         await _db.SaveChangesAsync();
         return group;
@@ -649,7 +651,8 @@ public sealed class StudyGroupService
             member.GroupId == groupId && member.UserId == userId);
 
     public Task<int> DefaultChannelIdAsync(int groupId) => _db.ChatChannels
-        .Where(channel => channel.GroupId == groupId && channel.IsDefault).Select(channel => channel.Id).SingleAsync();
+        .Where(channel => channel.GroupId == groupId && channel.IsDefault && channel.Kind == ChatChannelKind.Text)
+        .Select(channel => channel.Id).SingleAsync();
 
     public async Task<bool> MarkReadAsync(int groupId, string userId, int lastMessageId)
     {

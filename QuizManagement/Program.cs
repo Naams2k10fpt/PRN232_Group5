@@ -74,11 +74,18 @@ builder.Services.AddScoped<ChatService>();
 builder.Services.AddSingleton<RoomPresence>();
 builder.Services.AddSingleton<PresenceBroadcaster>();
 builder.Services.AddHostedService<PresenceExpirationService>();
+builder.Services.AddOptions<VoiceRoomOptions>()
+    .Bind(builder.Configuration.GetSection(VoiceRoomOptions.SectionName))
+    .Validate(options => options.IsValid(), "Cấu hình VoiceRooms không hợp lệ (2–8 người, URL STUN/TURN hợp lệ).")
+    .ValidateOnStart();
+builder.Services.AddSingleton<VoiceRoomState>();
+builder.Services.AddScoped<VoiceRoomService>();
+builder.Services.AddHostedService<VoiceRoomMaintenanceService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IFlashcardService, FlashcardService>();
 
 // 4. Infrastructure (web-tier)
-builder.Services.AddSignalR();
+builder.Services.AddSignalR().AddHubOptions<VoiceHub>(options => options.MaximumReceiveMessageSize = 80 * 1024);
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -389,6 +396,7 @@ if (swaggerEnabled)
 
 app.MapHub<KahootHub>("/hubs/kahoot");
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<VoiceHub>("/hubs/voice");
 app.MapControllers();
 app.MapHealthChecks("/healthz");
 app.MapControllerRoute(

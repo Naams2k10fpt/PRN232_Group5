@@ -16,7 +16,7 @@ The interaction model follows Discord's [text-channel guide](https://support.dis
 - After reconnect, clients page forward from their last message until all missed pages are loaded. They also reconcile edits/deletions/reactions in the previously loaded range. Revisions reject older updates. An update to an unloaded message does not insert an isolated row into the timeline.
 - Web: channel sidebar, timeline, member panel; compact channel navigation on smaller screens. Enter sends; Shift+Enter starts a new line. Flutter: channel drawer on phones, sidebars on larger screens, draft text/files/reply retained separately per channel while the room is open.
 
-Voice/video, direct messages, threads, custom emoji, per-channel permission overrides, and OS push notifications are outside this text-and-files release.
+Voice/video channels are documented in [voice rooms](voice-rooms.md). Direct messages, threads, custom emoji, per-channel permission overrides, and OS push notifications remain outside this release.
 
 ## Routes
 

@@ -1,11 +1,14 @@
 namespace BusinessObjects;
 
+public enum ChatChannelKind { Text = 0, Voice = 1 }
+
 public sealed class ChatChannel
 {
     public int Id { get; set; }
     public int GroupId { get; set; }
     public string Name { get; set; } = "chung";
     public string? Topic { get; set; }
+    public ChatChannelKind Kind { get; set; }
     public bool IsDefault { get; set; }
     public bool IsArchived { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

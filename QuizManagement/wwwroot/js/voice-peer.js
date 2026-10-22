@@ -1,0 +1,102 @@
+// WebRTC perfect negotiation: either caller can enable media without offer collisions.
+export class VoicePeer {
+    constructor({ localId, remoteId, configuration, sendSignal, onStream, onState, onError,
+        PeerConnection = RTCPeerConnection, Stream = MediaStream }) {
+        this.closed = false;
+        this.polite = localId > remoteId;
+        this.sendSignal = sendSignal;
+        this.onError = onError;
+        this.makingOffer = false;
+        this.ignoreOffer = false;
+        this.settingAnswer = false;
+        this.pendingCandidates = [];
+        this.queue = Promise.resolve();
+        this.restarts = 0;
+        this.stream = new Stream();
+        const pc = this.pc = new PeerConnection(configuration);
+        // Reserve both media sections even for a listener who has not enabled devices.
+        this.senders = {
+            audio: pc.addTransceiver('audio', { direction: 'sendrecv' }).sender,
+            video: pc.addTransceiver('video', { direction: 'sendrecv' }).sender
+        };
+        pc.ontrack = event => {
+            if (this.closed) return;
+            if (!this.stream.getTrackById(event.track.id)) this.stream.addTrack(event.track);
+            event.track.onunmute = () => { if (!this.closed) onStream(this.stream); };
+            onStream(this.stream);
+        };
+        pc.onicecandidate = event => {
+            if (event.candidate && !this.closed)
+                sendSignal({ type: 'ice', candidate: event.candidate.toJSON() }).catch(error => this.fail(error));
+        };
+        pc.onnegotiationneeded = async () => {
+            try {
+                this.makingOffer = true;
+                await pc.setLocalDescription();
+                if (!this.closed) await sendSignal({ type: pc.localDescription.type, sdp: pc.localDescription.sdp });
+            } catch (error) { this.fail(error); }
+            finally { this.makingOffer = false; }
+        };
+        pc.onconnectionstatechange = () => {
+            if (this.closed) return;
+            onState(pc.connectionState);
+            if (pc.connectionState === 'failed' && this.restarts++ === 0) pc.restartIce();
+        };
+    }
+
+    async setTrack(kind, track) {
+        if (this.closed) return;
+        const sender = this.senders[kind];
+        try { await sender.replaceTrack(track); }
+        catch (error) { if (!this.closed) throw error; }
+        if (kind === 'video' && track && !this.closed) {
+            const parameters = sender.getParameters();
+            if (parameters.encodings?.length) {
+                parameters.encodings[0].maxBitrate = 750000;
+                parameters.encodings[0].maxFramerate = 24;
+                // Some browsers cannot change encoding parameters before the first answer.
+                await sender.setParameters(parameters).catch(() => {});
+            }
+        }
+    }
+
+    receive(signal) {
+        this.queue = this.queue.then(() => this.receiveCore(signal)).catch(error => this.fail(error));
+        return this.queue;
+    }
+
+    async receiveCore(signal) {
+        if (this.closed) return;
+        const pc = this.pc;
+        if (signal.type === 'offer' || signal.type === 'answer') {
+            const ready = !this.makingOffer && (pc.signalingState === 'stable' || this.settingAnswer);
+            this.ignoreOffer = !this.polite && signal.type === 'offer' && !ready;
+            if (this.ignoreOffer) { this.pendingCandidates = []; return; }
+            this.settingAnswer = signal.type === 'answer';
+            try { await pc.setRemoteDescription({ type: signal.type, sdp: signal.sdp }); }
+            finally { this.settingAnswer = false; }
+            if (this.closed) return;
+            for (const candidate of this.pendingCandidates.splice(0)) await pc.addIceCandidate(candidate);
+            if (signal.type === 'offer') {
+                await pc.setLocalDescription();
+                if (!this.closed) await this.sendSignal({ type: pc.localDescription.type, sdp: pc.localDescription.sdp });
+            }
+        } else if (signal.type === 'ice' && !this.ignoreOffer) {
+            if (!pc.remoteDescription) {
+                if (this.pendingCandidates.length >= 128) throw new Error('Quá nhiều tín hiệu kết nối.');
+                this.pendingCandidates.push(signal.candidate);
+            } else await pc.addIceCandidate(signal.candidate);
+        }
+    }
+
+    fail(error) { if (!this.closed) this.onError(error); }
+
+    close() {
+        if (this.closed) return;
+        this.closed = true;
+        this.pendingCandidates = [];
+        this.pc.ontrack = this.pc.onicecandidate = this.pc.onnegotiationneeded = this.pc.onconnectionstatechange = null;
+        this.pc.close();
+        this.stream.getTracks().forEach(track => track.stop());
+    }
+}
