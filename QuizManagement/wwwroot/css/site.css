@@ -200,36 +200,86 @@ body {
 
 .quizms-motif {
   position: absolute;
-  color: rgba(255, 255, 255, 0.14);
+  opacity: 0;
+  animation-fill-mode: both !important;
   user-select: none;
   font-family: 'Cambria Math', 'KaTeX_Math', 'Times New Roman', 'DejaVu Serif', serif;
   font-style: italic;
   font-weight: 500;
-  filter: drop-shadow(0 0 14px rgba(102, 58, 243, 0.35));
   will-change: transform, opacity;
-  animation: motifFloat 22s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  animation-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
+  animation-iteration-count: infinite;
 }
 
-@keyframes motifFloat {
+@keyframes motifBreathe1 {
   0% {
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.98);
-    opacity: 0.08;
-  }
-  25% {
-    transform: translate3d(12px, -18px, 0) rotate(4deg) scale(1.02);
-    opacity: 0.24;
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.88);
+    text-shadow: 0 0 0 transparent;
   }
   50% {
-    transform: translate3d(-10px, -36px, 0) rotate(-3deg) scale(1.04);
-    opacity: 0.28;
-  }
-  75% {
-    transform: translate3d(16px, -18px, 0) rotate(5deg) scale(1.01);
-    opacity: 0.22;
+    opacity: 0.82;
+    transform: translate3d(12px, -24px, 0) rotate(3deg) scale(1.12);
+    text-shadow: 0 0 16px currentColor;
   }
   100% {
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.98);
-    opacity: 0.08;
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.88);
+    text-shadow: 0 0 0 transparent;
+  }
+}
+
+@keyframes motifBreathe2 {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.88);
+    text-shadow: 0 0 0 transparent;
+  }
+  50% {
+    opacity: 0.82;
+    transform: translate3d(-14px, -22px, 0) rotate(-4deg) scale(1.14);
+    text-shadow: 0 0 16px currentColor;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.88);
+    text-shadow: 0 0 0 transparent;
+  }
+}
+
+@keyframes motifBreathe3 {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.88);
+    text-shadow: 0 0 0 transparent;
+  }
+  50% {
+    opacity: 0.78;
+    transform: translate3d(14px, 18px, 0) rotate(3deg) scale(1.10);
+    text-shadow: 0 0 16px currentColor;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.88);
+    text-shadow: 0 0 0 transparent;
+  }
+}
+
+@keyframes motifBreathe4 {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.88);
+    text-shadow: 0 0 0 transparent;
+  }
+  50% {
+    opacity: 0.78;
+    transform: translate3d(-12px, 20px, 0) rotate(-3deg) scale(1.10);
+    text-shadow: 0 0 16px currentColor;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.88);
+    text-shadow: 0 0 0 transparent;
   }
 }
 
@@ -286,9 +336,16 @@ body {
 }
 
 [data-bs-theme="light"] .quizms-motif {
-  color: rgba(15, 23, 42, 0.16);
-  filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.18));
+  text-shadow: 0 0 10px currentColor;
 }
+[data-bs-theme="light"] .quizms-motif.motif-1 { color: #4f46e5 !important; }
+[data-bs-theme="light"] .quizms-motif.motif-2 { color: #0284c7 !important; }
+[data-bs-theme="light"] .quizms-motif.motif-3 { color: #7c3aed !important; }
+[data-bs-theme="light"] .quizms-motif.motif-4 { color: #059669 !important; }
+[data-bs-theme="light"] .quizms-motif.motif-5 { color: #d97706 !important; }
+[data-bs-theme="light"] .quizms-motif.motif-6 { color: #0284c7 !important; }
+[data-bs-theme="light"] .quizms-motif.motif-7 { color: #9333ea !important; }
+[data-bs-theme="light"] .quizms-motif.motif-8 { color: #2563eb !important; }
 
 [data-bs-theme="light"] .navbar {
   background: rgba(255, 255, 255, 0.88) !important;
