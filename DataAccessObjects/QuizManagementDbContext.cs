@@ -495,8 +495,9 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).HasMaxLength(40);
             entity.Property(e => e.Topic).HasMaxLength(200);
-            entity.HasIndex(e => new { e.GroupId, e.Name }).IsUnique();
-            entity.HasIndex(e => e.GroupId).IsUnique().HasFilter("\"IsDefault\"");
+            entity.ToTable(table => table.HasCheckConstraint("CK_ChatChannels_Kind", "\"Kind\" IN (0, 1)"));
+            entity.HasIndex(e => new { e.GroupId, e.Kind, e.Name }).IsUnique();
+            entity.HasIndex(e => new { e.GroupId, e.Kind }).IsUnique().HasFilter("\"IsDefault\"");
             entity.HasOne(e => e.Group).WithMany(e => e.Channels)
                 .HasForeignKey(e => e.GroupId).OnDelete(DeleteBehavior.Cascade);
         });

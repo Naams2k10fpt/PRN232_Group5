@@ -4,6 +4,8 @@ https://prn232-group5.onrender.com/
 
 TV3 channel chat, replies, reactions and file sharing: [protocol and migration](docs/tv3-channel-chat.md).
 
+Study group voice/video channels: [usage, migration and TURN configuration](docs/voice-rooms.md).
+
 REST API for the PRM393 mobile app, next to the web app.
 
 | | Local | Render |

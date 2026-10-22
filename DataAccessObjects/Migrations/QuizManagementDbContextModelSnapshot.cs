@@ -100,6 +100,9 @@ namespace DataAccessObjects.Migrations
                     b.Property<bool>("IsDefault")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -111,14 +114,17 @@ namespace DataAccessObjects.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("GroupId")
+                    b.HasIndex("GroupId", "Kind")
                         .IsUnique()
                         .HasFilter("\"IsDefault\"");
 
-                    b.HasIndex("GroupId", "Name")
+                    b.HasIndex("GroupId", "Kind", "Name")
                         .IsUnique();
 
-                    b.ToTable("ChatChannels");
+                    b.ToTable("ChatChannels", t =>
+                        {
+                            t.HasCheckConstraint("CK_ChatChannels_Kind", "\"Kind\" IN (0, 1)");
+                        });
                 });
 
             modelBuilder.Entity("BusinessObjects.ChatChannelRead", b =>

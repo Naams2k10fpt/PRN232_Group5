@@ -14,11 +14,13 @@ public sealed class StudyGroupsController : Controller
 {
     private readonly StudyGroupService _groups;
     private readonly IHubContext<ChatHub> _hub;
+    private readonly VoiceRoomService? _voice;
 
-    public StudyGroupsController(StudyGroupService groups, IHubContext<ChatHub> hub)
+    public StudyGroupsController(StudyGroupService groups, IHubContext<ChatHub> hub, VoiceRoomService? voice = null)
     {
         _groups = groups;
         _hub = hub;
+        _voice = voice;
     }
 
     public async Task<IActionResult> Index(string? search, StudyGroupAccessMode? accessMode,
@@ -269,6 +271,7 @@ public sealed class StudyGroupsController : Controller
     {
         var result = await _groups.RemoveMemberAsync(id, UserId(), userId);
         if (result != GroupActionResult.Success) return NotFound();
+        if (_voice is not null) await _voice.RevokeAsync(id, userId);
         await _hub.Clients.User(userId).SendAsync("GroupAccessRevoked", id);
         await NotifyMembershipEventAsync(id, userId, GroupMessageKind.Left);
         await NotifyRoomRosterChangedAsync(id);
@@ -290,6 +293,7 @@ public sealed class StudyGroupsController : Controller
     {
         var result = await _groups.LeaveAsync(id, UserId());
         if (result != GroupActionResult.Success) return NotFound();
+        if (_voice is not null) await _voice.RevokeAsync(id, UserId());
         await _hub.Clients.User(UserId()).SendAsync("GroupAccessRevoked", id);
         await NotifyMembershipEventAsync(id, UserId(), GroupMessageKind.Left);
         await NotifyRoomRosterChangedAsync(id);

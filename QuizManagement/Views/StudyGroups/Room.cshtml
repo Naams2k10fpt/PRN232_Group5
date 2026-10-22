@@ -10,18 +10,43 @@
     var role = (int)(members.FirstOrDefault(member => member.UserId == userId)?.Role ?? StudyGroupMemberRole.Member);
 }
 <link rel="stylesheet" href="~/css/channel-chat.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/voice-room.css" asp-append-version="true" />
 <div id="channelChat" class="channel-chat" data-group-id="@Model.Id" data-user-id="@userId" data-role="@role">
     <aside class="cc-sidebar" aria-label="Các kênh trong nhóm">
         <a class="cc-back" asp-action="Index">← Nhóm học</a>
         <div class="cc-server"><div class="cc-server-mark">@Model.Name[..1].ToUpper()</div><div><h1>@Model.Name</h1><p>@Model.Description</p></div></div>
         <div class="cc-section-heading"><span>KÊNH TRÒ CHUYỆN</span><button id="createChannel" type="button" class="cc-icon" title="Tạo kênh" aria-label="Tạo kênh" hidden="@(role < 1)">+</button></div>
         <nav id="channelList" class="cc-channels" aria-label="Danh sách kênh"></nav>
+        <div class="vc-sidebar">
+            <div class="vc-sidebar-label"><span>KÊNH THOẠI</span><button id="createVoiceChannel" type="button" class="cc-icon" title="Tạo kênh voice" aria-label="Tạo kênh voice" hidden="@(role < 1)">+</button></div>
+            <nav id="voiceChannelList" aria-label="Danh sách kênh voice"></nav>
+            <p id="voiceEmpty" class="vc-empty" hidden>Chưa có kênh voice.</p>
+            <div id="voiceSidebarMembers" class="vc-sidebar-members"></div>
+        </div>
+        <div id="voiceDock" class="vc-dock" hidden>
+            <button type="button" class="vc-dock-status" data-voice-action="open"><span class="vc-live-dot"></span> Đang trong phòng voice</button>
+            <div class="vc-dock-actions"><button type="button" data-voice-action="mic" aria-pressed="false">Bật mic</button><button type="button" data-voice-action="leave" class="vc-danger">Rời phòng</button></div>
+        </div>
         <div class="cc-server-footer">
             @if (role >= 1) { <a asp-action="Manage" asp-route-id="@Model.Id">Quản lý nhóm ↗</a> }
             <span>@members.Count thành viên · Nhóm học tập</span>
         </div>
     </aside>
     <section class="cc-main" aria-label="Nội dung kênh chat">
+        <section id="voiceStage" class="vc-stage" aria-label="Phòng voice và video" hidden>
+            <header class="vc-header"><div><span class="vc-eyebrow">CÙNG NHAU HỌC TẬP</span><h2><span id="voiceStageTitle">Phòng voice</span> <span class="vc-badge">VOICE & VIDEO</span></h2><p id="voiceStatus" role="status">Đang kết nối phòng voice…</p></div><div class="vc-header-actions"><button id="editVoiceChannel" type="button" class="cc-icon" aria-label="Sửa kênh voice" title="Sửa kênh voice" hidden="@(role < 1)">⚙</button><button type="button" class="vc-back" data-voice-action="chat">← Về chat</button></div></header>
+            <div id="voiceAlert" class="vc-alert" role="alert" hidden></div>
+            <div id="voiceLobby" class="vc-lobby">
+                <div class="vc-lobby-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 14v-3a9 9 0 0 1 18 0v3M3 13h4v8H5a2 2 0 0 1-2-2zm14 0h4v6a2 2 0 0 1-2 2h-2z" /></svg></div>
+                <span class="vc-eyebrow">MỘT KHÔNG GIAN ĐỂ KẾT NỐI</span><h3>Học cùng nhau,<br />hiểu bài nhanh hơn.</h3><p>Trao đổi bằng giọng nói, mở camera và cùng giải bài.<br />Mic và camera chỉ bật khi bạn chọn.</p>
+                <button id="voiceJoin" type="button" class="vc-join" data-voice-action="join" disabled>Tham gia phòng</button><span id="voiceLobbyCount" class="vc-lobby-count">Đang tải thông tin phòng…</span>
+            </div>
+            <div id="voiceGrid" class="vc-grid" aria-label="Người trong cuộc gọi" hidden></div>
+            <button id="voicePlayback" type="button" class="vc-playback" hidden>Bấm để bật âm thanh cuộc gọi</button>
+            <footer id="voiceControls" class="vc-controls" hidden>
+                <div class="vc-control-group"><button type="button" class="vc-control is-off" data-voice-action="mic" aria-pressed="false"><svg class="vc-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/><path class="vc-slash" d="m3 3 18 18"/></svg><span>Bật mic</span></button><button type="button" class="vc-control is-off" data-voice-action="camera" aria-pressed="false"><svg class="vc-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-4v12l-6-4"/><path class="vc-slash" d="m3 3 18 18"/></svg><span>Bật camera</span></button><button type="button" class="vc-control vc-hangup" data-voice-action="leave"><svg class="vc-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15c0-7 18-7 18 0v3h-5v-4a12 12 0 0 0-8 0v4H3z"/></svg><span>Rời phòng</span></button></div><p>Chọn kênh chat bất kỳ để nhắn tin trong khi gọi.</p>
+            </footer>
+        </section>
         <header class="cc-header"><span class="cc-hash">#</span><div class="cc-channel-title"><h2 id="channelTitle">Đang tải kênh…</h2><p id="channelTopic"></p></div>
             <button id="editChannel" class="cc-icon" title="Sửa kênh" type="button" hidden="@(role < 1)">⚙</button>
             <button id="toggleMembers" class="cc-icon" title="Thành viên" type="button" aria-controls="chatMembers" aria-expanded="false">☷</button>
@@ -51,6 +76,7 @@
 </div>
 <dialog id="channelEditor" class="cc-dialog">
     <form id="channelEditorForm"><h2 id="channelEditorTitle">Tạo kênh</h2>
+        <label for="channelKind">Loại kênh</label><select id="channelKind" class="form-select"><option value="0"># Kênh chat — nhắn tin, chia sẻ file</option><option value="1">Kênh voice — mic và video</option></select>
         <label for="channelName">Tên kênh</label><input id="channelName" class="form-control" required maxlength="40" placeholder="ví dụ: bài-tập" />
         <label for="channelDescription">Chủ đề</label><input id="channelDescription" class="form-control" maxlength="200" placeholder="Kênh này dành cho nội dung gì?" />
         <p id="channelEditorError" class="text-danger small" role="alert"></p>
@@ -61,4 +87,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
     <script>window.channelChatMembers = @Html.Raw(JsonSerializer.Serialize(members, JsonSerializerOptions.Web));</script>
     <script src="~/js/channel-chat.js" asp-append-version="true"></script>
+    <script type="module" src="~/js/voice-room.js" asp-append-version="true"></script>
 }

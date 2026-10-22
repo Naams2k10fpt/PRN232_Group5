@@ -8,7 +8,8 @@ namespace QuizManagement.Services;
 public sealed record ChatReply(int Id, string SenderName, string Content, bool IsDeleted, int Revision = 0);
 public sealed record ChatFile(Guid Id, string FileName, string ContentType, int Size);
 public sealed record ReactionSummary(string Emoji, string UserId);
-public sealed record ChannelSummary(int Id, int GroupId, string Name, string? Topic, bool IsDefault, int UnreadCount);
+public sealed record ChannelSummary(int Id, int GroupId, string Name, string? Topic, bool IsDefault, int UnreadCount,
+    ChatChannelKind Kind = ChatChannelKind.Text);
 public sealed record ChatUpload(string FileName, string ContentType, byte[] Data);
 public sealed class ChatFailure(string code, string message, int status = 400) : Exception(message)
 {
@@ -26,11 +27,12 @@ public sealed class ChatService(QuizManagementDbContext db, StudyGroupService gr
             throw new ChatFailure("group_forbidden", "Bạn không còn quyền vào nhóm.", 403);
     }
 
-    private async Task<ChatChannel> Channel(int groupId, int channelId, string userId)
+    private async Task<ChatChannel> Channel(int groupId, int channelId, string userId, bool textOnly = true)
     {
         await RequireMember(groupId, userId);
         return await db.ChatChannels.AsNoTracking().SingleOrDefaultAsync(channel =>
-            channel.Id == channelId && channel.GroupId == groupId && !channel.IsArchived)
+            channel.Id == channelId && channel.GroupId == groupId && !channel.IsArchived
+            && (!textOnly || channel.Kind == ChatChannelKind.Text))
             ?? throw new ChatFailure("channel_not_found", "Kênh không tồn tại hoặc đã được lưu trữ.", 404);
     }
 
@@ -38,18 +40,21 @@ public sealed class ChatService(QuizManagementDbContext db, StudyGroupService gr
     {
         await RequireMember(groupId, userId);
         return await db.ChatChannels.AsNoTracking().Where(channel => channel.GroupId == groupId && !channel.IsArchived)
-            .OrderByDescending(channel => channel.IsDefault).ThenBy(channel => channel.Id)
+            .OrderBy(channel => channel.Kind).ThenByDescending(channel => channel.IsDefault).ThenBy(channel => channel.Id)
             .Select(channel => new ChannelSummary(channel.Id, channel.GroupId, channel.Name, channel.Topic,
                 channel.IsDefault, channel.Messages.Count(message => message.Kind == GroupMessageKind.Chat
                     && message.DeletedAt == null && message.SenderUserId != userId
-                    && !channel.Reads.Any(read => read.UserId == userId && read.LastReadMessageId >= message.Id))))
+                    && !channel.Reads.Any(read => read.UserId == userId && read.LastReadMessageId >= message.Id)), channel.Kind))
             .ToListAsync();
     }
 
-    public async Task<ChannelSummary> SaveChannelAsync(int groupId, int? channelId, string userId, string name, string? topic)
+    public async Task<ChannelSummary> SaveChannelAsync(int groupId, int? channelId, string userId, string name, string? topic,
+        ChatChannelKind? kind = null)
     {
         if (!await groups.IsManagerAsync(groupId, userId))
             throw new ChatFailure("group_forbidden", "Chỉ chủ phòng hoặc người quản lý được quản lý kênh.", 403);
+        if (kind.HasValue && !Enum.IsDefined(kind.Value))
+            throw new ChatFailure("invalid_channel_kind", "Chọn kênh chat hoặc kênh voice.");
         name = Regex.Replace(name.Trim().ToLowerInvariant(), @"[^\p{L}\p{Nd}-]+", "-").Trim('-');
         topic = topic?.Trim();
         if (name.Length is < 1 or > 40 || topic?.Length > 200)
@@ -57,7 +62,9 @@ public sealed class ChatService(QuizManagementDbContext db, StudyGroupService gr
         var channel = channelId.HasValue
             ? await db.ChatChannels.SingleOrDefaultAsync(item => item.Id == channelId && item.GroupId == groupId && !item.IsArchived)
                 ?? throw new ChatFailure("channel_not_found", "Không tìm thấy kênh.", 404)
-            : new ChatChannel { GroupId = groupId, CreatedAt = clock.GetUtcNow().UtcDateTime };
+            : new ChatChannel { GroupId = groupId, Kind = kind ?? ChatChannelKind.Text, CreatedAt = clock.GetUtcNow().UtcDateTime };
+        if (channelId.HasValue && kind.HasValue && channel.Kind != kind.Value)
+            throw new ChatFailure("channel_kind_immutable", "Không thể đổi loại kênh sau khi tạo. Hãy tạo một kênh mới.");
         if (!channelId.HasValue && await db.ChatChannels.CountAsync(item => item.GroupId == groupId && !item.IsArchived) >= 30)
             throw new ChatFailure("channel_limit", "Mỗi nhóm có tối đa 30 kênh đang hoạt động.");
         channel.Name = name;
@@ -69,12 +76,12 @@ public sealed class ChatService(QuizManagementDbContext db, StudyGroupService gr
             db.ChangeTracker.Clear();
             throw new ChatFailure("channel_name_taken", "Tên kênh đã được sử dụng.", 409);
         }
-        return new(channel.Id, groupId, channel.Name, channel.Topic, channel.IsDefault, 0);
+        return new(channel.Id, groupId, channel.Name, channel.Topic, channel.IsDefault, 0, channel.Kind);
     }
 
     public async Task ArchiveChannelAsync(int groupId, int channelId, string userId)
     {
-        var channel = await Channel(groupId, channelId, userId);
+        var channel = await Channel(groupId, channelId, userId, textOnly: false);
         if (!await groups.IsManagerAsync(groupId, userId))
             throw new ChatFailure("group_forbidden", "Bạn không có quyền quản lý kênh.", 403);
         if (channel.IsDefault) throw new ChatFailure("default_channel", "Không thể lưu trữ kênh mặc định.");

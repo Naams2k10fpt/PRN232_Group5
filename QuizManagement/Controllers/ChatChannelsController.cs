@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.SignalR;
 using QuizManagement.Hubs;
 using QuizManagement.Infrastructure;
 using QuizManagement.Services;
+using BusinessObjects;
 
 namespace QuizManagement.Controllers;
 
 [ApiController, Route("api/groups/{groupId:int}/channels"), ChatAuthorize]
-public sealed class ChatChannelsController(ChatService chat, StudyGroupService groups, IHubContext<ChatHub> hub) : ControllerBase
+public sealed class ChatChannelsController(ChatService chat, StudyGroupService groups, IHubContext<ChatHub> hub,
+    VoiceRoomService voice) : ControllerBase
 {
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
     private async Task<IActionResult> Run(Func<Task<IActionResult>> action)
@@ -26,7 +28,7 @@ public sealed class ChatChannelsController(ChatService chat, StudyGroupService g
     [HttpPost]
     public Task<IActionResult> Create(int groupId, ChannelRequest request) => Run(async () =>
     {
-        var channel = await chat.SaveChannelAsync(groupId, null, UserId, request.Name, request.Topic);
+        var channel = await chat.SaveChannelAsync(groupId, null, UserId, request.Name, request.Topic, request.Kind);
         await Broadcast(groupId, "ChannelsChanged", groupId);
         return Created($"/api/groups/{groupId}/channels/{channel.Id}", channel);
     });
@@ -34,7 +36,7 @@ public sealed class ChatChannelsController(ChatService chat, StudyGroupService g
     [HttpPut("{channelId:int}")]
     public Task<IActionResult> Update(int groupId, int channelId, ChannelRequest request) => Run(async () =>
     {
-        var channel = await chat.SaveChannelAsync(groupId, channelId, UserId, request.Name, request.Topic);
+        var channel = await chat.SaveChannelAsync(groupId, channelId, UserId, request.Name, request.Topic, request.Kind);
         await Broadcast(groupId, "ChannelsChanged", groupId);
         return Ok(channel);
     });
@@ -43,6 +45,7 @@ public sealed class ChatChannelsController(ChatService chat, StudyGroupService g
     public Task<IActionResult> Archive(int groupId, int channelId) => Run(async () =>
     {
         await chat.ArchiveChannelAsync(groupId, channelId, UserId);
+        await voice.CloseChannelAsync(groupId, channelId);
         await Broadcast(groupId, "ChannelsChanged", groupId);
         return NoContent();
     });
@@ -116,7 +119,8 @@ public sealed class ChatAttachmentsController(ChatService chat) : ControllerBase
     }
 }
 
-public sealed record ChannelRequest([Required, MaxLength(100)] string Name, [MaxLength(200)] string? Topic);
+public sealed record ChannelRequest([Required, MaxLength(100)] string Name, [MaxLength(200)] string? Topic,
+    ChatChannelKind? Kind = null);
 public sealed record EditChatMessageRequest([Required, MaxLength(2000)] string Content);
 public sealed record ChatReactionRequest([Required, MaxLength(16)] string Emoji, bool Active);
 public sealed class ChatMessageForm

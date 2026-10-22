@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using BusinessObjects;
 using DataAccessObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -23,7 +24,7 @@ public sealed class ChatChannelsApiTests
         await using var db = new QuizManagementDbContext(options);
         try
         {
-            var previous = db.Database.GetMigrations().Last(name => !name.EndsWith("AddDiscordStyleChat", StringComparison.Ordinal));
+            const string previous = "20261007174822_AddStudyGroupInviteLinks";
             await db.GetService<IMigrator>().MigrateAsync(previous);
             await db.Database.ExecuteSqlRawAsync("""
                 INSERT INTO "Users" ("Id", "Username", "Email", "Role", "EmailConfirmed", "IsDisabled", "CreatedAt")
@@ -36,7 +37,8 @@ public sealed class ChatChannelsApiTests
                 UPDATE "StudyGroupMembers" SET "LastReadMessageId" = (SELECT max("Id") FROM "GroupMessages");
                 """);
             await db.Database.MigrateAsync();
-            var channel = await db.ChatChannels.SingleAsync();
+            var channel = await db.ChatChannels.SingleAsync(item => item.Kind == ChatChannelKind.Text);
+            Assert.True((await db.ChatChannels.SingleAsync(item => item.Kind == ChatChannelKind.Voice)).IsDefault);
             var message = await db.GroupMessages.SingleAsync();
             Assert.True(channel.IsDefault);
             Assert.Equal("chung", channel.Name);

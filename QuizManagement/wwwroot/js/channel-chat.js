@@ -69,7 +69,10 @@
         }));
     }
     async function loadChannels() {
-        channels = await api(base);
+        const allChannels = await api(base);
+        window.studyGroupChannels = allChannels;
+        root.dispatchEvent(new CustomEvent('quiz:channels-changed', { detail: allChannels }));
+        channels = allChannels.filter(channel => (channel.kind || 0) === 0);
         const current = channels.find(channel => channel.id === active?.id);
         if (!current && channels.length) await selectChannel(channels[0], true);
         else if (current) { active = current; $('channelTitle').textContent = active.name; $('channelTopic').textContent = active.topic || 'Cùng nhau học tập và chia sẻ'; }
@@ -255,7 +258,10 @@
     $('toggleMembers').addEventListener('click', () => { const opened = $('chatMembers').classList.toggle('is-open'); $('toggleMembers').setAttribute('aria-expanded', String(opened)); });
     function renderMembers() {
         role = members.find(member => member.userId === userId)?.role ?? role;
-        $('createChannel').hidden = role < 1; $('editChannel').hidden = role < 1;
+        const previousRole = root.dataset.role;
+        root.dataset.role = String(role);
+        $('createChannel').hidden = role < 1; $('editChannel').hidden = role < 1; $('createVoiceChannel').hidden = role < 1;
+        if (previousRole !== root.dataset.role) root.dispatchEvent(new Event('quiz:role-changed'));
         $('memberCount').textContent = members.length;
         $('presenceStatus').textContent = `${members.filter(member => online.has(member.userId)).length} trong phòng · ${members.filter(member => !online.has(member.userId) && website.has(member.userId)).length} chờ trên web`;
         $('memberList').replaceChildren(...[...members].sort((a, b) => Number(online.has(b.userId)) - Number(online.has(a.userId)) || b.role - a.role).map(member => {
@@ -322,18 +328,21 @@
     let visibilityQueue = Promise.resolve();
     document.addEventListener('visibilitychange', () => { visibilityQueue = visibilityQueue.catch(() => {}).then(async () => { await syncViewing(); if (!document.hidden) { await refreshMessages(); markRead(); } }).catch(showError); });
 
-    function openEditor(id = null) {
-        editorId = id; $('channelEditorTitle').textContent = id ? 'Sửa kênh' : 'Tạo kênh chat';
-        $('channelName').value = id ? active.name : ''; $('channelDescription').value = id ? active.topic || '' : '';
-        $('archiveChannel').hidden = !id || active.isDefault; $('channelEditorError').textContent = '';
+    function openEditor(channel = null, kind = 0) {
+        editorId = channel?.id ?? null; $('channelEditorTitle').textContent = channel ? 'Sửa kênh' : 'Tạo kênh';
+        $('channelKind').value = String(channel?.kind ?? kind); $('channelKind').disabled = !!channel;
+        $('channelName').value = channel?.name || ''; $('channelDescription').value = channel?.topic || '';
+        $('archiveChannel').hidden = !channel || channel.isDefault; $('channelEditorError').textContent = '';
         $('channelEditor').showModal();
     }
-    $('createChannel').addEventListener('click', () => openEditor()); $('editChannel').addEventListener('click', () => openEditor(active?.id));
+    $('createChannel').addEventListener('click', () => openEditor()); $('editChannel').addEventListener('click', () => openEditor(active));
+    $('createVoiceChannel').addEventListener('click', () => openEditor(null, 1));
+    root.addEventListener('quiz:edit-channel', event => openEditor(event.detail));
     $('cancelChannelEditor').addEventListener('click', () => $('channelEditor').close());
     $('channelEditorForm').addEventListener('submit', async event => {
         event.preventDefault();
         const submit = event.submitter; submit.disabled = true;
-        try { await api(editorId ? `${base}/${editorId}` : base, { method: editorId ? 'PUT' : 'POST', body: { name: $('channelName').value, topic: $('channelDescription').value } }); $('channelEditor').close(); await loadChannels(); }
+        try { await api(editorId ? `${base}/${editorId}` : base, { method: editorId ? 'PUT' : 'POST', body: { name: $('channelName').value, topic: $('channelDescription').value, kind: Number($('channelKind').value) } }); $('channelEditor').close(); await loadChannels(); }
         catch (error) { $('channelEditorError').textContent = error.message; } finally { submit.disabled = false; }
     });
     $('archiveChannel').addEventListener('click', async () => {
