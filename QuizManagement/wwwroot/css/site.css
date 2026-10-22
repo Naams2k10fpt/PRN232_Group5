@@ -202,11 +202,13 @@ body {
 
 .quizms-motif {
   position: absolute;
-  color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.14);
   user-select: none;
-  font-family: 'Inter', system-ui, sans-serif;
-  filter: drop-shadow(0 0 12px rgba(124, 109, 248, 0.3));
-  animation: motifFloat 16s ease-in-out infinite alternate;
+  font-family: 'Cambria Math', 'KaTeX_Math', 'Times New Roman', 'DejaVu Serif', serif;
+  font-style: italic;
+  font-weight: 500;
+  filter: drop-shadow(0 0 14px rgba(124, 109, 248, 0.35));
+  animation: motifFloat 18s ease-in-out infinite alternate;
 }
 
 @keyframes motifFloat {
