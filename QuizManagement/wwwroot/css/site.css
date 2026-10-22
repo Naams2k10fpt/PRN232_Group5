@@ -328,9 +328,20 @@ body {
 
 /* Light mode sticky headers & bottom action bars */
 [data-bs-theme="light"] .quiz-sticky-header,
-[data-bs-theme="light"] .quizlet-action-bar {
+[data-bs-theme="light"] .quizlet-action-bar,
+[data-bs-theme="light"] .sticky-action-bar {
   background: rgba(255, 255, 255, 0.94) !important;
   border-color: rgba(15, 23, 42, 0.12) !important;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-bs-theme="light"] .quizlet-answer-row {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+[data-bs-theme="light"] .quizlet-answer-row:hover {
+  border-color: var(--accent) !important;
 }
 
 /* Light mode text inputs & areas */
@@ -377,17 +388,31 @@ body {
   background: rgba(17, 24, 39, 0.94);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(124, 109, 248, 0.25);
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65), 0 0 30px rgba(124, 109, 248, 0.12);
+  border: 1px solid rgba(186, 215, 247, 0.18);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(216, 236, 248, 0.18);
   color: var(--text);
   overflow: hidden;
 }
 
 [data-bs-theme="light"] .quizms-modal .modal-content {
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 30px rgba(99, 102, 241, 0.08);
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  color: #0f172a !important;
+}
+
+[data-bs-theme="light"] .quizms-modal .modal-title {
+  color: #0f172a !important;
+}
+
+[data-bs-theme="light"] .quizms-modal #quizms-modal-message {
+  color: #475569 !important;
+}
+
+[data-bs-theme="light"] .quizms-modal-icon-badge {
+  background: rgba(245, 158, 11, 0.12) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
 }
 
 .quizms-modal .modal-header {
@@ -407,6 +432,7 @@ body {
 
 [data-bs-theme="light"] .quizms-modal .modal-footer {
   background: rgba(0, 0, 0, 0.02);
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .quizms-modal-icon-badge {
@@ -417,8 +443,8 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 24px;
-  background: rgba(124, 109, 248, 0.12);
-  border: 1px solid rgba(124, 109, 248, 0.25);
+  background: rgba(102, 58, 243, 0.12);
+  border: 1px solid rgba(102, 58, 243, 0.25);
   margin-bottom: 0.75rem;
 }
 

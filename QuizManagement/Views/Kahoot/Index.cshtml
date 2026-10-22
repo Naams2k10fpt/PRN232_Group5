@@ -133,7 +133,7 @@
                                 <option value="">-- Chọn bộ đề để thi đấu --</option>
                                 @foreach (var group in decks.GroupBy(d => d.Subject?.Name ?? "Môn học chung"))
                                 {
-                                    <optgroup label="📚 Môn: @group.Key">
+                                    <optgroup label="Môn: @group.Key">
                                         @foreach (var deck in group)
                                         {
                                             <option value="@deck.Id">@deck.Name (@deck.Questions.Count(q => !q.IsDeleted) câu hỏi)</option>
