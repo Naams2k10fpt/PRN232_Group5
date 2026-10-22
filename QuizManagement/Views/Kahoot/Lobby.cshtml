@@ -158,8 +158,8 @@
     <div class="lobby-header-card d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
             <div class="d-flex align-items-center gap-2 mb-1">
-                <span class="badge" style="background:var(--accent-light); color:var(--accent); font-weight:700;">
-                    <i class="bi bi-broadcast me-1"></i> ĐẤU TRƯỜNG TRỰC TIẾP
+                <span class="badge d-inline-flex align-items-center gap-1" style="background:var(--accent-light); color:var(--accent); font-weight:700;">
+                    <span class="iconify" data-icon="lucide:radio"></span> ĐẤU TRƯỜNG TRỰC TIẾP
                 </span>
                 <span class="badge" style="background:var(--cyan-light); color:var(--cyan); font-weight:700;">
                     @(Model.Deck?.Name ?? "Chung")
@@ -172,8 +172,8 @@
                 <span class="text-muted small d-block">Tổng số câu hỏi:</span>
                 <span class="fs-5 fw-bold text-white">@Model.TotalQuestions câu</span>
             </div>
-            <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-2">
-                <i class="bi bi-x-circle me-1"></i> Rời phòng
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-2 d-inline-flex align-items-center gap-1">
+                <span class="iconify" data-icon="radix-icons:cross-2"></span> Rời phòng
             </a>
         </div>
     </div>
@@ -183,8 +183,8 @@
         <!-- Cột trái: QR Code & PIN -->
         <div class="col-lg-5">
             <div class="qr-glass-card text-center">
-                <p class="text-muted fw-bold mb-3 text-uppercase" style="letter-spacing:1px; font-size:0.9rem;">
-                    <i class="bi bi-qr-code-scan me-1 text-info"></i> Quét mã QR để vào ngay
+                <p class="text-muted fw-bold mb-3 text-uppercase d-flex align-items-center justify-content-center gap-1" style="letter-spacing:1px; font-size:0.9rem;">
+                    <span class="iconify text-info" data-icon="lucide:qr-code"></span> Quét mã QR để vào ngay
                 </p>
                 <div class="qr-box-wrapper mb-3">
                     <div id="qrcode"></div>
@@ -193,8 +193,8 @@
                     <small class="text-muted d-block mb-1">Hoặc nhập mã PIN tại ứng dụng:</small>
                     <div class="pin-badge-display" id="pinDisplay">@Model.RoomCode</div>
                 </div>
-                <div class="mt-3 text-muted small">
-                    <i class="bi bi-info-circle me-1"></i> Người chơi có thể dùng App Mobile hoặc trình duyệt Web để tham gia.
+                <div class="mt-3 text-muted small d-flex align-items-center justify-content-center gap-1">
+                    <span class="iconify" data-icon="radix-icons:info-circled"></span> Người chơi có thể dùng App Mobile hoặc trình duyệt Web để tham gia.
                 </div>
             </div>
         </div>
@@ -204,14 +204,14 @@
             <div class="players-container-card">
                 <div class="d-flex justify-content-between align-items-center pb-3 border-bottom" style="border-color:var(--border)!important;">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="count-pill" id="playerCountBox">
-                            <i class="bi bi-people-fill me-2"></i>
+                        <div class="count-pill d-inline-flex align-items-center gap-1" id="playerCountBox">
+                            <span class="iconify" data-icon="radix-icons:person"></span>
                             <span id="playerCount">@initialCount</span>
                         </div>
                         <span class="text-white fw-bold fs-5">Thí sinh đã sẵn sàng</span>
                     </div>
-                    <button id="btnStartGame" class="btn-start-arena">
-                        <i class="bi bi-play-fill me-1"></i> BẮT ĐẦU TRẬN ĐẤU
+                    <button id="btnStartGame" class="btn-start-arena d-inline-flex align-items-center gap-2">
+                        <span class="iconify" data-icon="radix-icons:play"></span> BẮT ĐẦU TRẬN ĐẤU
                     </button>
                 </div>
 
@@ -232,7 +232,7 @@
 
                     <div id="emptyHint" class="text-center py-5 text-muted @(initialCount > 0 ? "d-none" : "")">
                         <div class="mb-3" style="font-size: 3rem; opacity: 0.3;">
-                            <i class="bi bi-hourglass-split"></i>
+                            <span class="iconify" data-icon="radix-icons:stopwatch"></span>
                         </div>
                         <p class="fs-6 mb-1">Đang chờ thí sinh tham gia phòng đấu...</p>
                         <small style="color:var(--text-dim);">Quét mã QR bên cạnh hoặc nhập mã PIN để hiển thị tại đây.</small>
@@ -240,7 +240,7 @@
                 </div>
 
                 <div class="pt-3 border-top d-flex justify-content-between align-items-center text-muted small" style="border-color:var(--border)!important;">
-                    <span><i class="bi bi-shield-check text-success me-1"></i> Kết nối thời gian thực SignalR</span>
+                    <span class="d-inline-flex align-items-center gap-1"><span class="iconify text-success" data-icon="radix-icons:check-circled"></span> Kết nối thời gian thực SignalR</span>
                     <span id="connStatus" class="badge bg-success bg-opacity-25 text-success">Đang trực tuyến</span>
                 </div>
             </div>
@@ -427,7 +427,7 @@
                     btnText: 'Đã hiểu'
                 });
                 btnStart.disabled = false;
-                btnStart.innerHTML = '<i class="bi bi-play-fill me-1"></i> BẮT ĐẦU TRẬN ĐẤU';
+                btnStart.innerHTML = '<span class="iconify me-1" data-icon="radix-icons:play"></span> BẮT ĐẦU TRẬN ĐẤU';
             });
         });
     </script>

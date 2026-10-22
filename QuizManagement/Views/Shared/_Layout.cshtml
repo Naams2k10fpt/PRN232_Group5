@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/QuizManagement.styles.css" asp-append-version="true" />
+    <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
     <script>
         (function() {
             var savedTheme = localStorage.getItem('quizms_theme') || 'dark';
@@ -69,8 +70,8 @@
                                 <a class="nav-link" asp-controller="StudyGroups" asp-action="Index">Nhóm học tập</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-warning fw-bold" asp-controller="Kahoot" asp-action="Index">
-                                    <i class="bi bi-controller me-1"></i>Kahoot Live
+                                <a class="nav-link text-warning fw-bold d-flex align-items-center" asp-controller="Kahoot" asp-action="Index">
+                                    <span class="iconify me-1" data-icon="lucide:gamepad-2"></span>Kahoot Live
                                 </a>
                             </li>
                             @if (User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Mentor))
@@ -94,7 +95,7 @@
                         <li class="nav-item me-2">
                             <button id="quizms-theme-toggle" class="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center"
                                     type="button" title="Chuyển chế độ Sáng / Tối" style="width: 36px; height: 36px; padding: 0;">
-                                <span id="theme-toggle-icon" style="font-size: 15px;">🌙</span>
+                                <span id="theme-toggle-icon" class="d-flex align-items-center justify-content-center"><span class="iconify" data-icon="radix-icons:moon" style="font-size: 16px;"></span></span>
                             </button>
                         </li>
                         @if (User.Identity?.IsAuthenticated == true)
@@ -107,22 +108,25 @@
                                     </span>
                                     <span class="d-none d-md-inline">@User.Identity.Name</span>
                                 </a>
-                                <ul class="dropdown-menu dropdown-menu-end">
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="background:var(--bg-elevated); border:1px solid var(--border)!important;">
                                     <li>
-                                        <a class="dropdown-item" asp-controller="Profile" asp-action="Index">
-                                            Hồ sơ
+                                        <a class="dropdown-item d-flex align-items-center gap-2" asp-controller="Profile" asp-action="Index">
+                                            <span class="iconify" data-icon="radix-icons:person"></span>
+                                            <span>Hồ sơ</span>
                                         </a>
                                     </li>
                                     <li>
-                                        <a class="dropdown-item" asp-controller="Profile" asp-action="ChangePassword">
-                                            Đổi mật khẩu
+                                        <a class="dropdown-item d-flex align-items-center gap-2" asp-controller="Profile" asp-action="ChangePassword">
+                                            <span class="iconify" data-icon="radix-icons:lock-closed"></span>
+                                            <span>Đổi mật khẩu</span>
                                         </a>
                                     </li>
-                                    <li><hr class="dropdown-divider" /></li>
+                                    <li><hr class="dropdown-divider" style="border-color:var(--border);" /></li>
                                     <li>
                                         <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline w-100">
-                                            <button type="submit" class="dropdown-item" style="color:var(--danger)!important;">
-                                                Đăng xuất
+                                            <button type="submit" class="dropdown-item d-flex align-items-center gap-2" style="color:var(--danger)!important;">
+                                                <span class="iconify" data-icon="radix-icons:exit"></span>
+                                                <span>Đăng xuất</span>
                                             </button>
                                         </form>
                                     </li>
@@ -132,11 +136,15 @@
                         else
                         {
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Account" asp-action="Login">Đăng nhập</a>
+                                <a class="nav-link d-flex align-items-center gap-1" asp-controller="Account" asp-action="Login">
+                                    <span class="iconify" data-icon="radix-icons:enter"></span> Đăng nhập
+                                </a>
                             </li>
                             <li class="nav-item ms-1">
-                                <a class="btn btn-primary btn-sm" asp-controller="Account" asp-action="Register"
-                                   style="padding:0.35rem 0.85rem;">Đăng ký</a>
+                                <a class="btn btn-primary btn-sm d-flex align-items-center gap-1" asp-controller="Account" asp-action="Register"
+                                   style="padding:0.35rem 0.85rem;">
+                                    <span class="iconify" data-icon="radix-icons:pencil-1"></span> Đăng ký
+                                </a>
                             </li>
                         }
                     </ul>
@@ -300,7 +308,9 @@
 
             function updateIcon(theme) {
                 if (icon) {
-                    icon.textContent = theme === 'light' ? '☀️' : '🌙';
+                    icon.innerHTML = theme === 'light'
+                        ? '<span class="iconify" data-icon="radix-icons:sun" style="font-size:16px;"></span>'
+                        : '<span class="iconify" data-icon="radix-icons:moon" style="font-size:16px;"></span>';
                 }
                 if (toggleBtn) {
                     toggleBtn.title = theme === 'light' ? 'Chuyển sang chế độ Tối (Dark Mode)' : 'Chuyển sang chế độ Sáng (Light Mode)';
@@ -329,7 +339,7 @@
                 <div class="modal-header border-0 pb-0">
                     <div class="d-flex align-items-center gap-3">
                         <div id="quizms-modal-icon-badge" class="quizms-modal-icon-badge mb-0">
-                            <span id="quizms-modal-icon">⚠️</span>
+                            <span id="quizms-modal-icon"><span class="iconify fs-3 text-warning" data-icon="radix-icons:exclamation-triangle"></span></span>
                         </div>
                         <h5 class="modal-title fw-bold fs-5 mb-0" id="quizms-modal-title">Xác nhận</h5>
                     </div>
@@ -358,6 +368,14 @@
             var confirmBtn = document.getElementById('quizms-modal-confirm-btn');
             var cancelBtn = document.getElementById('quizms-modal-cancel-btn');
 
+            function getRadixIconHtml(iconType, isAlert) {
+                if (typeof iconType === 'string' && iconType.indexOf('<') !== -1) return iconType;
+                if (iconType === 'success' || iconType === '✅') return '<span class="iconify fs-3 text-success" data-icon="radix-icons:check-circled"></span>';
+                if (iconType === 'danger' || iconType === 'error' || iconType === '❌') return '<span class="iconify fs-3 text-danger" data-icon="radix-icons:cross-circled"></span>';
+                if (iconType === 'info' || iconType === 'ℹ️' || isAlert) return '<span class="iconify fs-3 text-info" data-icon="radix-icons:info-circled"></span>';
+                return '<span class="iconify fs-3 text-warning" data-icon="radix-icons:exclamation-triangle"></span>';
+            }
+
             window.QuizModal = {
                 confirm: function(options) {
                     options = options || {};
@@ -366,7 +384,7 @@
                             resolve(window.confirm(options.message || 'Bạn có chắc chắn?'));
                             return;
                         }
-                        iconEl.textContent = options.icon || '⚠️';
+                        iconEl.innerHTML = getRadixIconHtml(options.icon, false);
                         titleEl.textContent = options.title || 'Xác nhận thao tác';
                         messageEl.innerHTML = options.message || 'Bạn có chắc muốn thực hiện thao tác này?';
 
@@ -398,7 +416,7 @@
                 alert: function(options) {
                     var msg = typeof options === 'string' ? options : (options.message || '');
                     var title = (typeof options === 'object' && options.title) ? options.title : 'Thông báo';
-                    var icon = (typeof options === 'object' && options.icon) ? options.icon : 'ℹ️';
+                    var icon = (typeof options === 'object' && options.icon) ? options.icon : 'info';
                     var btnText = (typeof options === 'object' && options.btnText) ? options.btnText : 'Đã hiểu';
 
                     return new Promise(function(resolve) {
@@ -407,7 +425,7 @@
                             resolve();
                             return;
                         }
-                        iconEl.textContent = icon;
+                        iconEl.innerHTML = getRadixIconHtml(icon, true);
                         titleEl.textContent = title;
                         messageEl.innerHTML = msg;
 

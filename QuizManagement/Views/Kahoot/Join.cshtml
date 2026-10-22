@@ -94,7 +94,7 @@
         <div class="mb-4">
             <div class="d-inline-flex align-items-center justify-content-center p-3 rounded-circle mb-3"
                  style="background: var(--accent-light); color: var(--accent);">
-                <i class="bi bi-controller fs-2"></i>
+                <span class="iconify fs-2" data-icon="lucide:gamepad-2"></span>
             </div>
             <div class="join-title">QUIZ ARENA</div>
             <p class="text-muted small mt-1 mb-0">Nhập mã PIN hoặc quét mã QR từ màn hình chính</p>
@@ -113,16 +113,16 @@
             </div>
 
             <div class="d-grid">
-                <button type="submit" class="btn btn-join-arena">
-                    <i class="bi bi-lightning-charge-fill me-2"></i> VÀO ĐẤU TRƯỜNG NGAY
+                <button type="submit" class="btn btn-join-arena d-flex align-items-center justify-content-center gap-2">
+                    <span class="iconify fs-5" data-icon="radix-icons:enter"></span> VÀO ĐẤU TRƯỜNG NGAY
                 </button>
             </div>
         </form>
 
         <div class="mt-4 pt-3 border-top text-muted small d-flex justify-content-between align-items-center" style="border-color: var(--border) !important;">
-            <span><i class="bi bi-phone me-1"></i> Có thể dùng App</span>
-            <a asp-action="Index" class="text-muted text-decoration-none">
-                <i class="bi bi-arrow-left me-1"></i> Mở phòng mới
+            <span class="d-inline-flex align-items-center gap-1"><span class="iconify" data-icon="radix-icons:mobile"></span> Có thể dùng App</span>
+            <a asp-action="Index" class="text-muted text-decoration-none d-inline-flex align-items-center gap-1">
+                <span class="iconify" data-icon="radix-icons:arrow-left"></span> Mở phòng mới
             </a>
         </div>
     </div>

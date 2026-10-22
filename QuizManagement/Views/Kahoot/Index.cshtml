@@ -92,8 +92,8 @@
                 <div class="arena-create-header d-flex flex-wrap justify-content-between align-items-center gap-3">
                     <div>
                         <div class="d-flex align-items-center gap-2 mb-1">
-                            <span class="badge" style="background:var(--accent-light); color:var(--accent); font-weight:700;">
-                                <i class="bi bi-broadcast me-1"></i> LIVE ARENA
+                            <span class="badge d-inline-flex align-items-center gap-1" style="background:var(--accent-light); color:var(--accent); font-weight:700;">
+                                <span class="iconify" data-icon="lucide:radio"></span> LIVE ARENA
                             </span>
                             <span class="badge" style="background:var(--cyan-light); color:var(--cyan); font-weight:700;">
                                 Multiplayer Realtime
@@ -102,8 +102,8 @@
                         <h3 class="fw-bold mb-0 text-white">Tạo Phòng Thi Đấu Kahoot Live</h3>
                     </div>
                     <div class="d-flex gap-2">
-                        <span class="feature-chip"><i class="bi bi-qr-code text-info"></i> Mã QR</span>
-                        <span class="feature-chip"><i class="bi bi-phone text-warning"></i> App Mobile</span>
+                        <span class="feature-chip d-inline-flex align-items-center gap-1"><span class="iconify text-info" data-icon="lucide:qr-code"></span> Mã QR</span>
+                        <span class="feature-chip d-inline-flex align-items-center gap-1"><span class="iconify text-warning" data-icon="radix-icons:mobile"></span> App Mobile</span>
                     </div>
                 </div>
 
@@ -118,16 +118,16 @@
                         @Html.AntiForgeryToken()
 
                         <div class="mb-4">
-                            <label class="form-label fw-semibold text-white">
-                                <i class="bi bi-fonts me-1 text-primary"></i> Tên phòng thi đấu
+                            <label class="form-label fw-semibold text-white d-flex align-items-center gap-1">
+                                <span class="iconify text-primary" data-icon="radix-icons:text"></span> Tên phòng thi đấu
                             </label>
                             <input type="text" name="title" class="form-control form-control-custom form-control-lg"
                                    placeholder="Ví dụ: Đấu trường PRN232 - Vòng chung kết" required />
                         </div>
 
                         <div class="mb-4">
-                            <label class="form-label fw-semibold text-white">
-                                <i class="bi bi-collection me-1 text-info"></i> Chọn bộ đề câu hỏi (Deck)
+                            <label class="form-label fw-semibold text-white d-flex align-items-center gap-1">
+                                <span class="iconify text-info" data-icon="radix-icons:card-stack"></span> Chọn bộ đề câu hỏi (Deck)
                             </label>
                             <select name="deckId" class="form-select form-select-custom form-select-lg" required>
                                 <option value="">-- Chọn bộ đề để thi đấu --</option>
@@ -144,8 +144,8 @@
                         </div>
 
                         <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-create-arena">
-                                <i class="bi bi-play-circle-fill me-2"></i> Khởi tạo phòng & Tạo mã tham gia
+                            <button type="submit" class="btn btn-create-arena d-flex align-items-center justify-content-center gap-2">
+                                <span class="iconify fs-5" data-icon="radix-icons:play"></span> Khởi tạo phòng & Tạo mã tham gia
                             </button>
                         </div>
                     </form>
@@ -156,14 +156,14 @@
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="rounded-circle d-flex align-items-center justify-content-center"
                                          style="width: 40px; height: 40px; background: var(--cyan-light); color: var(--cyan);">
-                                        <i class="bi bi-box-arrow-in-right fs-5"></i>
+                                        <span class="iconify fs-5" data-icon="radix-icons:enter"></span>
                                     </div>
                                     <div>
                                         <div class="fw-bold text-white">Bạn là thí sinh tham gia?</div>
                                         <div class="text-muted small">Bấm vào đây để nhập mã PIN hoặc biệt danh vào phòng</div>
                                     </div>
                                 </div>
-                                <i class="bi bi-chevron-right text-muted"></i>
+                                <span class="iconify text-muted fs-5" data-icon="radix-icons:chevron-right"></span>
                             </div>
                         </a>
                     </div>

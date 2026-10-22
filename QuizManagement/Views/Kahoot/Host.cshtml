@@ -83,12 +83,12 @@
     <!-- Top Bar -->
     <div class="d-flex justify-content-between align-items-center px-4 py-2 border-bottom border-light border-opacity-10">
         <div class="d-flex align-items-center gap-3">
-            <span class="badge bg-primary bg-opacity-25 text-info border border-info border-opacity-25 px-3 py-2 fs-6 rounded-pill">
-                <i class="bi bi-broadcast me-1"></i> QUIZ BATTLE ARENA
+            <span class="badge bg-primary bg-opacity-25 text-info border border-info border-opacity-25 px-3 py-2 fs-6 rounded-pill d-inline-flex align-items-center gap-1">
+                <span class="iconify" data-icon="lucide:radio"></span> QUIZ BATTLE ARENA
             </span>
             <span class="fs-4 fw-bold" id="questionCounter">Đang chuẩn bị câu hỏi...</span>
-            <span class="badge bg-warning text-dark px-3 py-2 fs-6 rounded-pill fw-bold">
-                <i class="bi bi-key-fill me-1"></i> PIN: @Model.RoomCode
+            <span class="badge bg-warning text-dark px-3 py-2 fs-6 rounded-pill fw-bold d-inline-flex align-items-center gap-1">
+                <span class="iconify" data-icon="radix-icons:lock-closed"></span> PIN: @Model.RoomCode
             </span>
         </div>
 
@@ -96,7 +96,7 @@
         <div class="d-flex align-items-center gap-2">
             <div id="timerBox" class="bg-dark border border-warning text-warning fw-bolder rounded-pill px-4 py-2 d-flex align-items-center gap-2 shadow-lg"
                  style="font-size: 1.75rem; letter-spacing: 1px;">
-                <i class="bi bi-stopwatch-fill fs-3"></i>
+                <span class="iconify fs-3" data-icon="radix-icons:stopwatch"></span>
                 <span id="timerText">20</span>s
             </div>
         </div>
@@ -107,14 +107,14 @@
                 <span class="d-block text-white-50 small">Đã trả lời:</span>
                 <span id="answerCount" class="fs-4 fw-bold text-success">0</span>
             </div>
-            <button id="btnSync" class="btn btn-outline-info px-3 py-2 fw-semibold rounded-pill d-none" title="Đồng bộ lại nếu bị trễ">
-                <i class="bi bi-arrow-repeat"></i> Đồng bộ
+            <button id="btnSync" class="btn btn-outline-info px-3 py-2 fw-semibold rounded-pill d-none align-items-center gap-1" title="Đồng bộ lại nếu bị trễ">
+                <span class="iconify" data-icon="radix-icons:reload"></span> Đồng bộ
             </button>
-            <button id="btnSkip" class="btn btn-outline-light px-3 py-2 fw-bold rounded-pill">
-                <i class="bi bi-fast-forward-fill me-1"></i> Kết thúc câu hỏi
+            <button id="btnSkip" class="btn btn-outline-light px-3 py-2 fw-bold rounded-pill d-flex align-items-center gap-1">
+                <span class="iconify" data-icon="radix-icons:track-next"></span> Kết thúc câu hỏi
             </button>
-            <button id="btnNext" class="btn btn-warning px-4 py-2 fw-bold rounded-pill d-none shadow">
-                Câu tiếp theo <i class="bi bi-arrow-right"></i>
+            <button id="btnNext" class="btn btn-warning px-4 py-2 fw-bold rounded-pill d-none shadow align-items-center gap-1">
+                Câu tiếp theo <span class="iconify" data-icon="radix-icons:arrow-right"></span>
             </button>
         </div>
     </div>
@@ -166,10 +166,12 @@
     <!-- Leaderboard Section (Hidden during answering) -->
     <div class="container my-auto py-4 d-none" id="leaderboardSection">
         <div class="text-center mb-4">
-            <span class="badge bg-warning bg-opacity-25 text-warning px-3 py-2 rounded-pill fs-6 mb-2">
-                <i class="bi bi-lightning-charge-fill me-1"></i> BẢNG ĐIỂM CHIẾN ĐẤU
+            <span class="badge bg-warning bg-opacity-25 text-warning px-3 py-2 rounded-pill fs-6 mb-2 d-inline-flex align-items-center gap-1">
+                <span class="iconify" data-icon="radix-icons:bar-chart"></span> BẢNG ĐIỂM CHIẾN ĐẤU
             </span>
-            <h2 class="display-6 fw-bold text-white"><i class="bi bi-trophy-fill text-warning me-2"></i>BẢNG XẾP HẠNG TOP 5</h2>
+            <h2 class="display-6 fw-bold text-white d-flex align-items-center justify-content-center gap-2">
+                <span class="iconify text-warning" data-icon="radix-icons:star-filled"></span> BẢNG XẾP HẠNG TOP 5
+            </h2>
         </div>
         <div class="row justify-content-center">
             <div class="col-md-8">
@@ -183,7 +185,9 @@
     <!-- Podium Section (Final Game Over) -->
     <div class="container my-auto py-4 d-none" id="podiumSection">
         <div class="text-center mb-4">
-            <h1 class="display-4 fw-bolder text-warning">🏆 BỤC VINH DANH CHUNG CUỘC 🏆</h1>
+            <h1 class="display-4 fw-bolder text-warning d-flex align-items-center justify-content-center gap-2">
+                <span class="iconify" data-icon="radix-icons:star-filled"></span> BỤC VINH DANH CHUNG CUỘC <span class="iconify" data-icon="radix-icons:star-filled"></span>
+            </h1>
             <p class="fs-5 text-white-50">Chúc mừng các chiến binh xuất sắc nhất đấu trường!</p>
         </div>
         <div class="row justify-content-center align-items-end g-3" style="min-height: 350px;">
@@ -197,7 +201,9 @@
             </div>
             <!-- 1st Place -->
             <div class="col-4 text-center">
-                <div class="fs-1 text-warning mb-1">👑</div>
+                <div class="mb-1 text-warning d-flex justify-content-center">
+                    <span class="iconify" data-icon="radix-icons:star-filled" style="font-size:2.5rem;"></span>
+                </div>
                 <h3 id="podium1Name" class="fw-bold mb-1 text-warning">---</h3>
                 <span id="podium1Score" class="badge bg-warning text-dark mb-2 fs-6">0 pts</span>
                 <div class="podium-step bg-warning text-dark shadow-lg py-4" style="height: 250px;">
@@ -215,8 +221,8 @@
         </div>
 
         <div class="text-center mt-5">
-            <a asp-action="Index" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow">
-                <i class="bi bi-arrow-counterclockwise me-1"></i> Tạo trận đấu mới
+            <a asp-action="Index" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow d-inline-flex align-items-center gap-2">
+                <span class="iconify" data-icon="radix-icons:reload"></span> Tạo trận đấu mới
             </a>
         </div>
     </div>

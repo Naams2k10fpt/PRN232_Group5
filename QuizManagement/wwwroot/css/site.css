@@ -1735,3 +1735,28 @@ textarea.form-control { resize: vertical; min-height: 90px; }
   .auth-container { max-width: 100%; }
   .table > :not(caption) > * > * { padding: 0.65rem 0.7rem !important; }
 }
+
+/* ===== RADIX UI ICONS & COMPANIONS SYSTEM ===== */
+.iconify, .rx-icon {
+  display: inline-block;
+  vertical-align: -0.16em;
+  width: 1.15em;
+  height: 1.15em;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: transform var(--t), color var(--t);
+}
+.btn .iconify, .badge .iconify {
+  vertical-align: -0.14em;
+}
+.iconify-lg, .rx-icon-lg {
+  width: 1.4em;
+  height: 1.4em;
+  vertical-align: -0.22em;
+}
+.iconify-xl, .rx-icon-xl {
+  width: 2.2em;
+  height: 2.2em;
+  vertical-align: -0.25em;
+}
+
