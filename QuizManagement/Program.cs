@@ -367,8 +367,10 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-// Sau proxy, TLS kết thúc tại Render và Render tự chuyển HTTP → HTTPS.
-if (!hosting.BehindProxy)
+// Development serves Flutter's local HTTP API even when Visual Studio also exposes HTTPS.
+// Redirecting a CORS preflight to the development certificate prevents browser API calls.
+// Behind Render's proxy, TLS termination and HTTP redirects are handled by Render.
+if (!app.Environment.IsDevelopment() && !hosting.BehindProxy)
     app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
