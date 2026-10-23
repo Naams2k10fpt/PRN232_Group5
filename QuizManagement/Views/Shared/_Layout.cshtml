@@ -50,43 +50,47 @@
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
+@{
+    var currentCtrl = ViewContext.RouteData.Values["Controller"]?.ToString() ?? "";
+    var currentAct = ViewContext.RouteData.Values["Action"]?.ToString() ?? "";
+}
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link @(currentCtrl.Equals("Home", StringComparison.OrdinalIgnoreCase) && currentAct.Equals("Index", StringComparison.OrdinalIgnoreCase) ? "active" : "")" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
                         @if (User.Identity?.IsAuthenticated == true)
                         {
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Subjects" asp-action="Index">Môn học</a>
+                                <a class="nav-link @(currentCtrl.Equals("Subjects", StringComparison.OrdinalIgnoreCase) || currentCtrl.Equals("Decks", StringComparison.OrdinalIgnoreCase) || currentCtrl.Equals("Questions", StringComparison.OrdinalIgnoreCase) || currentCtrl.Equals("QuestionImport", StringComparison.OrdinalIgnoreCase) ? "active" : "")" asp-controller="Subjects" asp-action="Index">Môn học</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Statistics" asp-action="Index">Thống kê</a>
+                                <a class="nav-link @(currentCtrl.Equals("Statistics", StringComparison.OrdinalIgnoreCase) && !currentAct.Equals("MentorStats", StringComparison.OrdinalIgnoreCase) ? "active" : "")" asp-controller="Statistics" asp-action="Index">Thống kê</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="History" asp-action="Index">Lịch sử</a>
+                                <a class="nav-link @(currentCtrl.Equals("History", StringComparison.OrdinalIgnoreCase) ? "active" : "")" asp-controller="History" asp-action="Index">Lịch sử</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="StudyGroups" asp-action="Index">Nhóm học tập</a>
+                                <a class="nav-link @(currentCtrl.Equals("StudyGroups", StringComparison.OrdinalIgnoreCase) ? "active" : "")" asp-controller="StudyGroups" asp-action="Index">Nhóm học tập</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-warning fw-bold d-flex align-items-center" asp-controller="Kahoot" asp-action="Index">
+                                <a class="nav-link text-warning fw-bold d-flex align-items-center @(currentCtrl.Equals("Kahoot", StringComparison.OrdinalIgnoreCase) ? "active" : "")" asp-controller="Kahoot" asp-action="Index">
                                     <span class="iconify me-1" data-icon="lucide:gamepad-2"></span>Kahoot Live
                                 </a>
                             </li>
                             @if (User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Mentor))
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Statistics" asp-action="MentorStats">Thống kê nội dung</a>
+                                    <a class="nav-link @(currentCtrl.Equals("Statistics", StringComparison.OrdinalIgnoreCase) && currentAct.Equals("MentorStats", StringComparison.OrdinalIgnoreCase) ? "active" : "")" asp-controller="Statistics" asp-action="MentorStats">Thống kê nội dung</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" asp-controller="QuestionReports" asp-action="Index">Báo cáo lỗi</a>
+                                    <a class="nav-link @(currentCtrl.Equals("QuestionReports", StringComparison.OrdinalIgnoreCase) ? "active" : "")" asp-controller="QuestionReports" asp-action="Index">Báo cáo lỗi</a>
                                 </li>
                             }
                             @if (User.IsInRole(AppRoles.Admin))
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link text-danger fw-semibold" asp-controller="Admin" asp-action="Index">Quản trị</a>
+                                    <a class="nav-link text-danger fw-semibold @(currentCtrl.Equals("Admin", StringComparison.OrdinalIgnoreCase) ? "active" : "")" asp-controller="Admin" asp-action="Index">Quản trị</a>
                                 </li>
                             }
                         }

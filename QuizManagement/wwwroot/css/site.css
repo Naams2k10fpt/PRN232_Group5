@@ -585,6 +585,23 @@ header {
   -webkit-text-fill-color: var(--text) !important;
 }
 
+.navbar .nav-link.active {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background: linear-gradient(135deg, rgba(124, 109, 248, 0.28) 0%, rgba(34, 211, 238, 0.18) 100%) !important;
+  border: 1px solid rgba(124, 109, 248, 0.45) !important;
+  font-weight: 600 !important;
+  box-shadow: 0 0 16px rgba(124, 109, 248, 0.3) !important;
+}
+
+[data-bs-theme="light"] .navbar .nav-link.active {
+  color: #4338ca !important;
+  -webkit-text-fill-color: #4338ca !important;
+  background: rgba(99, 102, 241, 0.12) !important;
+  border: 1px solid rgba(99, 102, 241, 0.3) !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15) !important;
+}
+
 /* Admin link — keep red but styled */
 .navbar .nav-link.text-danger {
   -webkit-text-fill-color: var(--danger) !important;
