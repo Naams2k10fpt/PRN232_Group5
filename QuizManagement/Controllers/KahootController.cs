@@ -48,10 +48,15 @@ namespace QuizManagement.Controllers
 
         [Authorize]
         [HttpGet]
-        public async Task<IActionResult> Lobby(string roomCode)
+        public async Task<IActionResult> Lobby(string? roomCode)
         {
+            if (string.IsNullOrWhiteSpace(roomCode))
+            {
+                return RedirectToAction(nameof(Index));
+            }
+
             var room = await _kahootService.GetRoomByCodeAsync(roomCode);
-            if (room == null) return NotFound("Phòng không tồn tại.");
+            if (room == null) return NotFound("Phòng không tồn tại hoặc đã kết thúc.");
 
             ViewBag.Room = room;
             return View(room);
@@ -59,10 +64,15 @@ namespace QuizManagement.Controllers
 
         [Authorize]
         [HttpGet]
-        public async Task<IActionResult> Host(string roomCode)
+        public async Task<IActionResult> Host(string? roomCode)
         {
+            if (string.IsNullOrWhiteSpace(roomCode))
+            {
+                return RedirectToAction(nameof(Index));
+            }
+
             var room = await _kahootService.GetRoomByCodeAsync(roomCode);
-            if (room == null) return NotFound("Phòng không tồn tại.");
+            if (room == null) return NotFound("Phòng không tồn tại hoặc đã kết thúc.");
 
             ViewBag.Room = room;
             return View(room);
@@ -80,10 +90,15 @@ namespace QuizManagement.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Play(string roomCode, string? nickname = null)
+        public async Task<IActionResult> Play(string? roomCode, string? nickname = null)
         {
+            if (string.IsNullOrWhiteSpace(roomCode))
+            {
+                return RedirectToAction(nameof(Join));
+            }
+
             var room = await _kahootService.GetRoomByCodeAsync(roomCode);
-            if (room == null) return NotFound("Phòng không tồn tại.");
+            if (room == null) return NotFound("Phòng không tồn tại hoặc đã kết thúc.");
 
             ViewBag.Room = room;
             ViewBag.Nickname = nickname ?? User.Identity?.Name ?? "Player";

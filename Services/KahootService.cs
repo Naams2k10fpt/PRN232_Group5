@@ -45,14 +45,24 @@ public class KahootService : IKahootService
         return Task.FromResult(createdRoom);
     }
 
-    public Task<KahootRoom?> GetRoomByCodeAsync(string roomCode)
+    public Task<KahootRoom?> GetRoomByCodeAsync(string? roomCode)
     {
+        if (string.IsNullOrWhiteSpace(roomCode))
+        {
+            return Task.FromResult<KahootRoom?>(null);
+        }
+
         var room = _repository.GetRoomByCode(roomCode.Trim());
         return Task.FromResult(room);
     }
 
-    public Task<KahootParticipant> JoinRoomAsync(string roomCode, string nickname, string? userId, string? connectionId)
+    public Task<KahootParticipant> JoinRoomAsync(string? roomCode, string nickname, string? userId, string? connectionId)
     {
+        if (string.IsNullOrWhiteSpace(roomCode))
+        {
+            throw new InvalidOperationException("Mã phòng không được để trống.");
+        }
+
         var room = _repository.GetRoomByCode(roomCode.Trim());
         if (room == null)
         {
@@ -146,8 +156,13 @@ public class KahootService : IKahootService
         });
     }
 
-    public Task<List<KahootLeaderboardEntry>> GetLeaderboardAsync(string roomCode)
+    public Task<List<KahootLeaderboardEntry>> GetLeaderboardAsync(string? roomCode)
     {
+        if (string.IsNullOrWhiteSpace(roomCode))
+        {
+            return Task.FromResult(new List<KahootLeaderboardEntry>());
+        }
+
         var participants = _repository.GetParticipantsByRoom(roomCode.Trim());
         var leaderboard = participants
             .Select((p, index) => new KahootLeaderboardEntry
@@ -162,14 +177,24 @@ public class KahootService : IKahootService
         return Task.FromResult(leaderboard);
     }
 
-    public Task<bool> UpdateRoomStatusAsync(string roomCode, string status, int currentQuestionIndex)
+    public Task<bool> UpdateRoomStatusAsync(string? roomCode, string status, int currentQuestionIndex)
     {
+        if (string.IsNullOrWhiteSpace(roomCode))
+        {
+            return Task.FromResult(false);
+        }
+
         _repository.UpdateRoomStatus(roomCode.Trim(), status, currentQuestionIndex);
         return Task.FromResult(true);
     }
 
-    public Task<List<KahootParticipant>> GetParticipantsAsync(string roomCode)
+    public Task<List<KahootParticipant>> GetParticipantsAsync(string? roomCode)
     {
+        if (string.IsNullOrWhiteSpace(roomCode))
+        {
+            return Task.FromResult(new List<KahootParticipant>());
+        }
+
         var participants = _repository.GetParticipantsByRoom(roomCode.Trim());
         return Task.FromResult(participants);
     }
