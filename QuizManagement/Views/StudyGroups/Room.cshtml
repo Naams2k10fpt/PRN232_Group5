@@ -34,7 +34,7 @@
     </aside>
     <section class="cc-main" aria-label="Nội dung kênh chat">
         <section id="voiceStage" class="vc-stage" aria-label="Phòng voice và video" hidden>
-            <header class="vc-header"><div><span class="vc-eyebrow">CÙNG NHAU HỌC TẬP</span><h2><span id="voiceStageTitle">Phòng voice</span> <span class="vc-badge">VOICE & VIDEO</span></h2><p id="voiceStatus" role="status">Đang kết nối phòng voice…</p></div><div class="vc-header-actions"><button id="editVoiceChannel" type="button" class="cc-icon" aria-label="Sửa kênh voice" title="Sửa kênh voice" hidden="@(role < 1)">⚙</button><button type="button" class="vc-back" data-voice-action="chat">← Về chat</button></div></header>
+            <header class="vc-header"><div><span class="vc-eyebrow">CÙNG NHAU HỌC TẬP</span><h2><span id="voiceStageTitle">Phòng voice</span> <span class="vc-badge">VOICE & VIDEO</span></h2><p id="voiceStatus" role="status">Đang kết nối phòng voice…</p></div><div class="vc-header-actions"><button id="editVoiceChannel" type="button" class="cc-icon" aria-label="Sửa kênh voice" title="Sửa kênh voice" hidden="@(role < 1)"><span class="iconify" data-icon="radix-icons:gear"></span></button><button type="button" class="vc-back" data-voice-action="chat"><span class="iconify me-1" data-icon="radix-icons:arrow-left"></span> Về chat</button></div></header>
             <div id="voiceAlert" class="vc-alert" role="alert" hidden></div>
             <div id="voiceLobby" class="vc-lobby">
                 <div class="vc-lobby-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 14v-3a9 9 0 0 1 18 0v3M3 13h4v8H5a2 2 0 0 1-2-2zm14 0h4v6a2 2 0 0 1-2 2h-2z" /></svg></div>
@@ -48,8 +48,8 @@
             </footer>
         </section>
         <header class="cc-header"><span class="cc-hash">#</span><div class="cc-channel-title"><h2 id="channelTitle">Đang tải kênh…</h2><p id="channelTopic"></p></div>
-            <button id="editChannel" class="cc-icon" title="Sửa kênh" type="button" hidden="@(role < 1)">⚙</button>
-            <button id="toggleMembers" class="cc-icon" title="Thành viên" type="button" aria-controls="chatMembers" aria-expanded="false">☷</button>
+            <button id="editChannel" class="cc-icon" title="Sửa kênh" type="button" hidden="@(role < 1)"><span class="iconify" data-icon="radix-icons:gear"></span></button>
+            <button id="toggleMembers" class="cc-icon" title="Thành viên" type="button" aria-controls="chatMembers" aria-expanded="false"><span class="iconify" data-icon="radix-icons:person"></span></button>
         </header>
         <div id="chatAlert" class="cc-alert" role="alert" hidden></div>
         <div id="connectionStatus" class="cc-connection" role="status">Đang kết nối…</div>
@@ -60,14 +60,14 @@
             <button id="newMessages" type="button" class="cc-new" hidden>↓ Tin nhắn mới</button>
         </div>
         <div class="cc-compose-area">
-            <div id="composerContext" class="cc-context" hidden><span id="composerContextText"></span><button id="cancelContext" type="button" class="cc-icon" aria-label="Hủy trả lời hoặc chỉnh sửa">×</button></div>
+            <div id="composerContext" class="cc-context" hidden><span id="composerContextText"></span><button id="cancelContext" type="button" class="cc-icon" aria-label="Hủy trả lời hoặc chỉnh sửa"><span class="iconify" data-icon="radix-icons:cross-2"></span></button></div>
             <div id="pendingFiles" class="cc-pending"></div>
             <form id="channelMessageForm" class="cc-composer">
                 @Html.AntiForgeryToken()
                 <input id="chatFiles" type="file" multiple hidden accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.csv,.zip,.docx,.xlsx,.pptx" />
-                <button id="attachFile" type="button" class="cc-attach" title="Đính kèm ảnh/file" aria-label="Đính kèm ảnh/file">+</button>
+                <button id="attachFile" type="button" class="cc-attach" title="Đính kèm ảnh/file" aria-label="Đính kèm ảnh/file"><span class="iconify" data-icon="radix-icons:plus"></span></button>
                 <textarea id="chatInput" rows="1" maxlength="2000" placeholder="Nhắn vào kênh…" aria-label="Nội dung tin nhắn"></textarea>
-                <button id="sendMessage" type="submit" class="cc-send" aria-label="Gửi tin nhắn">Gửi ↗</button>
+                <button id="sendMessage" type="submit" class="cc-send" aria-label="Gửi tin nhắn">Gửi <span class="iconify ms-1" data-icon="radix-icons:paper-plane"></span></button>
             </form>
             <div class="cc-compose-hint"><span>Enter để gửi · Shift + Enter để xuống dòng</span><span>3 file / tin · 5 MB / file</span></div>
         </div>

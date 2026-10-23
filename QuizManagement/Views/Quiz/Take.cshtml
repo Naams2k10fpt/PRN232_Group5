@@ -144,7 +144,7 @@
                 confirmText: 'Nộp bài ngay',
                 cancelText: 'Tiếp tục làm bài',
                 confirmClass: 'btn-primary',
-                icon: unanswered > 0 ? '⚠️' : '📝'
+                icon: unanswered > 0 ? 'warning' : 'info'
             }).then(function(confirmed) {
                 if (confirmed) postQuiz();
             });

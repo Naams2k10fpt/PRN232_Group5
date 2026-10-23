@@ -223,7 +223,7 @@
         const resultScore = document.getElementById("resultScore");
 
         if (res.isCorrect) {
-            resultIcon.innerHTML = "🎉";
+            resultIcon.innerHTML = '<span class="iconify text-success" data-icon="radix-icons:check-circled" style="font-size: 5rem;"></span>';
             resultText.innerText = "CHÍNH XÁC!";
             resultText.className = "display-4 fw-bolder text-success mb-2";
             resultScore.innerText = `+${res.scoreEarned} điểm`;
@@ -231,7 +231,7 @@
                 window.QuizCelebration.confetti({ particleCount: 35, duration: 1600 });
             }
         } else {
-            resultIcon.innerHTML = "❌";
+            resultIcon.innerHTML = '<span class="iconify text-danger" data-icon="radix-icons:cross-circled" style="font-size: 5rem;"></span>';
             resultText.innerText = "CHƯA ĐÚNG!";
             resultText.className = "display-4 fw-bolder text-danger mb-2";
             resultScore.innerText = "+0 điểm";

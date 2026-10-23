@@ -48,18 +48,18 @@ else
                                 3 => "text-danger fw-semibold",
                                 _ => ""
                             };
-                            var medal = entry.Rank switch
+                            var medalHtml = entry.Rank switch
                             {
-                                1 => "🥇",
-                                2 => "🥈",
-                                3 => "🥉",
-                                _ => entry.Rank.ToString()
+                                1 => "<span class=\"badge rounded-pill bg-warning text-dark px-2 py-1\"><span class=\"iconify me-1\" data-icon=\"radix-icons:badge\"></span>Top 1</span>",
+                                2 => "<span class=\"badge rounded-pill bg-secondary text-light px-2 py-1\"><span class=\"iconify me-1\" data-icon=\"radix-icons:badge\"></span>Top 2</span>",
+                                3 => "<span class=\"badge rounded-pill bg-danger text-light px-2 py-1\"><span class=\"iconify me-1\" data-icon=\"radix-icons:badge\"></span>Top 3</span>",
+                                _ => $"<span class=\"text-muted fw-semibold\">#{entry.Rank}</span>"
                             };
                             var scoreClass = entry.BestPercentage >= 80 ? "text-success fw-semibold"
                                            : entry.BestPercentage >= 50 ? ""
                                            : "text-danger";
                             <tr>
-                                <td class="ps-4 @medalClass" style="font-size:1.1rem;">@medal</td>
+                                <td class="ps-4 @medalClass" style="font-size:0.95rem;">@Html.Raw(medalHtml)</td>
                                 <td>@entry.Username</td>
                                 <td class="text-center @scoreClass">@entry.BestPercentage.ToString("0.#")%</td>
                                 <td class="text-center" style="color:var(--text-muted);">@entry.AttemptCount lần</td>
