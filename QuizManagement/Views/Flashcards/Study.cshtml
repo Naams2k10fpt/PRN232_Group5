@@ -294,12 +294,8 @@ else
                 }
 
                 isAnimating = true;
-                cardInner.classList.add('fc-card--turning');
-                setTimeout(() => {
-                    changeFace();
-                    cardInner.classList.remove('fc-card--turning');
-                    setTimeout(() => { isAnimating = false; }, 120);
-                }, 120);
+                changeFace();
+                setTimeout(() => { isAnimating = false; }, 550);
             }
 
             function move(delta) {

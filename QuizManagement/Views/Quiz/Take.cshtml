@@ -4,30 +4,34 @@
 }
 
 <div class="quiz-sticky-header">
-    <div class="d-flex align-items-center gap-3 flex-grow-1" style="min-width:0;">
-        <div style="min-width:0;flex:1;">
-            <div class="fw-semibold" style="font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+    <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+        <div class="d-flex align-items-center gap-2" style="min-width:0;flex:1;">
+            <span class="badge bg-primary-subtle text-primary border border-primary border-opacity-25 px-2 py-1" style="font-size:.8rem;">
+                <span class="iconify" data-icon="lucide:book-open"></span>
+            </span>
+            <div class="fw-semibold text-truncate" style="font-size:.95rem;" title="@Model.SubjectName / @Model.DeckName">
                 @Model.SubjectName / @Model.DeckName
             </div>
         </div>
-        <span id="answeredBadge" class="badge bg-primary" style="font-size:.82rem;padding:.35rem .7rem;flex-shrink:0;">
-            0 / @Model.Questions.Count đã trả lời
-        </span>
-        <span class="badge bg-dark-subtle text-muted d-none d-lg-inline-flex align-items-center gap-1 border border-secondary border-opacity-25" style="font-size:.75rem;">
-            <kbd class="bg-secondary-subtle text-body px-1 py-0">1-4</kbd> / <kbd class="bg-secondary-subtle text-body px-1 py-0">A-D</kbd> Chọn nhanh · <kbd class="bg-secondary-subtle text-body px-1 py-0">↓↑</kbd> Chuyển câu
-        </span>
-        @if (Model.TimeRemainingSeconds.HasValue)
-        {
-            <span id="quizTimer" class="badge bg-warning text-dark"
-                  style="font-size:.9rem;padding:.35rem .8rem;flex-shrink:0;font-variant-numeric:tabular-nums;min-width:4.5rem;text-align:center;">
-                --:--
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span id="answeredBadge" class="badge bg-primary" style="font-size:.82rem;padding:.38rem .75rem;flex-shrink:0;">
+                0 / @Model.Questions.Count đã trả lời
             </span>
-        }
+            <span class="badge bg-dark-subtle text-muted d-none d-lg-inline-flex align-items-center gap-1 border border-secondary border-opacity-25" style="font-size:.75rem;padding:.38rem .75rem;">
+                <kbd class="bg-secondary-subtle text-body px-1 py-0">1-4</kbd> / <kbd class="bg-secondary-subtle text-body px-1 py-0">A-D</kbd> Chọn nhanh · <kbd class="bg-secondary-subtle text-body px-1 py-0">↓↑</kbd> Chuyển câu
+            </span>
+            @if (Model.TimeRemainingSeconds.HasValue)
+            {
+                <span id="quizTimer" class="badge bg-warning text-dark fw-bold"
+                      style="font-size:.9rem;padding:.38rem .85rem;flex-shrink:0;font-variant-numeric:tabular-nums;min-width:4.8rem;text-align:center;">
+                    --:--
+                </span>
+            }
+        </div>
     </div>
-</div>
-
-<div class="quiz-progress-track mt-0 mb-4">
-    <div id="quizProgressBar" class="quiz-progress-bar" style="width:0%"></div>
+    <div class="quiz-progress-track mt-2 mb-0">
+        <div id="quizProgressBar" class="quiz-progress-bar" style="width:0%"></div>
+    </div>
 </div>
 
 <form asp-action="Submit" method="post" id="quizForm">
