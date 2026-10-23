@@ -18,17 +18,6 @@
                     <p class="text-muted small">Đăng nhập tài khoản QuizMS của bạn để tiếp tục học tập</p>
                 </div>
 
-                <!-- One-click Demo Credentials Bar for fast grading and testing -->
-                <div class="auth-demo-bar">
-                    <span class="auth-demo-label">Đăng nhập nhanh:</span>
-                    <button type="button" class="auth-demo-btn" onclick="fillCredentials('student@quizms.com', 'Student@123456')">
-                        <span class="iconify" data-icon="radix-icons:person"></span> Học sinh
-                    </button>
-                    <button type="button" class="auth-demo-btn" onclick="fillCredentials('admin@quizms.com', 'Admin@123456')">
-                        <span class="iconify" data-icon="radix-icons:lock-closed"></span> Admin
-                    </button>
-                </div>
-
                 <div class="auth-card">
                     @if (TempData["SuccessMessage"] is string successMessage)
                     {
@@ -165,21 +154,4 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script>
-        function fillCredentials(email, password) {
-            const emailInput = document.getElementById('inputEmail');
-            const passInput = document.getElementById('inputPassword');
-            if (emailInput && passInput) {
-                emailInput.value = email;
-                passInput.value = password;
-                // Add a brief glow effect
-                emailInput.classList.add('border-primary');
-                passInput.classList.add('border-primary');
-                setTimeout(() => {
-                    emailInput.classList.remove('border-primary');
-                    passInput.classList.remove('border-primary');
-                }, 800);
-            }
-        }
-    </script>
 }
