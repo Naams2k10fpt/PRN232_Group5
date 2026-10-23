@@ -4,9 +4,85 @@
     var canManageContent = User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Mentor);
 }
 
-<div class="mb-5" style="animation: pageFadeIn .4s ease both;">
-    <h1 class="h3 mb-1">Dashboard</h1>
-    <p style="color:var(--text-muted);">Xin chào, <strong style="color:var(--text);">@User.Identity?.Name</strong>! Tiếp tục học nào.</p>
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4" style="animation: pageFadeIn .4s ease both;">
+    <div>
+        <h1 class="h3 fw-bold mb-1">Bảng điều khiển học tập</h1>
+        <p class="mb-0 text-muted">Xin chào, <strong class="text-body">@User.Identity?.Name</strong>! Tiếp tục hành trình học tập hôm nay nào.</p>
+    </div>
+    
+    <!-- Gamification Streak Flame Pill -->
+    <div class="quizms-streak-pill d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill">
+        <span class="quizms-flame-icon">🔥</span>
+        <div>
+            <div class="fw-bold" style="font-size:0.85rem; line-height:1.2;">Chuỗi 5 ngày học liên tục</div>
+            <div class="small text-muted" style="font-size:0.72rem;">Đạt mục tiêu tuần 85%</div>
+        </div>
+    </div>
+</div>
+
+<!-- Bento Grid: Main Feature Hub -->
+<div class="row g-3 mb-4">
+    <!-- Bento 1: Kahoot Live Hero (Lớn) -->
+    <div class="col-lg-6">
+        <div class="bento-card bento-card--kahoot h-100 p-4 rounded-4 position-relative overflow-hidden d-flex flex-column justify-content-between">
+            <div class="position-relative z-1">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="badge rounded-pill d-inline-flex align-items-center gap-1" style="background:rgba(34, 197, 94, 0.2); color:#4ade80; border:1px solid rgba(34, 197, 94, 0.3); font-size:0.75rem;">
+                        <span class="pulse-dot"></span> Đấu trường trực tuyến
+                    </span>
+                    <span class="iconify fs-3 text-warning" data-icon="lucide:gamepad-2"></span>
+                </div>
+                <h3 class="h5 fw-bold mb-2">Kahoot Live Arena</h3>
+                <p class="text-muted small mb-3">Tạo phòng thi đấu thời gian thực hoặc nhập mã PIN từ thiết bị bất kỳ để tham gia so tài cùng các bạn học.</p>
+            </div>
+            <div class="d-flex gap-2 flex-wrap position-relative z-1">
+                <a asp-controller="Kahoot" asp-action="Index" class="btn btn-sm btn-primary px-3 rounded-pill fw-semibold">
+                    Vào phòng Kahoot
+                </a>
+                <a asp-controller="Kahoot" asp-action="Host" class="btn btn-sm btn-outline-secondary px-3 rounded-pill">
+                    Tạo phòng mới
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bento 2: Flashcards SRS -->
+    <div class="col-md-6 col-lg-3">
+        <div class="bento-card h-100 p-4 rounded-4 d-flex flex-column justify-content-between">
+            <div>
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="badge rounded-pill bg-info bg-opacity-10 text-info border border-info border-opacity-25 small" style="font-size:0.72rem;">
+                        Spaced Repetition
+                    </span>
+                    <span class="iconify fs-3 text-info" data-icon="radix-icons:layers"></span>
+                </div>
+                <h4 class="h6 fw-bold mb-2">Thẻ Flashcard</h4>
+                <p class="text-muted small mb-3">Ôn tập ngắt quãng theo thuật toán Leitner để tối ưu khả năng ghi nhớ dài hạn.</p>
+            </div>
+            <a asp-controller="Subjects" asp-action="Index" class="btn btn-sm btn-outline-info rounded-pill w-100">
+                Ôn thẻ hôm nay
+            </a>
+        </div>
+    </div>
+
+    <!-- Bento 3: Study Groups Chat -->
+    <div class="col-md-6 col-lg-3">
+        <div class="bento-card h-100 p-4 rounded-4 d-flex flex-column justify-content-between">
+            <div>
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="badge rounded-pill bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 small" style="font-size:0.72rem;">
+                        SignalR Hub
+                    </span>
+                    <span class="iconify fs-3 text-warning" data-icon="radix-icons:chat-bubble"></span>
+                </div>
+                <h4 class="h6 fw-bold mb-2">Nhóm học tập</h4>
+                <p class="text-muted small mb-3">Trao đổi thắc mắc, chia sẻ đề thi và thảo luận trực tiếp với giảng viên & bạn bè.</p>
+            </div>
+            <a asp-controller="StudyGroups" asp-action="Index" class="btn btn-sm btn-outline-warning rounded-pill w-100">
+                Phòng thảo luận
+            </a>
+        </div>
+    </div>
 </div>
 
 <div class="row g-3 mb-5">

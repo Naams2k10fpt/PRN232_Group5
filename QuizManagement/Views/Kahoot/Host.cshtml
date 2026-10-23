@@ -82,6 +82,11 @@
         border-radius: 1.25rem 1.25rem 0 0;
         transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
+
+    @@keyframes timerThrob {
+        0% { transform: scale(1); box-shadow: 0 0 10px rgba(239,68,68,0.4); }
+        100% { transform: scale(1.12); box-shadow: 0 0 28px rgba(239,68,68,0.95); }
+    }
 </style>
 
 <div class="arena-container container-fluid py-3 d-flex flex-column justify-content-between">
@@ -308,8 +313,22 @@
                 const percent = Math.max(0, (timeLeft / totalDuration) * 100);
                 timeProgressBar.style.width = percent + "%";
 
+                const timerBox = document.getElementById("timerBox");
+                if (timerBox) {
+                    if (timeLeft <= 5 && timeLeft > 0) {
+                        timerBox.classList.remove("border-warning", "text-warning");
+                        timerBox.classList.add("border-danger", "text-danger");
+                        timerBox.style.animation = "timerThrob 0.5s infinite alternate";
+                    } else if (timeLeft > 5) {
+                        timerBox.classList.remove("border-danger", "text-danger");
+                        timerBox.classList.add("border-warning", "text-warning");
+                        timerBox.style.animation = "none";
+                    }
+                }
+
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
+                    if (timerBox) timerBox.style.animation = "none";
                     connection.invoke("EndQuestion", roomCode);
                 }
             }, 1000);

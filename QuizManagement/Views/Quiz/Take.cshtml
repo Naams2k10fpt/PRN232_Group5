@@ -13,6 +13,9 @@
         <span id="answeredBadge" class="badge bg-primary" style="font-size:.82rem;padding:.35rem .7rem;flex-shrink:0;">
             0 / @Model.Questions.Count đã trả lời
         </span>
+        <span class="badge bg-dark-subtle text-muted d-none d-lg-inline-flex align-items-center gap-1 border border-secondary border-opacity-25" style="font-size:.75rem;">
+            <kbd class="bg-secondary-subtle text-body px-1 py-0">1-4</kbd> / <kbd class="bg-secondary-subtle text-body px-1 py-0">A-D</kbd> Chọn nhanh · <kbd class="bg-secondary-subtle text-body px-1 py-0">↓↑</kbd> Chuyển câu
+        </span>
         @if (Model.TimeRemainingSeconds.HasValue)
         {
             <span id="quizTimer" class="badge bg-warning text-dark"
@@ -173,7 +176,58 @@
 
             tickTimer();
         }
-        // ───────────────────────────────────────────────────────
+        // ── Keyboard Hotkeys (1-4, A-D, ArrowDown, ArrowUp) ───────────
+        var currentActiveIndex = 0;
+        function getActiveQuestionIndex() {
+            var cards = document.querySelectorAll('.question-card');
+            var scrollPos = window.scrollY + 160;
+            for (var i = 0; i < cards.length; i++) {
+                var top = cards[i].offsetTop;
+                var bottom = top + cards[i].offsetHeight;
+                if (scrollPos >= top && scrollPos <= bottom) {
+                    return i;
+                }
+            }
+            return currentActiveIndex;
+        }
+
+        window.addEventListener('keydown', function(e) {
+            if (['INPUT', 'TEXTAREA'].includes(e.target.tagName) && e.target.type !== 'radio' && e.target.type !== 'checkbox') return;
+            var key = e.key.toUpperCase();
+            var activeIdx = getActiveQuestionIndex();
+
+            if (e.key === 'ArrowDown' && activeIdx < totalQuestions - 1) {
+                e.preventDefault();
+                currentActiveIndex = activeIdx + 1;
+                var nextCard = document.getElementById('question-' + currentActiveIndex);
+                if (nextCard) nextCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+            if (e.key === 'ArrowUp' && activeIdx > 0) {
+                e.preventDefault();
+                currentActiveIndex = activeIdx - 1;
+                var prevCard = document.getElementById('question-' + currentActiveIndex);
+                if (prevCard) prevCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
+            var answerMap = { '1': 0, 'A': 0, '2': 1, 'B': 1, '3': 2, 'C': 2, '4': 3, 'D': 3 };
+            if (key in answerMap) {
+                var ansIdx = answerMap[key];
+                var card = document.getElementById('question-' + activeIdx);
+                if (card) {
+                    var inputs = card.querySelectorAll('.answer-option input');
+                    if (inputs[ansIdx]) {
+                        if (inputs[ansIdx].type === 'radio') {
+                            inputs[ansIdx].checked = true;
+                        } else {
+                            inputs[ansIdx].checked = !inputs[ansIdx].checked;
+                        }
+                        updateProgress();
+                    }
+                }
+            }
+        });
 
         updateProgress();
     </script>
