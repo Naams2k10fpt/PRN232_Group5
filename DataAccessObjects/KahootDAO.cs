@@ -87,8 +87,21 @@ namespace DataAccessObjects
                 .ToList();
         }
 
+        public KahootAnswer? GetAnswer(QuizManagementDbContext context, int participantId, int questionId)
+        {
+            return context.KahootAnswers
+                .FirstOrDefault(a => a.ParticipantId == participantId && a.QuestionId == questionId);
+        }
+
         public void SaveAnswer(QuizManagementDbContext context, KahootAnswer answer)
         {
+            var alreadyAnswered = context.KahootAnswers
+                .Any(a => a.ParticipantId == answer.ParticipantId && a.QuestionId == answer.QuestionId);
+            if (alreadyAnswered)
+            {
+                return;
+            }
+
             context.KahootAnswers.Add(answer);
             
             var participant = context.KahootParticipants.FirstOrDefault(p => p.Id == answer.ParticipantId);

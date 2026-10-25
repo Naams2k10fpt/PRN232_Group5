@@ -31,6 +31,9 @@ namespace Repositories
         public List<KahootParticipant> GetParticipantsByRoom(string roomCode)
             => KahootDAO.Instance.GetParticipantsByRoom(_context, roomCode);
 
+        public KahootAnswer? GetAnswer(int participantId, int questionId)
+            => KahootDAO.Instance.GetAnswer(_context, participantId, questionId);
+
         public void SaveAnswer(KahootAnswer answer)
             => KahootDAO.Instance.SaveAnswer(_context, answer);
 

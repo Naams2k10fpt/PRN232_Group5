@@ -107,7 +107,7 @@ public class KahootService : IKahootService
         int timeLimitSeconds)
     {
         var participant = _repository.GetParticipant(participantId);
-        if (participant == null)
+        if (participant == null || participant.Room == null)
         {
             throw new InvalidOperationException("Không tìm thấy người tham gia.");
         }
@@ -122,6 +122,19 @@ public class KahootService : IKahootService
         var selectedAnswer = question.Answers.FirstOrDefault(a => a.Id == selectedAnswerId);
         var correctAnswer = question.Answers.FirstOrDefault(a => a.IsCorrect);
         bool isCorrect = selectedAnswer?.IsCorrect ?? false;
+
+        // Nếu thí sinh đã nộp câu hỏi này rồi, trả về kết quả đã lưu mà không cộng dồn điểm tiếp
+        var existingAnswer = _repository.GetAnswer(participantId, questionId);
+        if (existingAnswer != null)
+        {
+            return Task.FromResult(new KahootAnswerResult
+            {
+                IsCorrect = existingAnswer.IsCorrect,
+                ScoreEarned = existingAnswer.ScoreEarned,
+                TotalScore = participant.TotalScore,
+                CorrectAnswerId = correctAnswer?.Id ?? 0
+            });
+        }
 
         int scoreEarned = 0;
         if (isCorrect)

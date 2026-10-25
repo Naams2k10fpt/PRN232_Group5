@@ -18,6 +18,8 @@ namespace QuizManagement.Hubs
         public int CurrentAnswerCount { get; set; } = 0;
         public int TotalParticipants { get; set; } = 0;
         public int TimeLimitSeconds { get; set; } = 20;
+        public DateTime QuestionStartedAtUtc { get; set; } = DateTime.UtcNow;
+        public HashSet<int> AnsweredParticipantIds { get; } = new();
     }
 
     public class KahootHub : Hub
@@ -233,6 +235,12 @@ namespace QuizManagement.Hubs
             if (state.CurrentQuestionIndex >= state.Questions.Count) return;
 
             state.CurrentAnswerCount = 0;
+            state.QuestionStartedAtUtc = DateTime.UtcNow;
+            lock (state.AnsweredParticipantIds)
+            {
+                state.AnsweredParticipantIds.Clear();
+            }
+
             var questionPayload = BuildQuestionPayload(state);
             await Clients.Group(roomCode).SendAsync("ReceiveQuestion", questionPayload);
         }
@@ -241,17 +249,77 @@ namespace QuizManagement.Hubs
         public async Task SubmitAnswer(string roomCode, int participantId, int questionId, int selectedAnswerId, double elapsedSeconds)
         {
             roomCode = roomCode.Trim().ToUpperInvariant();
-            var state = _roomStates.GetOrAdd(roomCode, _ => new RoomGameState { RoomCode = roomCode });
+
+            // 1. Chống IDOR: Xác thực danh tính caller qua connection session đã lưu
+            if (!_connectionMap.TryGetValue(Context.ConnectionId, out var session) ||
+                !string.Equals(session.RoomCode, roomCode, StringComparison.OrdinalIgnoreCase))
+            {
+                await Clients.Caller.SendAsync("Error", "Phiên kết nối phòng không hợp lệ.");
+                return;
+            }
+
+            // Đảm bảo participantId thực tế thuộc về ConnectionId này
+            int verifiedParticipantId = session.ParticipantId;
+            if (participantId != 0 && participantId != verifiedParticipantId)
+            {
+                await Clients.Caller.SendAsync("Error", "Bạn không có quyền nộp bài cho người chơi khác.");
+                return;
+            }
+
+            var state = await EnsureRoomStateAsync(roomCode);
+            if (state == null) return;
+
+            // Kiểm tra câu hỏi có khớp với câu hỏi hiện tại không
+            if (state.CurrentQuestionIndex >= state.Questions.Count ||
+                state.Questions[state.CurrentQuestionIndex].Id != questionId)
+            {
+                return;
+            }
+
+            // 2. Chống gian lận thời gian: Sử dụng server clock làm thước đo chuẩn
+            var serverElapsed = (decimal)Math.Max(0.0, (DateTime.UtcNow - state.QuestionStartedAtUtc).TotalSeconds);
+            int safeLimit = state.TimeLimitSeconds > 0 ? state.TimeLimitSeconds : 20;
+
+            // Nếu câu hỏi đã kết thúc (quá thời gian quy định + 2.0s dung sai độ trễ mạng)
+            if (serverElapsed > safeLimit + 2.0m)
+            {
+                var participantsExpired = await _kahootService.GetParticipantsAsync(roomCode);
+                var currentP = participantsExpired.FirstOrDefault(p => p.Id == verifiedParticipantId);
+                await Clients.Caller.SendAsync("AnswerResult", new
+                {
+                    isCorrect = false,
+                    scoreEarned = 0,
+                    totalScore = currentP?.TotalScore ?? 0
+                });
+                return;
+            }
+
+            // Client không được khai báo thời gian thấp hơn (serverElapsed - 1.5s)
+            // (1.5s cho phép bù trừ độ trễ ping/RTT mạng bình thường)
+            decimal clientElapsed = (decimal)Math.Max(0.0, elapsedSeconds);
+            decimal minAllowedElapsed = Math.Max(0.0m, serverElapsed - 1.5m);
+            decimal validatedElapsed = clientElapsed < minAllowedElapsed || clientElapsed > serverElapsed + 1.0m
+                ? minAllowedElapsed
+                : clientElapsed;
 
             var result = await _kahootService.SubmitAnswerAsync(
                 roomCode,
-                participantId,
+                verifiedParticipantId,
                 questionId,
                 selectedAnswerId,
-                (decimal)elapsedSeconds,
-                state.TimeLimitSeconds);
+                validatedElapsed,
+                safeLimit);
 
-            state.CurrentAnswerCount++;
+            // 3. Chống double-submit lặp điểm và cập nhật số lượng trả lời chính xác
+            bool isFirstSubmit;
+            lock (state.AnsweredParticipantIds)
+            {
+                isFirstSubmit = state.AnsweredParticipantIds.Add(verifiedParticipantId);
+                if (isFirstSubmit)
+                {
+                    state.CurrentAnswerCount = state.AnsweredParticipantIds.Count;
+                }
+            }
 
             // Trả riêng kết quả cho thí sinh vừa nộp
             await Clients.Caller.SendAsync("AnswerResult", new
@@ -261,13 +329,16 @@ namespace QuizManagement.Hubs
                 totalScore = result.TotalScore
             });
 
-            // Báo cho Host biết số lượng người đã trả lời
-            var participants = await _kahootService.GetParticipantsAsync(roomCode);
-            await Clients.Group(roomCode).SendAsync("AnswerSubmitted", new
+            // Chỉ phát tín hiệu AnswerSubmitted tới Host và nhóm khi đây là lần nộp đầu tiên của câu hỏi này
+            if (isFirstSubmit)
             {
-                currentAnswerCount = state.CurrentAnswerCount,
-                totalPlayers = participants.Count
-            });
+                var participants = await _kahootService.GetParticipantsAsync(roomCode);
+                await Clients.Group(roomCode).SendAsync("AnswerSubmitted", new
+                {
+                    currentAnswerCount = state.CurrentAnswerCount,
+                    totalPlayers = participants.Count
+                });
+            }
         }
 
         // Hết giờ câu hỏi: Host gọi hoặc Server tự kết thúc câu hỏi
