@@ -20,6 +20,25 @@
     </script>
 </head>
 <body>
+    <!-- Global Lottie Opening Splash Screen -->
+    <div id="quizms-opening-screen" class="quizms-opening-screen" aria-hidden="true">
+        <div class="quizms-opening-content">
+            <div class="quizms-lottie-halo">
+                <div id="quizms-lottie-intro" class="quizms-lottie-player-box"></div>
+            </div>
+            <div class="quizms-opening-brand mt-3">
+                <h1 class="quizms-opening-title">Quiz<span class="text-gradient">MS</span></h1>
+                <p class="quizms-opening-subtitle">Nền tảng Ôn tập & Đấu trường Trực tuyến</p>
+            </div>
+            <div class="quizms-opening-progress-track">
+                <div id="quizms-opening-progress" class="quizms-opening-progress-bar"></div>
+            </div>
+            <div class="quizms-opening-status text-muted small mt-2">
+                <span id="quizms-opening-status-text">Khởi tạo hệ thống…</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Academic Cyber Ambient Background System -->
     <div class="quizms-ambient-bg" aria-hidden="true">
         <div class="quizms-cyber-grid"></div>
@@ -173,7 +192,80 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/lottie-web/lottie.min.js" asp-append-version="true"></script>
     <script src="~/js/gamification.js" asp-append-version="true"></script>
+    <script>
+        (function() {
+            var screen = document.getElementById('quizms-opening-screen');
+            var container = document.getElementById('quizms-lottie-intro');
+            var progressBar = document.getElementById('quizms-opening-progress');
+            var statusText = document.getElementById('quizms-opening-status-text');
+
+            if (!screen || !container) return;
+
+            var urlParams = new URLSearchParams(window.location.search);
+            var forceIntro = urlParams.get('intro') === '1';
+            var hasSeen = sessionStorage.getItem('quizms_splash_seen');
+
+            if (hasSeen && !forceIntro) {
+                screen.remove();
+                return;
+            }
+
+            function initLottieIntro() {
+                if (!window.lottie) {
+                    screen.remove();
+                    return;
+                }
+
+                try {
+                    window.lottie.loadAnimation({
+                        container: container,
+                        renderer: 'svg',
+                        loop: true,
+                        autoplay: true,
+                        path: '/assets/lottie/trophy.json'
+                    });
+
+                    var progress = 0;
+                    var interval = setInterval(function() {
+                        progress += 16;
+                        if (progressBar) progressBar.style.width = Math.min(progress, 90) + '%';
+                        if (progress >= 35 && statusText) statusText.textContent = 'Đồng bộ tài nguyên học tập…';
+                        if (progress >= 75 && statusText) statusText.textContent = 'Sẵn sàng trải nghiệm!';
+                    }, 100);
+
+                    function dismissIntro() {
+                        clearInterval(interval);
+                        if (progressBar) progressBar.style.width = '100%';
+                        setTimeout(function() {
+                            screen.classList.add('quizms-opening-hidden');
+                            sessionStorage.setItem('quizms_splash_seen', 'true');
+                            setTimeout(function() {
+                                if (screen.parentNode) screen.parentNode.removeChild(screen);
+                            }, 600);
+                        }, 250);
+                    }
+
+                    setTimeout(dismissIntro, 1200);
+                    screen.addEventListener('click', dismissIntro);
+                } catch(e) {
+                    screen.remove();
+                }
+            }
+
+            if (window.lottie) {
+                initLottieIntro();
+            } else {
+                window.addEventListener('DOMContentLoaded', initLottieIntro);
+            }
+
+            window.replayIntro = function() {
+                sessionStorage.removeItem('quizms_splash_seen');
+                window.location.href = window.location.pathname + '?intro=1';
+            };
+        })();
+    </script>
     @if (User.Identity?.IsAuthenticated == true && ViewData["UsesChatHub"] is not true)
     {
         <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
