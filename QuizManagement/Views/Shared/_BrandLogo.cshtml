@@ -7,9 +7,11 @@
     bool showText = ViewData["ShowText"] as bool? ?? false;
 }
 
-<div class="quizms-brand-wrapper d-inline-flex align-items-center gap-2">
-    <div class="quizms-brand-icon-box" style="width: @(size)px; height: @(size)px; flex-shrink: 0;">
-        <svg class="quizms-brand-emblem" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:100%; display:block;">
+<div class="quizms-brand-wrapper d-inline-flex align-items-center gap-2" style="overflow: visible;">
+    <div class="quizms-brand-icon-box position-relative" style="width: @(size)px; height: @(size)px; flex-shrink: 0; overflow: visible;">
+        <!-- Expansive Diffuse Ambient Glow Halo (Unconstrained / Smooth / Never clipped) -->
+        <div class="quizms-emblem-ambient-glow" aria-hidden="true"></div>
+        <svg class="quizms-brand-emblem" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:100%; display:block; position:relative; z-index:1; overflow:visible;">
             <defs>
                 <linearGradient id="quizms-brand-primary" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#663af3" />

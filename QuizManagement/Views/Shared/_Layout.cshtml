@@ -23,22 +23,20 @@
     <!-- Brand Name & Emblem Opening Animation (Intro Screen) -->
     <div id="quizms-opening-screen" class="quizms-opening-screen" aria-hidden="true">
         <div class="quizms-opening-content">
-            <!-- Animated Brand Emblem -->
+            <!-- Animated Brand Emblem with Expansive Diffuse Glow -->
             <div class="quizms-brand-anim-wrapper">
-                <svg class="quizms-brand-anim-svg" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <div class="quizms-brand-anim-glow" aria-hidden="true"></div>
+                <svg class="quizms-brand-anim-svg" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="position:relative; z-index:1; overflow:visible;">
                     <defs>
                         <linearGradient id="quizms-brand-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
                             <stop offset="0%" stop-color="#663af3" />
                             <stop offset="100%" stop-color="#38bdf8" />
                         </linearGradient>
-                        <filter id="quizms-emblem-glow" x="-20%" y="-20%" width="140%" height="140%">
-                            <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#663af3" flood-opacity="0.45" />
-                        </filter>
                     </defs>
 
                     <!-- Outer Box -->
                     <rect class="quizms-anim-box" x="5" y="5" width="70" height="70" rx="20" 
-                          fill="#161c28" stroke="rgba(186, 215, 247, 0.2)" stroke-width="1.8" filter="url(#quizms-emblem-glow)" />
+                          fill="#161c28" stroke="rgba(186, 215, 247, 0.2)" stroke-width="1.8" />
 
                     <!-- Q Ring (animated stroke draw) -->
                     <circle class="quizms-anim-ring" cx="40" cy="38" r="18" 
