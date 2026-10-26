@@ -679,9 +679,17 @@ header {
   width: 100%;
   animation: pageContentFadeIn 0.25s ease both;
 }
-/* Auth pages: remove page-content padding so auth-page fills viewport correctly */
+/* Auth pages: remove container constraints so ambient glow and showcase breathe smoothly */
+.container:has(.auth-page) {
+  max-width: 100% !important;
+  padding: 0 !important;
+}
 .page-content:has(.auth-page) {
   padding: 0;
+  width: 100%;
+}
+.page-content:has(.auth-page) > main {
+  width: 100%;
 }
 /* Separate animation without transform — avoids breaking position:fixed descendants */
 @keyframes pageContentFadeIn {
@@ -1094,23 +1102,13 @@ textarea.form-control { resize: vertical; min-height: 90px; }
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2.5rem 1rem;
+  padding: 2.5rem 1.5rem;
   position: relative;
-  overflow: hidden;
+  overflow: visible !important;
 }
-.auth-page::before {
-  content: '';
-  position: absolute; top: -200px; left: -100px;
-  width: 700px; height: 700px;
-  background: radial-gradient(circle, rgba(124,109,248,0.07) 0%, transparent 65%);
-  pointer-events: none;
-}
+.auth-page::before,
 .auth-page::after {
-  content: '';
-  position: absolute; bottom: -200px; right: -100px;
-  width: 600px; height: 600px;
-  background: radial-gradient(circle, rgba(34,211,238,0.05) 0%, transparent 65%);
-  pointer-events: none;
+  display: none !important;
 }
 .auth-container {
   width: 100%; max-width: 420px;
@@ -1120,6 +1118,7 @@ textarea.form-control { resize: vertical; min-height: 90px; }
 .auth-brand {
   text-align: center;
   margin-bottom: 2rem;
+  overflow: visible !important;
 }
 .auth-brand-logo {
   display: inline-flex;
@@ -1145,21 +1144,28 @@ textarea.form-control { resize: vertical; min-height: 90px; }
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 180%;
-  height: 180%;
+  width: 320%;
+  height: 320%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(circle, rgba(102, 58, 243, 0.45) 0%, rgba(56, 189, 248, 0.2) 42%, transparent 72%);
-  filter: blur(18px);
+  background: radial-gradient(circle, rgba(102, 58, 243, 0.50) 0%, rgba(56, 189, 248, 0.22) 36%, rgba(56, 189, 248, 0.06) 56%, transparent 72%);
+  filter: blur(28px);
   border-radius: 50%;
   pointer-events: none;
   z-index: 0;
-  transition: transform 0.3s ease, filter 0.3s ease, opacity 0.3s ease;
+  transition: transform 0.35s ease, filter 0.35s ease, opacity 0.35s ease;
+  will-change: transform, filter;
 }
 .auth-brand-logo:hover .quizms-emblem-ambient-glow,
 .quizms-brand-wrapper:hover .quizms-emblem-ambient-glow {
-  transform: translate(-50%, -50%) scale(1.2);
-  filter: blur(24px);
-  background: radial-gradient(circle, rgba(102, 58, 243, 0.65) 0%, rgba(56, 189, 248, 0.32) 45%, transparent 75%);
+  transform: translate(-50%, -50%) scale(1.15);
+  filter: blur(34px);
+  background: radial-gradient(circle, rgba(102, 58, 243, 0.65) 0%, rgba(56, 189, 248, 0.32) 40%, rgba(56, 189, 248, 0.08) 60%, transparent 75%);
+}
+.navbar-brand .quizms-emblem-ambient-glow {
+  width: 220%;
+  height: 220%;
+  filter: blur(14px);
+  opacity: 0.75;
 }
 .auth-brand h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 0.3rem; }
 .auth-brand p  { color: var(--text-muted); font-size: 0.875rem; margin: 0; }
