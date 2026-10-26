@@ -2230,3 +2230,115 @@ textarea.form-control { resize: vertical; min-height: 90px; }
   vertical-align: -0.25em;
 }
 
+/* ===== MODERN UI/UX AESTHETICS ENHANCEMENTS ===== */
+
+/* Modern Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--r-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Glassmorphism & Micro-interactions */
+.card, .bento-card, .stat-card, .item-card, .quiz-card, .deck-card {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.28s ease,
+              background-color 0.28s ease !important;
+}
+
+.bento-card:hover, .stat-card:hover, .item-card:hover, .quiz-card:hover {
+  transform: translateY(-3px) scale(1.005);
+  box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.45),
+              0 0 20px -2px rgba(102, 58, 243, 0.16);
+  border-color: var(--border-hover) !important;
+}
+
+/* Hero & Kahoot Bento Visual Highlights */
+.bento-card--kahoot {
+  background: linear-gradient(135deg, rgba(22, 28, 40, 0.95), rgba(46, 16, 101, 0.4)) !important;
+  border: 1px solid rgba(168, 85, 247, 0.35) !important;
+  box-shadow: 0 8px 30px rgba(147, 51, 234, 0.12);
+  position: relative;
+}
+.bento-card--kahoot::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(192, 132, 252, 0.6), transparent);
+}
+.bento-card--kahoot:hover {
+  border-color: rgba(192, 132, 252, 0.6) !important;
+  box-shadow: 0 16px 40px rgba(147, 51, 234, 0.24);
+}
+
+/* Button Micro-interactions */
+.btn {
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.15s ease,
+              background-color 0.15s ease,
+              border-color 0.15s ease;
+}
+.btn:active {
+  transform: scale(0.97) !important;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #7c3aed, #6366f1) !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.32);
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, #6d28d9, #4f46e5) !important;
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.48);
+  transform: translateY(-1px);
+}
+
+/* Pulse Dot & Glow Effects */
+.pulse-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #34d399;
+  box-shadow: 0 0 8px #34d399;
+  animation: pulseGlow 2s infinite;
+}
+
+@keyframes pulseGlow {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+
+/* Gamification Streak Glow */
+.quizms-streak-pill {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.12), rgba(249, 115, 22, 0.12));
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.quizms-streak-pill:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 20px rgba(251, 191, 36, 0.2);
+}
+.quizms-flame-icon {
+  color: #f59e0b;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6));
+  animation: flameFlicker 2.5s ease-in-out infinite alternate;
+}
+@keyframes flameFlicker {
+  0% { transform: scale(1) rotate(-2deg); filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.5)); }
+  50% { transform: scale(1.08) rotate(3deg); filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.8)); }
+  100% { transform: scale(1) rotate(-1deg); filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.6)); }
+}
+
+
