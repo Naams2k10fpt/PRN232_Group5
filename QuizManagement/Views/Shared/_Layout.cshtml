@@ -20,20 +20,53 @@
     </script>
 </head>
 <body>
-    <!-- Global Lottie Opening Splash Screen -->
+    <!-- Brand Name & Emblem Opening Animation (Intro Screen) -->
     <div id="quizms-opening-screen" class="quizms-opening-screen" aria-hidden="true">
         <div class="quizms-opening-content">
-            <div class="quizms-lottie-halo">
-                <div id="quizms-lottie-intro" class="quizms-lottie-player-box"></div>
+            <!-- Animated Brand Emblem -->
+            <div class="quizms-brand-anim-wrapper">
+                <svg class="quizms-brand-anim-svg" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="quizms-brand-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#663af3" />
+                            <stop offset="100%" stop-color="#38bdf8" />
+                        </linearGradient>
+                        <filter id="quizms-emblem-glow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#663af3" flood-opacity="0.45" />
+                        </filter>
+                    </defs>
+
+                    <!-- Outer Box -->
+                    <rect class="quizms-anim-box" x="5" y="5" width="70" height="70" rx="20" 
+                          fill="#161c28" stroke="rgba(186, 215, 247, 0.2)" stroke-width="1.8" filter="url(#quizms-emblem-glow)" />
+
+                    <!-- Q Ring (animated stroke draw) -->
+                    <circle class="quizms-anim-ring" cx="40" cy="38" r="18" 
+                            stroke="url(#quizms-brand-gradient)" stroke-width="5" fill="none" stroke-linecap="round" />
+
+                    <!-- Q Tail (animated stroke draw) -->
+                    <path class="quizms-anim-tail" d="M48 46 L58 56" 
+                          stroke="url(#quizms-brand-gradient)" stroke-width="5" stroke-linecap="round" />
+
+                    <!-- Inner Focus Dot (pulsing pop) -->
+                    <circle class="quizms-anim-dot" cx="40" cy="38" r="3.2" fill="#38bdf8" />
+                </svg>
             </div>
-            <div class="quizms-opening-brand mt-3">
-                <h1 class="quizms-opening-title">Quiz<span class="text-gradient">MS</span></h1>
-                <p class="quizms-opening-subtitle">Nền tảng Ôn tập & Đấu trường Trực tuyến</p>
+
+            <!-- Animated Brand Typography -->
+            <div class="quizms-brand-title-box mt-3">
+                <h1 class="quizms-brand-anim-title">
+                    <span class="quizms-text-word quizms-text-quiz">Quiz</span><span class="quizms-text-word quizms-text-ms">MS</span>
+                </h1>
+                <p class="quizms-brand-anim-tagline">Nền tảng Ôn tập & Đấu trường Trực tuyến</p>
             </div>
+
+            <!-- Minimalist Tech Progress Line -->
             <div class="quizms-opening-progress-track">
                 <div id="quizms-opening-progress" class="quizms-opening-progress-bar"></div>
             </div>
-            <div class="quizms-opening-status text-muted small mt-2">
+            
+            <div class="quizms-opening-hint small text-muted mt-2">
                 <span id="quizms-opening-status-text">Khởi tạo hệ thống…</span>
             </div>
         </div>
@@ -192,16 +225,14 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/lib/lottie-web/lottie.min.js" asp-append-version="true"></script>
     <script src="~/js/gamification.js" asp-append-version="true"></script>
     <script>
         (function() {
             var screen = document.getElementById('quizms-opening-screen');
-            var container = document.getElementById('quizms-lottie-intro');
             var progressBar = document.getElementById('quizms-opening-progress');
             var statusText = document.getElementById('quizms-opening-status-text');
 
-            if (!screen || !container) return;
+            if (!screen) return;
 
             var urlParams = new URLSearchParams(window.location.search);
             var forceIntro = urlParams.get('intro') === '1';
@@ -212,53 +243,28 @@
                 return;
             }
 
-            function initLottieIntro() {
-                if (!window.lottie) {
-                    screen.remove();
-                    return;
-                }
+            var progress = 0;
+            var interval = setInterval(function() {
+                progress += 18;
+                if (progressBar) progressBar.style.width = Math.min(progress, 90) + '%';
+                if (progress >= 35 && statusText) statusText.textContent = 'Đồng bộ tài nguyên học tập…';
+                if (progress >= 75 && statusText) statusText.textContent = 'Sẵn sàng trải nghiệm!';
+            }, 100);
 
-                try {
-                    window.lottie.loadAnimation({
-                        container: container,
-                        renderer: 'svg',
-                        loop: true,
-                        autoplay: true,
-                        path: '/assets/lottie/trophy.json'
-                    });
-
-                    var progress = 0;
-                    var interval = setInterval(function() {
-                        progress += 16;
-                        if (progressBar) progressBar.style.width = Math.min(progress, 90) + '%';
-                        if (progress >= 35 && statusText) statusText.textContent = 'Đồng bộ tài nguyên học tập…';
-                        if (progress >= 75 && statusText) statusText.textContent = 'Sẵn sàng trải nghiệm!';
-                    }, 100);
-
-                    function dismissIntro() {
-                        clearInterval(interval);
-                        if (progressBar) progressBar.style.width = '100%';
-                        setTimeout(function() {
-                            screen.classList.add('quizms-opening-hidden');
-                            sessionStorage.setItem('quizms_splash_seen', 'true');
-                            setTimeout(function() {
-                                if (screen.parentNode) screen.parentNode.removeChild(screen);
-                            }, 600);
-                        }, 250);
-                    }
-
-                    setTimeout(dismissIntro, 1200);
-                    screen.addEventListener('click', dismissIntro);
-                } catch(e) {
-                    screen.remove();
-                }
+            function dismissIntro() {
+                clearInterval(interval);
+                if (progressBar) progressBar.style.width = '100%';
+                setTimeout(function() {
+                    screen.classList.add('quizms-opening-hidden');
+                    sessionStorage.setItem('quizms_splash_seen', 'true');
+                    setTimeout(function() {
+                        if (screen.parentNode) screen.parentNode.removeChild(screen);
+                    }, 550);
+                }, 220);
             }
 
-            if (window.lottie) {
-                initLottieIntro();
-            } else {
-                window.addEventListener('DOMContentLoaded', initLottieIntro);
-            }
+            setTimeout(dismissIntro, 1300);
+            screen.addEventListener('click', dismissIntro);
 
             window.replayIntro = function() {
                 sessionStorage.removeItem('quizms_splash_seen');

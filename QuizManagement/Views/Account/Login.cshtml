@@ -80,7 +80,7 @@
             <!-- Right Side: High-Fidelity Feature Showcase (AuthKit Style) -->
             <div class="auth-showcase-panel">
                 <span class="auth-showcase-eyebrow">
-                    <span class="iconify" data-icon="radix-icons:rocket"></span> NỀN TẢNG ÔN THI THẾ HỆ MỚI
+                    <span class="iconify" data-icon="radix-icons:sparkles"></span> NỀN TẢNG ÔN THI THẾ HỆ MỚI
                 </span>
 
                 <h2 class="auth-showcase-title">
@@ -90,10 +90,6 @@
                 <p class="auth-showcase-desc">
                     Hệ thống tích hợp phòng thi đấu trắc nghiệm trực tiếp, phương pháp ghi nhớ thông minh và nhóm học tập tương tác.
                 </p>
-
-                <div class="text-center my-3 py-1">
-                    <div id="lottie-rocket-hero" style="width: 140px; height: 140px; margin: 0 auto; filter: drop-shadow(0 12px 24px rgba(102, 58, 243, 0.4));"></div>
-                </div>
 
                 <div class="auth-feature-cards">
                     <!-- Feature 1: Kahoot Live -->
@@ -158,18 +154,4 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script>
-        (function() {
-            var container = document.getElementById('lottie-rocket-hero');
-            if (container && window.lottie) {
-                window.lottie.loadAnimation({
-                    container: container,
-                    renderer: 'svg',
-                    loop: true,
-                    autoplay: true,
-                    path: '/assets/lottie/rocket.json'
-                });
-            }
-        })();
-    </script>
 }
