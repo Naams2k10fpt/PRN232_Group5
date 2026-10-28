@@ -18,7 +18,7 @@ public sealed record VoiceSignal(string Type, string? Sdp = null, VoiceIceCandid
     {
         "offer" or "answer" => Candidate is null && Sdp is { Length: > 0 and <= 65536 }
             && Sdp.StartsWith("v=0", StringComparison.Ordinal),
-        "ice" => Sdp is null && Candidate is { Candidate.Length: > 0 and <= 4096 }
+        "ice" => Sdp is null && Candidate is { Candidate.Length: >= 0 and <= 4096 }
             && Candidate.SdpMid?.Length is not > 256
             && Candidate.SdpMLineIndex is null or >= 0 and <= 32
             && Candidate.UsernameFragment?.Length is not > 256,

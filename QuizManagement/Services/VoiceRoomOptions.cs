@@ -8,7 +8,7 @@ public sealed class VoiceRoomOptions
     public const string SectionName = "VoiceRooms";
     public int MaxParticipants { get; set; } = 6;
     public List<VoiceIceServer> IceServers { get; set; } =
-        [new(["stun:stun.l.google.com:19302"])];
+        [new(["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302", "stun:stun.cloudflare.com:3478"])];
     public string[] TurnUrls { get; set; } = [];
     public string? TurnSharedSecret { get; set; }
     public bool RelayOnly { get; set; }

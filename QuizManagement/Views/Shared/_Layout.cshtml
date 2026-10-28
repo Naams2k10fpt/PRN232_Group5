@@ -14,8 +14,11 @@
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
     <script>
         (function() {
-            var savedTheme = localStorage.getItem('quizms_theme') || 'dark';
-            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+            var saved = localStorage.getItem('quizms_theme') || 'auto';
+            var isSystemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var effectiveTheme = saved === 'auto' ? (isSystemDark ? 'dark' : 'light') : saved;
+            document.documentElement.setAttribute('data-bs-theme', effectiveTheme);
+            document.documentElement.setAttribute('data-theme-mode', saved);
         })();
     </script>
 </head>
@@ -408,32 +411,63 @@
             requestAnimationFrame(loop);
         })();
 
-        // Theme Mode Toggle Controller
+        // Theme Mode Toggle Controller (auto -> light -> dark -> auto)
         (function() {
             var toggleBtn = document.getElementById('quizms-theme-toggle');
             var icon = document.getElementById('theme-toggle-icon');
 
-            function updateIcon(theme) {
+            function getSavedMode() {
+                return localStorage.getItem('quizms_theme') || 'auto';
+            }
+
+            function applyTheme(mode) {
+                var isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var effective = mode === 'auto' ? (isDark ? 'dark' : 'light') : mode;
+                document.documentElement.setAttribute('data-bs-theme', effective);
+                document.documentElement.setAttribute('data-theme-mode', mode);
+                updateUI(mode);
+            }
+
+            function updateUI(mode) {
                 if (icon) {
-                    icon.innerHTML = theme === 'light'
-                        ? '<span class="iconify" data-icon="radix-icons:sun" style="font-size:16px;"></span>'
-                        : '<span class="iconify" data-icon="radix-icons:moon" style="font-size:16px;"></span>';
+                    if (mode === 'auto') {
+                        icon.innerHTML = '<span class="iconify" data-icon="radix-icons:desktop" style="font-size:16px;"></span>';
+                    } else if (mode === 'light') {
+                        icon.innerHTML = '<span class="iconify" data-icon="radix-icons:sun" style="font-size:16px;"></span>';
+                    } else {
+                        icon.innerHTML = '<span class="iconify" data-icon="radix-icons:moon" style="font-size:16px;"></span>';
+                    }
                 }
                 if (toggleBtn) {
-                    toggleBtn.title = theme === 'light' ? 'Chuyển sang chế độ Tối (Dark Mode)' : 'Chuyển sang chế độ Sáng (Light Mode)';
+                    if (mode === 'auto') {
+                        toggleBtn.title = 'Giao diện: Tự động theo hệ thống (Auto) — Bấm để chuyển sang Sáng';
+                        toggleBtn.setAttribute('aria-label', 'Giao diện tự động theo hệ thống');
+                    } else if (mode === 'light') {
+                        toggleBtn.title = 'Giao diện: Sáng (Light) — Bấm để chuyển sang Tối';
+                        toggleBtn.setAttribute('aria-label', 'Giao diện sáng');
+                    } else {
+                        toggleBtn.title = 'Giao diện: Tối (Dark) — Bấm để chuyển sang Tự động';
+                        toggleBtn.setAttribute('aria-label', 'Giao diện tối');
+                    }
                 }
             }
 
-            var currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'dark';
-            updateIcon(currentTheme);
+            if (window.matchMedia) {
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+                    if (getSavedMode() === 'auto') {
+                        document.documentElement.setAttribute('data-bs-theme', e.matches ? 'dark' : 'light');
+                    }
+                });
+            }
+
+            applyTheme(getSavedMode());
 
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', function() {
-                    var cur = document.documentElement.getAttribute('data-bs-theme') || 'dark';
-                    var next = cur === 'dark' ? 'light' : 'dark';
-                    document.documentElement.setAttribute('data-bs-theme', next);
+                    var current = getSavedMode();
+                    var next = current === 'auto' ? 'light' : current === 'light' ? 'dark' : 'auto';
                     localStorage.setItem('quizms_theme', next);
-                    updateIcon(next);
+                    applyTheme(next);
                 });
             }
         })();

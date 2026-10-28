@@ -12,3 +12,20 @@
 @media(min-width:1500px){.vc-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:700px){#voiceChannelList{display:flex;overflow:auto}.vc-sidebar{flex-shrink:0}.vc-sidebar .vc-sidebar-label{display:none}.vc-sidebar .vc-room-link{width:auto;flex-shrink:0}.vc-header-actions{gap:2px}}
 @media(max-width:700px){.vc-sidebar{padding:0 8px 6px}.vc-sidebar-label,.vc-sidebar-members{display:none}.vc-room-link{padding:6px 10px;font-size:.74rem}.vc-room-link small{display:inline;margin-left:8px;font-size:.6rem}.vc-room-link .vc-icon{width:17px;height:17px}.vc-dock{padding:5px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px}.vc-dock-status{font-size:.61rem}.vc-dock-actions{margin:0;gap:4px}.vc-dock-actions button{font-size:.6rem;padding:4px 6px}.vc-header{padding:13px 14px;gap:8px}.vc-header h2{font-size:.9rem}.vc-header .vc-eyebrow,.vc-badge{display:none}.vc-header p{font-size:.64rem}.vc-back{font-size:.65rem;padding:7px 9px}.vc-lobby{padding:28px 18px;gap:14px}.vc-lobby-icon{width:64px;height:64px;border-radius:21px}.vc-lobby p{font-size:.73rem}.vc-grid{padding:12px;gap:9px}.vc-tile{aspect-ratio:4/5}.vc-grid:has(>.vc-tile:only-child)>.vc-tile{aspect-ratio:4/3}.vc-tile-name{font-size:.59rem;max-width:65%;padding:4px 6px}.vc-tile-state{font-size:.52rem;padding:4px}.vc-tile-caption{left:5px;right:5px;bottom:5px;gap:3px}.vc-control{padding:10px 11px;gap:6px;font-size:.64rem}.vc-control .vc-icon{width:18px;height:18px}.vc-control-group{gap:7px}.vc-controls{padding:12px 8px}.vc-controls p{font-size:.55rem}.vc-playback{margin:0 12px 10px}}
+
+/* WCAG Contrast Overrides */
+.vc-control:not(.is-off):not(.vc-hangup) { color: #c4b5fd; }
+[data-bs-theme="light"] .vc-dock-status { color: #15803d !important; }
+[data-bs-theme="light"] .vc-control:not(.is-off):not(.vc-hangup) {
+  background: rgba(79, 70, 229, 0.1) !important;
+  border-color: #4f46e5 !important;
+  color: #3730a3 !important;
+}
+[data-bs-theme="light"] .vc-lobby-icon {
+  background: rgba(79, 70, 229, 0.1) !important;
+  color: #4f46e5 !important;
+}
+[data-bs-theme="light"] .vc-join {
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+}

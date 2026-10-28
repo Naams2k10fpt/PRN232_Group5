@@ -26,7 +26,8 @@ function initializeVoiceRoom(root) {
     function errorText(error) {
         if (error?.name === 'NotAllowedError') return 'Chưa được cấp quyền mic/camera. Bạn có thể cho phép trong cài đặt của trình duyệt rồi thử lại.';
         if (error?.name === 'NotFoundError') return 'Không tìm thấy mic/camera. Hãy kết nối thiết bị rồi thử lại.';
-        if (error?.name === 'NotReadableError') return 'Mic/camera đang bị ứng dụng khác sử dụng. Hãy đóng ứng dụng đó rồi thử lại.';
+        if (error?.name === 'NotReadableError' || error?.name === 'TrackStartError') return 'Không thể khởi động mic/camera (thiết bị có thể đang bị ứng dụng khác chiếm giữ, hoặc bị khóa quyền riêng tư trong cài đặt Windows / trình duyệt). Hãy thử đóng app khác hoặc mở cài đặt Camera của Windows.';
+        if (error?.name === 'OverconstrainedError') return 'Thiết bị không hỗ trợ định dạng hoặc độ phân giải yêu cầu.';
         if (/SDP|BUNDLE|setLocalDescription|setRemoteDescription/i.test(error?.message || '')) {
             console.warn('Voice negotiation failed:', error);
             return 'Không thể thiết lập âm thanh/hình ảnh với thành viên này. Hãy rời phòng rồi tham gia lại.';
@@ -255,9 +256,22 @@ function initializeVoiceRoom(root) {
                 current.onended = null; current.stop(); localStream.removeTrack(current);
                 await Promise.all([...peers.values()].map(peer => peer.setTrack(kind, null)));
             } else {
-                captured = await navigator.mediaDevices.getUserMedia(kind === 'audio'
-                    ? { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }
-                    : { audio: false, video: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 24, max: 30 } } });
+                if (kind === 'audio') {
+                    captured = await navigator.mediaDevices.getUserMedia({
+                        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+                        video: false
+                    });
+                } else {
+                    try {
+                        captured = await navigator.mediaDevices.getUserMedia({
+                            audio: false,
+                            video: { width: { ideal: 640 }, height: { ideal: 360 } }
+                        });
+                    } catch (videoErr) {
+                        if (videoErr?.name === 'NotAllowedError') throw videoErr;
+                        captured = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+                    }
+                }
                 if (!joined || epoch !== version) { captured.getTracks().forEach(track => track.stop()); return; }
                 const track = captured.getTracks().find(item => item.kind === kind);
                 if (!track) throw new Error('Thiết bị không cung cấp được âm thanh/hình ảnh.');

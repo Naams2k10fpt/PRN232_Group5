@@ -40,3 +40,11 @@ PRN222.md
 docs/tasks/
 .neon
 .env.local
+
+# Local tooling
+.claude/
+.agents/
+GEMINI.md
+friction-log.md
+
+

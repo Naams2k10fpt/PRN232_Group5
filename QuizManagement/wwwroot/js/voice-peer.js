@@ -30,7 +30,7 @@ export class VoicePeer {
             onStream(this.stream);
         };
         pc.onicecandidate = event => {
-            if (event.candidate && !this.closed)
+            if (event.candidate && event.candidate.candidate && !this.closed)
                 sendSignal({ type: 'ice', candidate: event.candidate.toJSON() }).catch(error => this.fail(error));
         };
         pc.onnegotiationneeded = async () => {
@@ -42,11 +42,18 @@ export class VoicePeer {
             } catch (error) { this.fail(error); }
             finally { this.makingOffer = false; }
         };
-        pc.onconnectionstatechange = () => {
+        const updateState = () => {
             if (this.closed) return;
-            onState(pc.connectionState);
-            if (pc.connectionState === 'failed' && this.restarts++ === 0) pc.restartIce();
+            const state = (pc.connectionState === 'failed' || pc.iceConnectionState === 'failed')
+                ? 'failed'
+                : (pc.connectionState === 'connected' || pc.iceConnectionState === 'connected')
+                    ? 'connected'
+                    : pc.connectionState;
+            onState(state);
+            if (state === 'failed' && this.restarts++ === 0) pc.restartIce();
         };
+        pc.onconnectionstatechange = updateState;
+        pc.oniceconnectionstatechange = updateState;
     }
 
     async setTrack(kind, track) {
@@ -100,7 +107,15 @@ export class VoicePeer {
             if (!pc.remoteDescription) {
                 if (this.pendingCandidates.length >= 128) throw new Error('Quá nhiều tín hiệu kết nối.');
                 this.pendingCandidates.push(signal.candidate);
-            } else await pc.addIceCandidate(signal.candidate);
+            } else {
+                try {
+                    await pc.addIceCandidate(signal.candidate);
+                } catch (err) {
+                    if (!this.ignoreOffer) {
+                        // Tolerate duplicate or expired candidates from offer collisions
+                    }
+                }
+            }
         }
     }
 
@@ -110,7 +125,7 @@ export class VoicePeer {
         if (this.closed) return;
         this.closed = true;
         this.pendingCandidates = [];
-        this.pc.ontrack = this.pc.onicecandidate = this.pc.onnegotiationneeded = this.pc.onconnectionstatechange = null;
+        this.pc.ontrack = this.pc.onicecandidate = this.pc.onnegotiationneeded = this.pc.onconnectionstatechange = this.pc.oniceconnectionstatechange = null;
         this.pc.close();
         this.stream.getTracks().forEach(track => track.stop());
     }

@@ -24,6 +24,7 @@ Deployment details: `docs/DEPLOY.md`.
 
 ## Conventions
 
+- **Verification & Quality Self-Scoring (>9/10):** Run `dotnet test` and exercise endpoints via Swagger or curl. Score on the 10-point scale (0–4 requirements, 0–3 response format & error handling, 0–2 non-regression, 0–1 architecture). Iterate if <= 9.
 - Schema changes: add an EF migration in the same commit as the model change. A test fails if the model and
   migrations drift apart.
 - PostgreSQL compares text case-sensitively: look users/subjects/decks up by the `Normalized*` columns
