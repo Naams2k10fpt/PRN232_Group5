@@ -27,6 +27,35 @@
         element.addEventListener('click', () => Promise.resolve(action()).catch(showError));
         return element;
     }
+    function actionButton(icon, title, action, className = '') {
+        const paths = {
+            reply: 'M9 10 4 15l5 5M4 15h10a6 6 0 0 0 0-12h-2',
+            smile: 'M8 14s1.5 2 4 2 4-2 4-2M8 8h.01M16 8h.01',
+            copy: 'M9 8h10v13H9zM5 16H3V3h10v2',
+            edit: 'm16 3 5 5-12 12-6 1 1-6zM14 5l5 5',
+            delete: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7'
+        };
+        const result = button('', title, action, className);
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('class', 'cc-action-icon'); svg.setAttribute('aria-hidden', 'true');
+        if (icon === 'smile') {
+            const circle = document.createElementNS(svg.namespaceURI, 'circle');
+            circle.setAttribute('cx', '12'); circle.setAttribute('cy', '12'); circle.setAttribute('r', '9'); svg.append(circle);
+        }
+        const path = document.createElementNS(svg.namespaceURI, 'path'); path.setAttribute('d', paths[icon]); svg.append(path);
+        result.append(svg); return result;
+    }
+    function avatar(name, url) {
+        const initial = Array.from(name.trim())[0]?.toUpperCase() || '?';
+        const result = node('div', 'cc-avatar', initial);
+        result.dataset.tone = String(Array.from(name).reduce((sum, char) => sum + char.codePointAt(0), 0) % 4);
+        result.setAttribute('aria-hidden', 'true');
+        if (url && (/^\/(?!\/)/.test(url) || /^https:\/\//i.test(url))) {
+            const image = node('img'); image.src = url; image.alt = ''; image.loading = 'lazy';
+            image.addEventListener('error', () => image.remove()); result.append(image);
+        }
+        return result;
+    }
     function showError(error) { $('chatAlert').hidden = false; $('chatAlert').textContent = error.message || String(error); }
     async function api(path, options = {}) {
         const headers = { RequestVerificationToken: csrf, ...options.headers };
@@ -146,15 +175,17 @@
     }
     function renderMessage(message) {
         if (message.kind !== 0) return node('div', 'cc-system', `${message.senderName} ${message.kind === 1 ? 'đã vào nhóm' : 'đã rời nhóm'}`);
-        const row = node('article', 'cc-message'); row.dataset.messageId = message.id;
-        row.append(node('div', 'cc-avatar', Array.from(message.senderName.trim())[0]?.toUpperCase() || '?'));
+        const row = node('article', 'cc-message'); row.dataset.messageId = message.id; row.tabIndex = 0;
+        row.append(avatar(message.senderName, message.senderAvatarUrl));
         const body = node('div', 'cc-message-body'), meta = node('div', 'cc-message-meta');
         const timestamp = node('time', 'cc-message-time', new Date(message.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         timestamp.dateTime = message.sentAt; timestamp.title = new Date(message.sentAt).toLocaleString();
         meta.append(node('span', 'cc-message-author', message.senderName), timestamp); body.append(meta);
         if (message.reply) {
             const target = messages.get(message.reply.id), reference = target && (target.revision || 0) >= (message.reply.revision || 0) ? { senderName: target.senderName, content: target.deletedAt ? 'Tin nhắn đã bị xóa' : target.content } : message.reply;
-            body.append(node('div', 'cc-reply', `↪ ${reference.senderName}: ${reference.content || 'File đính kèm'}`));
+            const preview = node('div', 'cc-reply');
+            preview.append(node('strong', '', reference.senderName), node('span', '', reference.content || 'File đính kèm'));
+            body.append(preview);
         }
         if (message.deletedAt) { body.append(node('div', 'cc-message-text cc-deleted', 'Tin nhắn đã bị xóa')); row.append(body); return row; }
         const content = node('div', 'cc-message-text', message.content);
@@ -167,23 +198,24 @@
         }
         body.append(reactions); row.append(body);
         const tools = node('div', 'cc-message-tools');
-        tools.append(button('↪', 'Trả lời', () => { editing = null; reply = message; renderComposer(); input.focus(); }));
-        tools.append(button('☺', 'Thả reaction', () => {
+        tools.setAttribute('role', 'group'); tools.setAttribute('aria-label', 'Thao tác tin nhắn');
+        tools.append(actionButton('reply', 'Trả lời', () => { editing = null; reply = message; renderComposer(); input.focus(); }));
+        tools.append(actionButton('smile', 'Thả reaction', () => {
             const current = body.querySelector('.cc-emoji-picker'); if (current) { current.remove(); return; }
             const picker = node('div', 'cc-emoji-picker');
             for (const emoji of emojis) picker.append(button(emoji, emoji, async () => { await react(message, emoji); picker.remove(); }));
             body.append(picker);
         }));
-        tools.append(button('Copy', 'Sao chép', () => navigator.clipboard.writeText(message.content)));
-        if (message.senderUserId === userId) tools.append(button('Sửa', 'Sửa tin nhắn', () => {
+        tools.append(actionButton('copy', 'Sao chép', () => navigator.clipboard.writeText(message.content)));
+        if (message.senderUserId === userId) tools.append(actionButton('edit', 'Sửa tin nhắn', () => {
             if (sending) return;
             beforeEdit = { text: input.value, files, reply }; editing = message; reply = null; input.value = message.content; renderComposer(); input.focus();
         }));
-        if (message.senderUserId === userId || role >= 1) tools.append(button('Xóa', 'Xóa tin nhắn', async () => {
+        if (message.senderUserId === userId || role >= 1) tools.append(actionButton('delete', 'Xóa tin nhắn', async () => {
             if (await QuizModal.confirm({ title: 'Xóa tin nhắn?', message: 'Nội dung và file đính kèm sẽ bị xóa.', confirmClass: 'btn-danger', confirmText: 'Xóa' })) {
                 merge([await api(`${base}/${message.channelId}/messages/${message.id}`, { method: 'DELETE' })]); renderMessages();
             }
-        }));
+        }, 'is-danger'));
         row.append(tools); return row;
     }
     function renderMessages() {
@@ -267,7 +299,7 @@
         $('memberList').replaceChildren(...[...members].sort((a, b) => Number(online.has(b.userId)) - Number(online.has(a.userId)) || b.role - a.role).map(member => {
             const row = node('div', 'cc-member'), info = node('div', 'cc-member-info');
             info.append(node('strong', '', member.username), node('small', '', member.role === 2 ? 'Chủ phòng' : member.role === 1 ? 'Người quản lý' : 'Thành viên'));
-            row.append(node('span', 'cc-avatar', Array.from(member.username)[0]?.toUpperCase() || '?'), info, node('span', `cc-presence-dot${online.has(member.userId) ? ' is-online' : website.has(member.userId) ? ' is-waiting' : ''}`)); return row;
+            row.append(avatar(member.username), info, node('span', `cc-presence-dot${online.has(member.userId) ? ' is-online' : website.has(member.userId) ? ' is-waiting' : ''}`)); return row;
         }));
     }
     function applyPresence(snapshot) { if (snapshot.groupId !== groupId || snapshot.version < presenceVersion) return; presenceVersion = snapshot.version; online = new Set(snapshot.onlineUserIds); renderMembers(); }

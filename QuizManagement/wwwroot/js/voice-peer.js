@@ -13,12 +13,16 @@ export class VoicePeer {
         this.queue = Promise.resolve();
         this.restarts = 0;
         this.stream = new Stream();
-        const pc = this.pc = new PeerConnection(configuration);
-        // Reserve both media sections even for a listener who has not enabled devices.
-        this.senders = {
-            audio: pc.addTransceiver('audio', { direction: 'sendrecv' }).sender,
-            video: pc.addTransceiver('video', { direction: 'sendrecv' }).sender
-        };
+        const pc = this.pc = new PeerConnection({ ...configuration, bundlePolicy: 'max-bundle' });
+        this.tracks = { audio: null, video: null };
+        this.senders = {};
+        // Only one side creates the initial media sections. Creating them on both
+        // sides before an offer is applied can leave duplicate, unassociated
+        // transceivers after rollback, with conflicting bundled header extensions.
+        if (!this.polite) {
+            for (const kind of ['audio', 'video'])
+                this.senders[kind] = pc.addTransceiver(kind, { direction: 'sendrecv' }).sender;
+        }
         pc.ontrack = event => {
             if (this.closed) return;
             if (!this.stream.getTrackById(event.track.id)) this.stream.addTrack(event.track);
@@ -30,6 +34,7 @@ export class VoicePeer {
                 sendSignal({ type: 'ice', candidate: event.candidate.toJSON() }).catch(error => this.fail(error));
         };
         pc.onnegotiationneeded = async () => {
+            if (this.closed || (this.polite && !pc.remoteDescription)) return;
             try {
                 this.makingOffer = true;
                 await pc.setLocalDescription();
@@ -46,7 +51,9 @@ export class VoicePeer {
 
     async setTrack(kind, track) {
         if (this.closed) return;
+        this.tracks[kind] = track;
         const sender = this.senders[kind];
+        if (!sender) return; // The answering side waits for the initial offer.
         try { await sender.replaceTrack(track); }
         catch (error) { if (!this.closed) throw error; }
         if (kind === 'video' && track && !this.closed) {
@@ -78,6 +85,14 @@ export class VoicePeer {
             if (this.closed) return;
             for (const candidate of this.pendingCandidates.splice(0)) await pc.addIceCandidate(candidate);
             if (signal.type === 'offer') {
+                for (const transceiver of pc.getTransceivers()) {
+                    const kind = transceiver.receiver.track.kind;
+                    if (!this.senders[kind]) {
+                        this.senders[kind] = transceiver.sender;
+                        transceiver.direction = 'sendrecv';
+                        await this.setTrack(kind, this.tracks[kind]);
+                    }
+                }
                 await pc.setLocalDescription();
                 if (!this.closed) await this.sendSignal({ type: pc.localDescription.type, sdp: pc.localDescription.sdp });
             }
