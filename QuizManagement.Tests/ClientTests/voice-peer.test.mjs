@@ -11,6 +11,7 @@ class Stream {
     addTrack(track) { this.tracks.push(track); }
 }
 class Connection {
+    constructor(configuration) { this.configuration = configuration; }
     signalingState = 'stable';
     connectionState = 'new';
     localDescription = null;
@@ -24,14 +25,18 @@ class Connection {
             async replaceTrack(track) { this.track = track; },
             getParameters() { return this.parameters; },
             async setParameters(parameters) { this.parameters = parameters; } };
-        this.transceivers.push({ kind, options, sender });
+        this.transceivers.push({ kind, options, sender, receiver: { track: { kind } } });
         return { sender };
     }
+    getTransceivers() { return this.transceivers; }
     async setLocalDescription() {
         this.localDescription = { type: this.signalingState === 'have-remote-offer' ? 'answer' : 'offer', sdp: 'v=0' };
         this.signalingState = this.localDescription.type === 'offer' ? 'have-local-offer' : 'stable';
     }
     async setRemoteDescription(description) {
+        if (description.type === 'offer' && !this.transceivers.length) {
+            this.addTransceiver('audio', {}); this.addTransceiver('video', {});
+        }
         this.remoteDescription = description;
         this.signalingState = description.type === 'offer' ? 'have-remote-offer' : 'stable';
     }
@@ -39,7 +44,7 @@ class Connection {
     restartIce() { this.restarts++; }
     close() { this.closed = true; }
 }
-function fixture(localId = 'b', remoteId = 'a') {
+function fixture(localId = 'a', remoteId = 'b') {
     const signals = [], errors = [], streams = [], states = [];
     const peer = new VoicePeer({ localId, remoteId, configuration: {}, PeerConnection: Connection, Stream,
         sendSignal: async signal => signals.push(signal), onError: error => errors.push(error),
@@ -49,8 +54,25 @@ function fixture(localId = 'b', remoteId = 'a') {
 
 test('a listener reserves audio and video so later device changes do not need a new call', () => {
     const { pc } = fixture();
+    assert.equal(pc.configuration.bundlePolicy, 'max-bundle');
     assert.deepEqual(pc.transceivers.map(item => [item.kind, item.options.direction]), [['audio', 'sendrecv'], ['video', 'sendrecv']]);
     assert.equal(pc.transceivers.every(item => item.sender.track === null), true);
+});
+test('the answering listener waits for the offer and reuses its media sections with pending tracks', async () => {
+    const { peer, pc, signals } = fixture('b', 'a');
+    const mic = { id: 'mic' }, camera = { id: 'camera' };
+    await peer.setTrack('audio', mic); await peer.setTrack('video', camera);
+    assert.equal(pc.transceivers.length, 0);
+    await pc.onnegotiationneeded();
+    assert.equal(signals.length, 0);
+    await peer.receive({ type: 'offer', sdp: 'v=0' });
+    assert.equal(pc.transceivers.length, 2);
+    assert.equal(peer.senders.audio.track, mic);
+    assert.equal(peer.senders.video.track, camera);
+    assert.ok(pc.transceivers.every(item => item.direction === 'sendrecv'));
+    assert.equal(signals[0].type, 'answer');
+    await peer.receive({ type: 'offer', sdp: 'v=0 restart' });
+    assert.equal(pc.transceivers.length, 2);
 });
 test('ICE received before an SDP description is buffered, then applied in order', async () => {
     const { peer, pc, signals } = fixture();

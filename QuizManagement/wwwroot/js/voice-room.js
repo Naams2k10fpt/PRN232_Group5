@@ -15,6 +15,7 @@ function initializeVoiceRoom(root) {
     let configuration = null, epoch = 0, startTimer = null;
     let pendingSignals = [], joinIntent = null;
     let voiceChannels = [], selectedChannelId = null, joinedChannelId = null;
+    const connectionFailureMessage = 'Không thể kết nối với một thành viên. Hãy kiểm tra mạng và thử vào lại phòng.';
 
     function element(tag, className, text) {
         const node = document.createElement(tag);
@@ -26,6 +27,10 @@ function initializeVoiceRoom(root) {
         if (error?.name === 'NotAllowedError') return 'Chưa được cấp quyền mic/camera. Bạn có thể cho phép trong cài đặt của trình duyệt rồi thử lại.';
         if (error?.name === 'NotFoundError') return 'Không tìm thấy mic/camera. Hãy kết nối thiết bị rồi thử lại.';
         if (error?.name === 'NotReadableError') return 'Mic/camera đang bị ứng dụng khác sử dụng. Hãy đóng ứng dụng đó rồi thử lại.';
+        if (/SDP|BUNDLE|setLocalDescription|setRemoteDescription/i.test(error?.message || '')) {
+            console.warn('Voice negotiation failed:', error);
+            return 'Không thể thiết lập âm thanh/hình ảnh với thành viên này. Hãy rời phòng rồi tham gia lại.';
+        }
         return (error?.message || String(error)).replace(/^.*HubException:\s*/, '');
     }
     function showError(error) { $('voiceAlert').textContent = errorText(error); $('voiceAlert').hidden = false; }
@@ -173,7 +178,9 @@ function initializeVoiceRoom(root) {
                     if (version !== epoch) return;
                     const tile = tiles.get(member.connectionId);
                     if (tile) { tile.state = state; tile.tile.classList.toggle('is-connected', state === 'connected'); tile.tile.classList.toggle('is-failed', state === 'failed'); renderTiles(); }
-                    if (state === 'failed') showError(new Error('Không thể kết nối với một thành viên. Hãy thử vào lại phòng; mạng này có thể cần máy chủ TURN.'));
+                    if (state === 'failed') showError(new Error(connectionFailureMessage));
+                    if (state === 'connected' && ![...tiles.values()].some(item => item.state === 'failed')
+                        && $('voiceAlert').textContent === connectionFailureMessage) clearError();
                 },
                 onError: error => { if (joined && version === epoch) showError(error); }
             });
@@ -204,7 +211,7 @@ function initializeVoiceRoom(root) {
                 if (version !== epoch || joinIntent !== intent) return;
                 participantId = result.participantId;
                 joinedChannelId = result.channelId;
-                configuration = { iceServers: result.iceServers, iceTransportPolicy: result.relayOnly ? 'relay' : 'all' };
+                configuration = { bundlePolicy: 'max-bundle', iceServers: result.iceServers, iceTransportPolicy: result.relayOnly ? 'relay' : 'all' };
                 joined = true; joining = false;
                 // A broadcast can arrive before the Join response; retain the newest roster.
                 applyRoom(result.room.version >= room.version ? result.room : room);
@@ -334,7 +341,7 @@ function initializeVoiceRoom(root) {
         try {
             const result = await connection.invoke('IceConfiguration', groupId);
             if (!joined || version !== epoch) return;
-            configuration = { iceServers: result.iceServers, iceTransportPolicy: result.relayOnly ? 'relay' : 'all' };
+            configuration = { bundlePolicy: 'max-bundle', iceServers: result.iceServers, iceTransportPolicy: result.relayOnly ? 'relay' : 'all' };
             peers.forEach(peer => peer.pc.setConfiguration(configuration));
         } catch (error) { showError(error); }
     }

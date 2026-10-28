@@ -68,6 +68,31 @@ dotnet test QuizManagement.Tests --filter "FullyQualifiedName~Voice|FullyQualifi
 node --test QuizManagement.Tests/ClientTests/*.test.mjs
 ```
 
+The initial offer is created by one elected peer. The answering peer reuses the
+offer's audio/video transceivers instead of reserving a second pair before the
+offer arrives. Both use `max-bundle`, including after TURN credential refresh.
+This avoids duplicated media sections during initial negotiation/rollback.
+
+For an optional real-browser regression check, install Playwright in your test
+environment (make its Node module available through `NODE_PATH` if installed
+outside this repository), then run with Chrome installed:
+
+```powershell
+node QuizManagement.Tests/ClientTests/voice-peer.browser.cjs
+# Also verify with Edge:
+$env:VOICE_BROWSER_CHANNEL = 'msedge'
+node QuizManagement.Tests/ClientTests/voice-peer.browser.cjs
+Remove-Item Env:VOICE_BROWSER_CHANNEL
+```
+
+This uses synthetic audio/canvas video and local signaling. It verifies listeners
+joining simultaneously, exactly two media sections, bidirectional audio/video
+RTP, device-track replacement, configuration refresh and simultaneous ICE
+restarts. It requires no account/database and sends no traffic to production.
+The old implementation timed out in the initial listener connection on Chrome
+156; the fixed implementation passes on Chrome 156 and Edge 156. This does not
+reproduce every browser-specific SDP error or validate TURN/NAT traversal.
+
 For a local browser check with synthetic devices, run
 `node QuizManagement.Tests/ClientTests/create-voice-preview.mjs`, then open
 `http://localhost:5039/__voice-preview.html` with the development app running. It uses the real UI and
