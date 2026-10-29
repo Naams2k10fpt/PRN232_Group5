@@ -78,11 +78,11 @@
                             <td>
                                 @if (user.IsDisabled)
                                 {
-                                    <span class="badge" style="background:rgba(248,113,113,.15);color:var(--danger);border:1px solid rgba(248,113,113,.25);">Bị khóa</span>
+                                    <span class="badge badge-status-disabled">Bị khóa</span>
                                 }
                                 else
                                 {
-                                    <span class="badge" style="background:rgba(52,211,153,.15);color:var(--success);border:1px solid rgba(52,211,153,.25);">Hoạt động</span>
+                                    <span class="badge badge-status-active">Hoạt động</span>
                                 }
                             </td>
                             <td style="color:var(--text-muted);font-size:.8rem;">@VietnamTime.FromUtc(user.CreatedAt).ToString("dd/MM/yyyy")</td>
