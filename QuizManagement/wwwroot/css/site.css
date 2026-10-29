@@ -2323,19 +2323,22 @@ textarea.form-control { resize: vertical; min-height: 90px; }
 }
 
 /* Hero & Kahoot Bento Visual Highlights */
-.bento-card--kahoot {
+[data-bs-theme="dark"] .bento-card--kahoot,
+:root:not([data-bs-theme="light"]) .bento-card--kahoot {
   background: linear-gradient(135deg, rgba(22, 28, 40, 0.95), rgba(46, 16, 101, 0.4)) !important;
   border: 1px solid rgba(168, 85, 247, 0.35) !important;
   box-shadow: 0 8px 30px rgba(147, 51, 234, 0.12);
   position: relative;
 }
-.bento-card--kahoot::after {
+[data-bs-theme="dark"] .bento-card--kahoot::after,
+:root:not([data-bs-theme="light"]) .bento-card--kahoot::after {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; height: 1px;
   background: linear-gradient(90deg, transparent, rgba(192, 132, 252, 0.6), transparent);
 }
-.bento-card--kahoot:hover {
+[data-bs-theme="dark"] .bento-card--kahoot:hover,
+:root:not([data-bs-theme="light"]) .bento-card--kahoot:hover {
   border-color: rgba(192, 132, 252, 0.6) !important;
   box-shadow: 0 16px 40px rgba(147, 51, 234, 0.24);
 }
@@ -2720,4 +2723,45 @@ textarea.form-control { resize: vertical; min-height: 90px; }
 .btn:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
   outline: 2px solid var(--accent) !important;
   outline-offset: 2px !important;
+}
+
+/* Kahoot Live Arena Bento Card in Light Mode (WCAG AAA Contrast) */
+[data-bs-theme="light"] .bento-card--kahoot {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.06) 0%, rgba(255, 255, 255, 0.98) 100%) !important;
+  background-color: #ffffff !important;
+  border: 1px solid rgba(79, 70, 229, 0.25) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), 0 0 16px rgba(79, 70, 229, 0.08) !important;
+  color: #0f172a !important;
+  position: relative;
+}
+[data-bs-theme="light"] .bento-card--kahoot::after {
+  display: none !important;
+}
+[data-bs-theme="light"] .bento-card--kahoot:hover {
+  border-color: rgba(79, 70, 229, 0.45) !important;
+  box-shadow: 0 12px 32px rgba(79, 70, 229, 0.16) !important;
+}
+[data-bs-theme="light"] .bento-card--kahoot h3,
+[data-bs-theme="light"] .bento-card--kahoot .h5 {
+  color: #0f172a !important;
+}
+[data-bs-theme="light"] .bento-card--kahoot p,
+[data-bs-theme="light"] .bento-card--kahoot .text-muted {
+  color: #334155 !important;
+}
+[data-bs-theme="light"] .bento-card--kahoot .iconify.text-warning {
+  color: #92400e !important;
+}
+[data-bs-theme="light"] .bento-card--kahoot .btn-outline-secondary {
+  color: #334155 !important;
+  border-color: rgba(15, 23, 42, 0.3) !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+}
+[data-bs-theme="light"] .bento-card--kahoot .btn-outline-secondary:hover {
+  background: rgba(15, 23, 42, 0.08) !important;
+  color: #0f172a !important;
+}
+[data-bs-theme="light"] .pulse-dot {
+  background-color: #15803d !important;
+  box-shadow: 0 0 6px #15803d !important;
 }
