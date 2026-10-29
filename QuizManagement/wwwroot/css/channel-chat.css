@@ -125,6 +125,8 @@ body:has(.channel-chat) > .quizms-ambient-bg { display: none; }
 .cc-composer { gap: 10px; padding: 9px 12px; border-color: transparent; background: var(--cc-input); transition: border-color .15s; }
 .cc-composer:focus-within { border-color: var(--cc-accent); }
 .cc-composer textarea { font: inherit; line-height: 1.6; padding: 6px 0; }
+/* The composer border provides focus feedback; avoid a second ring from site.css. */
+.cc-composer textarea:focus-visible { outline: none !important; outline-offset: 0 !important; }
 .cc-composer textarea::placeholder { color: var(--cc-faint); }
 .cc-attach { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 35px; padding: 0; font-size: 25px !important; }
 .cc-send { min-height: 34px; padding: 7px 14px; background: #7565df; font-size: 12px !important; font-weight: 650 !important; }
