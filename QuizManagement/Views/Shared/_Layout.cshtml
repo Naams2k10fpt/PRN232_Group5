@@ -58,21 +58,21 @@
     </div>
 
     <header>
-        <nav class="navbar navbar-expand-sm">
+        <nav class="navbar @(User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Mentor) ? "navbar-expand-xxl" : "navbar-expand-lg")">
             <div class="container-fluid">
                 <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
                     <partial name="_BrandLogo" view-data='@(new ViewDataDictionary(ViewData) { { "Size", 30 }, { "ShowText", true } })' />
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-                        data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
+                        data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Mở menu điều hướng">
                     <span class="navbar-toggler-icon"></span>
                 </button>
 @{
     var currentCtrl = ViewContext.RouteData.Values["Controller"]?.ToString() ?? "";
     var currentAct = ViewContext.RouteData.Values["Action"]?.ToString() ?? "";
 }
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                <div id="navbarSupportedContent" class="navbar-collapse collapse justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
                             <a class="nav-link @(currentCtrl.Equals("Home", StringComparison.OrdinalIgnoreCase) && currentAct.Equals("Index", StringComparison.OrdinalIgnoreCase) ? "active" : "")" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
@@ -113,7 +113,7 @@
                             }
                         }
                     </ul>
-                    <ul class="navbar-nav align-items-center">
+                    <ul class="navbar-nav flex-row flex-shrink-0 align-items-center">
                         <li class="nav-item me-2">
                             <button id="quizms-theme-toggle" class="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center"
                                     type="button" title="Chuyển chế độ Sáng / Tối" style="width: 36px; height: 36px; padding: 0;">
@@ -128,7 +128,7 @@
                                     <span class="nav-avatar">
                                         @(User.Identity.Name?.Length > 0 ? User.Identity.Name[0].ToString().ToUpper() : "U")
                                     </span>
-                                    <span class="d-none d-md-inline">@User.Identity.Name</span>
+                                    <span class="nav-username d-none d-md-inline">@User.Identity.Name</span>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="background:var(--bg-elevated); border:1px solid var(--border)!important;">
                                     <li>
