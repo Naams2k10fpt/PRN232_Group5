@@ -2421,17 +2421,14 @@ textarea.form-control { resize: vertical; min-height: 90px; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.98) 0%, rgba(10, 15, 29, 1) 100%);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), transform 0.55s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.55s;
+  background: #000000;
+  transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.55s;
   pointer-events: all;
   cursor: pointer;
 }
 
 .quizms-opening-screen.quizms-opening-hidden {
   opacity: 0;
-  transform: scale(1.05);
   visibility: hidden;
   pointer-events: none;
 }

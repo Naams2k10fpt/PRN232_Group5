@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="quizms-brand-primary" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#663af3" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+  </defs>
+  <!-- Clean Geometric Q Monogram Ring -->
+  <circle cx="32" cy="30" r="16" stroke="url(#quizms-brand-primary)" stroke-width="5.5" fill="none" stroke-linecap="round" />
+  <!-- Clean Geometric Q Tail (45-degree angled stroke) -->
+  <path d="M39 37 L49 47" stroke="url(#quizms-brand-primary)" stroke-width="5.5" stroke-linecap="round" />
+  <!-- Inner Focus Dot -->
+  <circle cx="32" cy="30" r="3.2" fill="#38bdf8" />
+</svg>

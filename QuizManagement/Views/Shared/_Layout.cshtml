@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/liquid-glass-logo.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/QuizManagement.styles.css" asp-append-version="true" />
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
@@ -23,53 +24,17 @@
     </script>
 </head>
 <body>
-    <!-- Brand Name & Emblem Opening Animation (Intro Screen) -->
+    <!-- ReactDrops Liquid Glass Logo Opening Screen -->
     <div id="quizms-opening-screen" class="quizms-opening-screen" aria-hidden="true">
-        <div class="quizms-opening-content">
-            <!-- Animated Brand Emblem with Expansive Diffuse Glow -->
-            <div class="quizms-brand-anim-wrapper">
-                <div class="quizms-brand-anim-glow" aria-hidden="true"></div>
-                <svg class="quizms-brand-anim-svg" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="position:relative; z-index:1; overflow:visible;">
-                    <defs>
-                        <linearGradient id="quizms-brand-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stop-color="#663af3" />
-                            <stop offset="100%" stop-color="#38bdf8" />
-                        </linearGradient>
-                    </defs>
-
-                    <!-- Outer Box -->
-                    <rect class="quizms-anim-box" x="5" y="5" width="70" height="70" rx="20" 
-                          fill="#161c28" stroke="rgba(186, 215, 247, 0.2)" stroke-width="1.8" />
-
-                    <!-- Q Ring (animated stroke draw) -->
-                    <circle class="quizms-anim-ring" cx="40" cy="38" r="18" 
-                            stroke="url(#quizms-brand-gradient)" stroke-width="5" fill="none" stroke-linecap="round" />
-
-                    <!-- Q Tail (animated stroke draw) -->
-                    <path class="quizms-anim-tail" d="M48 46 L58 56" 
-                          stroke="url(#quizms-brand-gradient)" stroke-width="5" stroke-linecap="round" />
-
-                    <!-- Inner Focus Dot (pulsing pop) -->
-                    <circle class="quizms-anim-dot" cx="40" cy="38" r="3.2" fill="#38bdf8" />
-                </svg>
-            </div>
-
-            <!-- Animated Brand Typography -->
-            <div class="quizms-brand-title-box mt-3">
-                <h1 class="quizms-brand-anim-title">
-                    <span class="quizms-text-word quizms-text-quiz">Quiz</span><span class="quizms-text-word quizms-text-ms">MS</span>
-                </h1>
-                <p class="quizms-brand-anim-tagline">Nền tảng Ôn tập & Đấu trường Trực tuyến</p>
-            </div>
-
-            <!-- Minimalist Tech Progress Line -->
-            <div class="quizms-opening-progress-track">
-                <div id="quizms-opening-progress" class="quizms-opening-progress-bar"></div>
-            </div>
-            
-            <div class="quizms-opening-hint small text-muted mt-2">
-                <span id="quizms-opening-status-text">Khởi tạo hệ thống…</span>
-            </div>
+        <div id="quizms-liquid-glass-logo"
+             class="liquid-glass-logo"
+             style="height: 480px; background: #000000;"
+             role="img"
+             aria-label="Logo">
+            <canvas aria-hidden="true"></canvas>
+            <span class="liquid-glass-logo-fallback" aria-hidden="true" style="display: none;">
+                <img src="/logo.svg" alt="" style="width: 184.32px; height: 184.32px; max-width: 80%; max-height: 80%; object-fit: contain;" />
+            </span>
         </div>
     </div>
 
@@ -228,13 +193,13 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/gamification.js" asp-append-version="true"></script>
     <script src="~/js/password-toggle.js" asp-append-version="true"></script>
+    <script src="~/js/liquid-glass-logo.js" asp-append-version="true"></script>
     <script>
         (function() {
             var screen = document.getElementById('quizms-opening-screen');
-            var progressBar = document.getElementById('quizms-opening-progress');
-            var statusText = document.getElementById('quizms-opening-status-text');
+            var logoContainer = document.getElementById('quizms-liquid-glass-logo');
 
-            if (!screen) return;
+            if (!screen || !logoContainer) return;
 
             var urlParams = new URLSearchParams(window.location.search);
             var forceIntro = urlParams.get('intro') === '1';
@@ -245,27 +210,34 @@
                 return;
             }
 
-            var progress = 0;
-            var interval = setInterval(function() {
-                progress += 18;
-                if (progressBar) progressBar.style.width = Math.min(progress, 90) + '%';
-                if (progress >= 35 && statusText) statusText.textContent = 'Đồng bộ tài nguyên học tập…';
-                if (progress >= 75 && statusText) statusText.textContent = 'Sẵn sàng trải nghiệm!';
-            }, 100);
-
-            function dismissIntro() {
-                clearInterval(interval);
-                if (progressBar) progressBar.style.width = '100%';
-                setTimeout(function() {
-                    screen.classList.add('quizms-opening-hidden');
-                    sessionStorage.setItem('quizms_splash_seen', 'true');
-                    setTimeout(function() {
-                        if (screen.parentNode) screen.parentNode.removeChild(screen);
-                    }, 550);
-                }, 220);
+            var instance = null;
+            if (window.LiquidGlassLogo && typeof window.LiquidGlassLogo.mount === 'function') {
+                instance = window.LiquidGlassLogo.mount(logoContainer, {
+                    logo: '/logo.svg',
+                    ending: 'logo',
+                    height: 480
+                });
+                window.__quizmsLiquidGlass = instance;
             }
 
-            setTimeout(dismissIntro, 1300);
+            var dismissed = false;
+            function dismissIntro() {
+                if (dismissed) return;
+                dismissed = true;
+                screen.classList.add('quizms-opening-hidden');
+                sessionStorage.setItem('quizms_splash_seen', 'true');
+                setTimeout(function() {
+                    if (instance && typeof instance.dispose === 'function') {
+                        instance.dispose();
+                    }
+                    if (screen.parentNode) {
+                        screen.parentNode.removeChild(screen);
+                    }
+                }, 550);
+            }
+
+            var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            setTimeout(dismissIntro, reduced ? 900 : 2500);
             screen.addEventListener('click', dismissIntro);
 
             window.replayIntro = function() {
