@@ -1,4 +1,5 @@
 import { VoicePeer } from './voice-peer.js';
+import { VoiceActivity } from './voice-activity.js';
 
 const root = document.getElementById('channelChat');
 if (root) initializeVoiceRoom(root);
@@ -9,6 +10,12 @@ function initializeVoiceRoom(root) {
     const main = root.querySelector('.cc-main');
     const connection = new signalR.HubConnectionBuilder().withUrl('/hubs/voice').withAutomaticReconnect().build();
     const peers = new Map(), tiles = new Map(), busyMedia = new Set();
+    const activity = new VoiceActivity((id, level) => {
+        const tile = tiles.get(id)?.tile;
+        if (!tile) return;
+        tile.classList.toggle('is-speaking', level > 0);
+        tile.style.setProperty('--voice-level', level.toFixed(2));
+    });
     const localStream = new MediaStream();
     let room = { groupId, participants: [], maxParticipants: 6, version: -1 };
     let ready = false, joining = false, joined = false, stopped = false, participantId = null;
@@ -115,6 +122,7 @@ function initializeVoiceRoom(root) {
         const local = member.connectionId === participantId;
         const tile = element('article', `vc-tile${local ? ' is-local is-connected' : ''}`);
         const video = element('video');
+        video.dataset.participantId = member.connectionId;
         video.autoplay = true; video.playsInline = true; video.muted = local;
         const avatar = element('div', 'vc-tile-avatar', Array.from(member.displayName)[0]?.toUpperCase() || '?');
         const caption = element('div', 'vc-tile-caption');
@@ -130,6 +138,7 @@ function initializeVoiceRoom(root) {
         const participants = room.participants.filter(member => member.channelId === joinedChannelId);
         for (const [id, tile] of tiles) {
             if (!participants.some(member => member.connectionId === id)) {
+                activity.remove(id);
                 tile.video.srcObject = null; tile.tile.remove(); tiles.delete(id);
             }
         }
@@ -139,11 +148,16 @@ function initializeVoiceRoom(root) {
             tile.name.textContent = local ? `${member.displayName} (Bạn)` : member.displayName;
             tile.tile.classList.toggle('has-camera', local ? !!activeTrack('video') : member.cameraEnabled);
             const microphone = local ? !!activeTrack('audio') : member.microphoneEnabled;
+            activity.setStream(member.connectionId, microphone ? tile.video.srcObject : null);
             tile.status.textContent = !local && tile.state === 'failed' ? 'Mất kết nối' : !local && tile.state !== 'connected' ? 'Đang nối…' : microphone ? 'Mic bật' : 'Mic tắt';
         }
     }
     function attachStream(video, stream) {
         if (video.srcObject !== stream) video.srcObject = stream;
+        const id = video.dataset.participantId;
+        const microphone = id === participantId ? !!activeTrack('audio')
+            : room.participants.find(member => member.connectionId === id)?.microphoneEnabled;
+        activity.setStream(id, microphone ? stream : null);
         video.play().catch(() => { if (joined && !video.muted) $('voicePlayback').hidden = false; });
     }
 
@@ -228,6 +242,7 @@ function initializeVoiceRoom(root) {
     function cleanup(preserveJoinIntent = false) {
         if (!preserveJoinIntent) joinIntent = null;
         epoch++; joined = false; joining = false; participantId = null; joinedChannelId = null; configuration = null; pendingSignals = [];
+        activity.clear();
         localStream.getTracks().forEach(track => { track.onended = null; track.stop(); localStream.removeTrack(track); });
         peers.forEach(peer => peer.close()); peers.clear();
         tiles.forEach(tile => { tile.video.srcObject = null; tile.tile.remove(); }); tiles.clear();
@@ -305,6 +320,7 @@ function initializeVoiceRoom(root) {
     }
 
     root.querySelectorAll('[data-voice-action]').forEach(button => button.addEventListener('click', () => {
+        activity.resume();
         const actions = { open: () => { if (joined) selectedChannelId = joinedChannelId; showStage(true); render(); }, chat: () => showStage(false), join,
             mic: () => toggleMedia('audio'), camera: () => toggleMedia('video'), leave };
         Promise.resolve().then(actions[button.dataset.voiceAction]).catch(showError);
@@ -317,6 +333,7 @@ function initializeVoiceRoom(root) {
         if (channel) root.dispatchEvent(new CustomEvent('quiz:edit-channel', { detail: channel }));
     });
     $('voicePlayback').addEventListener('click', async () => {
+        activity.resume();
         const results = await Promise.allSettled([...tiles.values()].map(tile => tile.video.play()));
         $('voicePlayback').hidden = results.every(result => result.status === 'fulfilled');
     });

@@ -2,9 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
+const activitySource = await readFile(new URL('../../QuizManagement/wwwroot/js/voice-activity.js', import.meta.url), 'utf8');
+const { VoiceActivity } = await import('data:text/javascript;base64,' + Buffer.from(activitySource).toString('base64'));
 
 const source = (await readFile(new URL('../../QuizManagement/wwwroot/js/voice-room.js', import.meta.url), 'utf8'))
-    .replace(/^import .*;\r?\n/, '');
+    .replace(/^import .*;\r?\n/gm, '');
 const flush = () => new Promise(resolve => setImmediate(resolve));
 function deferred() {
     let resolve, reject;
@@ -61,7 +63,7 @@ async function fixture() {
             }
         }
     };
-    class Stream { getTracks() { return []; } }
+    class Stream { getTracks() { return []; } getAudioTracks() { return []; } }
     const window = {
         isSecureContext: true, RTCPeerConnection() {},
         studyGroupChannels: [{ id: 10, kind: 1, name: 'First' }, { id: 11, kind: 1, name: 'Second' }],
@@ -69,7 +71,7 @@ async function fixture() {
     };
     runInNewContext(source, {
         document: { getElementById: get, createElement: () => new Element(), createElementNS: () => new Element(), createTextNode: () => new Element() },
-        window, navigator: { mediaDevices: { getUserMedia() {} } }, MediaStream: Stream,
+        window, navigator: { mediaDevices: { getUserMedia() {} } }, MediaStream: Stream, VoiceActivity,
         signalR: { HubConnectionState: { Connected: 'Connected' }, HubConnectionBuilder: class {
             withUrl() { return this; } withAutomaticReconnect() { return this; } build() { return connection; }
         } }

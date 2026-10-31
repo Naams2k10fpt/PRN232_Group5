@@ -29,3 +29,14 @@
   background: #4f46e5 !important;
   color: #ffffff !important;
 }
+.vc-tile { transition: border-color .12s ease, box-shadow .08s ease; }
+.vc-tile.is-speaking:not(.is-failed) {
+    border-color: #34d399;
+    outline: calc(1px + 2px * var(--voice-level, 0)) solid #34d399;
+    outline-offset: 0;
+    box-shadow: 0 0 calc(4px + 12px * var(--voice-level, 0)) rgba(52, 211, 153, .3);
+}
+@media (prefers-reduced-motion: reduce) {
+    .vc-tile { transition: none; }
+    .vc-tile.is-speaking:not(.is-failed) { outline-width: 3px; box-shadow: none; }
+}
