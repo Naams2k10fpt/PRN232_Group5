@@ -74,10 +74,21 @@ public class KahootService : IKahootService
             throw new InvalidOperationException("Phòng chơi này đã kết thúc.");
         }
 
+        var cleanNickname = string.IsNullOrWhiteSpace(nickname) ? $"Player_{RandomNumberGenerator.GetInt32(1000, 9999)}" : nickname.Trim();
+
+        // Tái sử dụng người chơi nếu nickname đã có trong phòng (trường hợp tải lại trang hoặc reconnect SignalR)
+        var existingParticipant = _repository.GetParticipantsByRoom(room.RoomCode)
+            .FirstOrDefault(p => string.Equals(p.Nickname, cleanNickname, StringComparison.OrdinalIgnoreCase));
+        if (existingParticipant != null)
+        {
+            existingParticipant.ConnectionId = connectionId;
+            return Task.FromResult(existingParticipant);
+        }
+
         var participant = new KahootParticipant
         {
             RoomId = room.Id,
-            Nickname = string.IsNullOrWhiteSpace(nickname) ? $"Player_{RandomNumberGenerator.GetInt32(1000, 9999)}" : nickname.Trim(),
+            Nickname = cleanNickname,
             UserId = string.IsNullOrWhiteSpace(userId) ? null : userId.Trim(),
             ConnectionId = connectionId,
             TotalScore = 0,

@@ -102,6 +102,12 @@ namespace QuizManagement.Hubs
                 var state = await EnsureRoomStateAsync(roomCode);
                 if (state != null && state.CurrentQuestionIndex < state.Questions.Count)
                 {
+                    // Đồng bộ lại mốc thời gian bắt đầu câu 1 khi Host vừa tải xong trang Host.cshtml
+                    if (state.CurrentQuestionIndex == 0 && (DateTime.UtcNow - state.QuestionStartedAtUtc).TotalSeconds < 15.0)
+                    {
+                        state.QuestionStartedAtUtc = DateTime.UtcNow;
+                    }
+
                     var questionPayload = BuildQuestionPayload(state);
                     await Clients.Caller.SendAsync("ReceiveQuestion", questionPayload);
 
@@ -280,8 +286,9 @@ namespace QuizManagement.Hubs
             var serverElapsed = (decimal)Math.Max(0.0, (DateTime.UtcNow - state.QuestionStartedAtUtc).TotalSeconds);
             int safeLimit = state.TimeLimitSeconds > 0 ? state.TimeLimitSeconds : 20;
 
-            // Nếu câu hỏi đã kết thúc (quá thời gian quy định + 2.0s dung sai độ trễ mạng)
-            if (serverElapsed > safeLimit + 2.0m)
+            // Nếu câu hỏi đã kết thúc (quá thời gian quy định + 5.0s dung sai độ trễ mạng và render client)
+            decimal gracePeriod = 5.0m;
+            if (serverElapsed > safeLimit + gracePeriod)
             {
                 var participantsExpired = await _kahootService.GetParticipantsAsync(roomCode);
                 var currentP = participantsExpired.FirstOrDefault(p => p.Id == verifiedParticipantId);
@@ -294,12 +301,12 @@ namespace QuizManagement.Hubs
                 return;
             }
 
-            // Client không được khai báo thời gian thấp hơn (serverElapsed - 1.5s)
-            // (1.5s cho phép bù trừ độ trễ ping/RTT mạng bình thường)
+            // Client không được khai báo thời gian thấp hơn (serverElapsed - 2.0s)
+            // Nếu client báo thời gian quá cao (lệch đồng hồ local), tự động đồng bộ theo serverElapsed
             decimal clientElapsed = (decimal)Math.Max(0.0, elapsedSeconds);
-            decimal minAllowedElapsed = Math.Max(0.0m, serverElapsed - 1.5m);
-            decimal validatedElapsed = clientElapsed < minAllowedElapsed || clientElapsed > serverElapsed + 1.0m
-                ? minAllowedElapsed
+            decimal minAllowedElapsed = Math.Max(0.0m, serverElapsed - 2.0m);
+            decimal validatedElapsed = (clientElapsed < minAllowedElapsed || clientElapsed > serverElapsed + 1.0m)
+                ? serverElapsed
                 : clientElapsed;
 
             var result = await _kahootService.SubmitAnswerAsync(

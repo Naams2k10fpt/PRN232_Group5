@@ -249,6 +249,45 @@
         }
     });
 
+    connection.on("QuestionEnded", function(data) {
+        // Nếu người chơi chưa nộp bài mà hết giờ, tự động chuyển sang thông báo Hết Giờ
+        const screenAnswering = document.getElementById("screenAnswering");
+        if (!screenAnswering.classList.contains("d-none")) {
+            const resultIcon = document.getElementById("resultIcon");
+            const resultText = document.getElementById("resultText");
+            const resultScore = document.getElementById("resultScore");
+
+            resultIcon.innerHTML = '<span class="iconify text-warning" data-icon="radix-icons:stopwatch" style="font-size: 5rem;"></span>';
+            resultText.innerText = "HẾT THỜI GIAN!";
+            resultText.className = "display-4 fw-bolder text-warning mb-2";
+            resultScore.innerText = "+0 điểm";
+
+            showScreen("screenResult");
+        }
+    });
+
+    connection.on("Error", function(msg) {
+        console.warn("KahootHub Error:", msg);
+        // Nếu bị lỗi lúc đang chờ nộp bài, khôi phục lại màn hình trả lời
+        const screenSubmitted = document.getElementById("screenSubmitted");
+        if (!screenSubmitted.classList.contains("d-none")) {
+            showScreen("screenAnswering");
+        }
+        if (window.QuizModal) {
+            QuizModal.alert({
+                title: "Thông báo đấu trường",
+                message: msg,
+                icon: "⚠️",
+                btnText: "Đóng"
+            });
+        }
+    });
+
+    connection.onreconnected(function(connectionId) {
+        console.log("Reconnected to KahootHub as Player:", connectionId);
+        connection.invoke("JoinRoom", roomCode, nickname, "");
+    });
+
     function submitChoice(colorIndex) {
         if (!currentQuestion || !participantId) return;
 
