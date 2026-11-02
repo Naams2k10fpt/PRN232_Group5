@@ -369,6 +369,19 @@ namespace QuizManagement.Hubs
             }
         }
 
+        // Host yêu cầu mở bảng điểm (Leaderboard) sau khi câu hỏi kết thúc
+        public async Task ShowLeaderboard(string roomCode)
+        {
+            roomCode = roomCode.Trim().ToUpperInvariant();
+            var leaderboard = await _kahootService.GetLeaderboardAsync(roomCode);
+
+            await Clients.Group(roomCode).SendAsync("LeaderboardShown", new
+            {
+                leaderboard = leaderboard.Take(5).ToList(),
+                allScores = leaderboard
+            });
+        }
+
         // Kết thúc trận đấu
         public async Task EndGame(string roomCode)
         {

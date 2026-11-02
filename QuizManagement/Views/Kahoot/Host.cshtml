@@ -72,6 +72,74 @@
         box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
     }
 
+    .btn-arena-skip {
+        color: #f1f5f9;
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1.5px solid rgba(255, 255, 255, 0.3);
+        transition: all 0.2s ease-in-out;
+    }
+    .btn-arena-skip:hover {
+        background-color: #ef4444;
+        border-color: #ef4444;
+        color: #ffffff;
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+    }
+
+    [data-bs-theme="light"] .btn-arena-skip {
+        color: #0f172a !important;
+        background-color: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+    [data-bs-theme="light"] .btn-arena-skip:hover {
+        background-color: #dc2626 !important;
+        border-color: #dc2626 !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3) !important;
+    }
+
+    [data-bs-theme="light"] #questionCounter {
+        color: #0f172a !important;
+    }
+
+    [data-bs-theme="light"] .arena-topbar {
+        border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+    }
+
+    [data-bs-theme="light"] #timerBox {
+        background-color: #ffffff !important;
+        color: #b45309 !important;
+        border-color: #f59e0b !important;
+        box-shadow: 0 4px 14px rgba(245, 158, 11, 0.15) !important;
+    }
+
+    [data-bs-theme="light"] .arena-stat-box {
+        background-color: #ffffff !important;
+        border-color: #cbd5e1 !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    [data-bs-theme="light"] .arena-stat-box .text-white-50 {
+        color: #64748b !important;
+    }
+
+    [data-bs-theme="light"] .arena-question-card {
+        background-color: #ffffff !important;
+        border-color: #e2e8f0 !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08) !important;
+    }
+    [data-bs-theme="light"] #questionText {
+        color: #0f172a !important;
+    }
+
+    [data-bs-theme="light"] #leaderboardSection h2 {
+        color: #0f172a !important;
+    }
+    [data-bs-theme="light"] #leaderboardList .list-group-item {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border-color: #e2e8f0 !important;
+    }
+
     .podium-step {
         display: flex;
         flex-direction: column;
@@ -91,7 +159,7 @@
 
 <div class="arena-container container-fluid py-3 d-flex flex-column justify-content-between">
     <!-- Top Bar -->
-    <div class="d-flex justify-content-between align-items-center px-4 py-2 border-bottom border-light border-opacity-10">
+    <div class="arena-topbar d-flex justify-content-between align-items-center px-4 py-2 border-bottom border-light border-opacity-10">
         <div class="d-flex align-items-center gap-3">
             <span class="badge bg-primary bg-opacity-25 text-info border border-info border-opacity-25 px-3 py-2 fs-6 rounded-pill d-inline-flex align-items-center gap-1">
                 <span class="iconify" data-icon="lucide:radio"></span> QUIZ BATTLE ARENA
@@ -113,18 +181,18 @@
 
         <!-- Answers count & Next button -->
         <div class="d-flex align-items-center gap-3">
-            <div class="bg-dark bg-opacity-50 px-3 py-1 rounded-3 border border-white border-opacity-10 text-end">
+            <div class="arena-stat-box bg-dark bg-opacity-50 px-3 py-1 rounded-3 border border-white border-opacity-10 text-end">
                 <span class="d-block text-white-50 small">Đã trả lời:</span>
                 <span id="answerCount" class="fs-4 fw-bold text-success">0</span>
             </div>
             <button id="btnSync" class="btn btn-outline-info px-3 py-2 fw-semibold rounded-pill d-none align-items-center gap-1" title="Đồng bộ lại nếu bị trễ">
                 <span class="iconify" data-icon="radix-icons:reload"></span> Đồng bộ
             </button>
-            <button id="btnSkip" class="btn btn-outline-light px-3 py-2 fw-bold rounded-pill d-flex align-items-center gap-1">
+            <button id="btnSkip" class="btn btn-arena-skip px-3 py-2 fw-bold rounded-pill d-flex align-items-center gap-1">
                 <span class="iconify" data-icon="radix-icons:track-next"></span> Kết thúc câu hỏi
             </button>
             <button id="btnNext" class="btn btn-warning px-4 py-2 fw-bold rounded-pill d-none shadow align-items-center gap-1">
-                Câu tiếp theo <span class="iconify" data-icon="radix-icons:arrow-right"></span>
+                Xem bảng điểm <span class="iconify" data-icon="radix-icons:bar-chart"></span>
             </button>
         </div>
     </div>
@@ -137,7 +205,7 @@
     <!-- Center: Question Container -->
     <div class="container my-auto py-3" id="gameplaySection">
         <!-- Question Text -->
-        <div class="bg-dark bg-opacity-75 text-white p-4 rounded-4 shadow-lg mb-4 text-center border border-light border-opacity-10" style="backdrop-filter: blur(10px);">
+        <div class="arena-question-card bg-dark bg-opacity-75 text-white p-4 rounded-4 shadow-lg mb-4 text-center border border-light border-opacity-10" style="backdrop-filter: blur(10px);">
             <h2 id="questionText" class="fw-bold mb-0 text-white" style="min-height: 70px; display: flex; align-items: center; justify-content: center; line-height: 1.4;">
                 <span class="spinner-border spinner-border-sm text-warning me-2" role="status"></span>
                 Đang kết nối vào đấu trường...
@@ -384,6 +452,7 @@
             // Show Next Button
             btnSkip.classList.add("d-none");
             btnNext.classList.remove("d-none");
+            btnNext.innerHTML = 'Xem bảng điểm <span class="iconify" data-icon="radix-icons:bar-chart"></span>';
 
             // Update Leaderboard
             renderLeaderboard(data.leaderboard);
@@ -445,13 +514,18 @@
 
         btnNext.addEventListener("click", function() {
             btnNext.disabled = true;
-            // Show Leaderboard first, then Next Question
+            // Bước 1: Mở Bảng điểm (Leaderboard) trước, phát tín hiệu ShowLeaderboard cho cả phòng
             if (leaderboardSection.classList.contains("d-none")) {
                 gameplaySection.classList.add("d-none");
                 leaderboardSection.classList.remove("d-none");
-                btnNext.innerText = "Câu tiếp theo ❯";
+                const isLast = currentQuestionData && currentQuestionData.questionIndex === currentQuestionData.totalQuestions;
+                btnNext.innerHTML = isLast
+                    ? 'Xem vinh danh chung cuộc <span class="iconify" data-icon="radix-icons:star-filled"></span>'
+                    : 'Câu tiếp theo <span class="iconify" data-icon="radix-icons:arrow-right"></span>';
                 btnNext.disabled = false;
+                connection.invoke("ShowLeaderboard", roomCode);
             } else {
+                // Bước 2: Chuyển sang câu hỏi tiếp theo (hoặc kết thúc nếu là câu cuối)
                 connection.invoke("NextQuestion", roomCode).finally(() => {
                     btnNext.disabled = false;
                 });

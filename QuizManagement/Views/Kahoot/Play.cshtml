@@ -144,7 +144,7 @@
     <div id="screenSubmitted" class="flex-grow-1 d-flex flex-column justify-content-center align-items-center text-center p-4 d-none">
         <span class="iconify text-success display-1 mb-3" data-icon="radix-icons:check-circled"></span>
         <h2 class="fw-bold mb-2">ĐÃ KHÓA LỰA CHỌN!</h2>
-        <p class="fs-5 text-white-50">Đang chờ thời gian kết thúc để chấm điểm...</p>
+        <p class="fs-5 text-white-50">Đang chờ chủ phòng công bố bảng điểm để xem kết quả...</p>
     </div>
 
     <!-- 4. Result Feedback Screen -->
@@ -177,6 +177,7 @@
     let currentQuestion = null;
     let questionStartTime = 0;
     let totalScore = 0;
+    let pendingResult = null;
 
     const connection = new signalR.HubConnectionBuilder()
         .withUrl("/hubs/kahoot")
@@ -198,6 +199,7 @@
     connection.on("ReceiveQuestion", function(q) {
         currentQuestion = q;
         questionStartTime = Date.now();
+        pendingResult = null;
 
         // Cập nhật text hiển thị trên 4 nút A, B, C, D
         for (let i = 0; i < 4; i++) {
@@ -215,32 +217,61 @@
     });
 
     connection.on("AnswerResult", function(res) {
-        totalScore = res.totalScore;
-        document.getElementById("scoreBadge").innerText = `${totalScore} pts`;
+        // Lưu lại kết quả chấm điểm từ server, KHÔNG hiển thị và KHÔNG cộng điểm ngay lập tức
+        // Người chơi tiếp tục ở màn hình chờ 'screenSubmitted' cho tới khi chủ phòng mở bảng điểm
+        pendingResult = res;
+    });
 
-        const resultIcon = document.getElementById("resultIcon");
-        const resultText = document.getElementById("resultText");
-        const resultScore = document.getElementById("resultScore");
+    connection.on("LeaderboardShown", function(data) {
+        // Khi chủ phòng nhấn vào xem bảng điểm (list điểm), hiển thị kết quả cho người chơi
+        if (pendingResult) {
+            totalScore = pendingResult.totalScore;
+            document.getElementById("scoreBadge").innerText = `${totalScore} pts`;
 
-        if (res.isCorrect) {
-            resultIcon.innerHTML = '<span class="iconify text-success" data-icon="radix-icons:check-circled" style="font-size: 5rem;"></span>';
-            resultText.innerText = "CHÍNH XÁC!";
-            resultText.className = "display-4 fw-bolder text-success mb-2";
-            resultScore.innerText = `+${res.scoreEarned} điểm`;
-            if (window.QuizCelebration) {
-                window.QuizCelebration.confetti({ particleCount: 35, duration: 1600 });
+            const resultIcon = document.getElementById("resultIcon");
+            const resultText = document.getElementById("resultText");
+            const resultScore = document.getElementById("resultScore");
+
+            if (pendingResult.isCorrect) {
+                resultIcon.innerHTML = '<span class="iconify text-success" data-icon="radix-icons:check-circled" style="font-size: 5rem;"></span>';
+                resultText.innerText = "CHÍNH XÁC!";
+                resultText.className = "display-4 fw-bolder text-success mb-2";
+                resultScore.innerText = `+${pendingResult.scoreEarned} điểm`;
+                if (window.QuizCelebration) {
+                    window.QuizCelebration.confetti({ particleCount: 35, duration: 1600 });
+                }
+            } else {
+                resultIcon.innerHTML = '<span class="iconify text-danger" data-icon="radix-icons:cross-circled" style="font-size: 5rem;"></span>';
+                resultText.innerText = "CHƯA ĐÚNG!";
+                resultText.className = "display-4 fw-bolder text-danger mb-2";
+                resultScore.innerText = "+0 điểm";
             }
-        } else {
-            resultIcon.innerHTML = '<span class="iconify text-danger" data-icon="radix-icons:cross-circled" style="font-size: 5rem;"></span>';
-            resultText.innerText = "CHƯA ĐÚNG!";
-            resultText.className = "display-4 fw-bolder text-danger mb-2";
-            resultScore.innerText = "+0 điểm";
-        }
 
-        showScreen("screenResult");
+            showScreen("screenResult");
+            pendingResult = null;
+        } else {
+            // Nếu người chơi chưa nộp bài mà chủ phòng đã mở bảng điểm -> Hết thời gian
+            const screenAnswering = document.getElementById("screenAnswering");
+            const screenSubmitted = document.getElementById("screenSubmitted");
+            if (!screenAnswering.classList.contains("d-none") || !screenSubmitted.classList.contains("d-none")) {
+                const resultIcon = document.getElementById("resultIcon");
+                const resultText = document.getElementById("resultText");
+                const resultScore = document.getElementById("resultScore");
+
+                resultIcon.innerHTML = '<span class="iconify text-warning" data-icon="radix-icons:stopwatch" style="font-size: 5rem;"></span>';
+                resultText.innerText = "HẾT THỜI GIAN!";
+                resultText.className = "display-4 fw-bolder text-warning mb-2";
+                resultScore.innerText = "+0 điểm";
+
+                showScreen("screenResult");
+            }
+        }
     });
 
     connection.on("GameOver", function() {
+        if (pendingResult) {
+            totalScore = pendingResult.totalScore;
+        }
         document.getElementById("finalScore").innerText = totalScore;
         showScreen("screenGameOver");
         if (window.QuizCelebration) {
@@ -298,9 +329,7 @@
         const btn = document.querySelector(`.btn-arena-${['a','b','c','d'][colorIndex]}`);
         if (btn) btn.classList.add('selected-shockwave');
 
-        setTimeout(() => {
-            showScreen("screenSubmitted");
-        }, 180);
+        showScreen("screenSubmitted");
 
         connection.invoke("SubmitAnswer",
             roomCode,
