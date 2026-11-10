@@ -47,7 +47,7 @@ public sealed record ApiFlashcardSession(
             )).ToList());
 }
 
-public sealed record ApiFlashcardReviewRequest(int DeckId, int QuestionId, bool Remembered);
+public sealed record ApiFlashcardReviewRequest(int DeckId, int QuestionId, bool Remembered, Guid? ReviewId = null);
 
 public sealed record ApiFlashcardReviewResponse(
     int QuestionId,

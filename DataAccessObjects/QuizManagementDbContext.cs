@@ -39,6 +39,8 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
 
     public virtual DbSet<FlashcardProgress> FlashcardProgresses { get; set; }
 
+    public DbSet<FlashcardReviewReceipt> FlashcardReviewReceipts { get; set; }
+
     public virtual DbSet<KahootRoom> KahootRooms { get; set; }
 
     public virtual DbSet<KahootParticipant> KahootParticipants { get; set; }
@@ -138,6 +140,7 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
         modelBuilder.Entity<FlashcardProgress>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property<uint>("Version").IsRowVersion();
             entity.ToTable(table =>
             {
                 table.HasCheckConstraint("CK_FlashcardProgresses_Repetition", "\"Repetition\" >= 0");
@@ -160,6 +163,14 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
                 .HasForeignKey(e => e.QuestionId)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK_FlashcardProgresses_Questions");
+        });
+
+        modelBuilder.Entity<FlashcardReviewReceipt>(entity =>
+        {
+            entity.HasKey(e => new { e.ProgressId, e.ReviewId });
+            entity.HasOne(e => e.Progress).WithMany()
+                .HasForeignKey(e => e.ProgressId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Subject>(entity =>

@@ -76,7 +76,7 @@ namespace Services
                 cards);
         }
 
-        public FlashcardReviewResult? Review(string userId, int deckId, int questionId, bool remembered)
+        public FlashcardReviewResult? Review(string userId, int deckId, int questionId, bool remembered, Guid? reviewId = null)
         {
             if (!_catalogRepository.QuestionBelongsToDeck(deckId, questionId))
             {
@@ -87,7 +87,8 @@ namespace Services
                 userId,
                 questionId,
                 remembered,
-                _timeProvider.GetUtcNow().UtcDateTime);
+                _timeProvider.GetUtcNow().UtcDateTime,
+                reviewId);
             return new FlashcardReviewResult(
                 progress.QuestionId,
                 progress.Repetition,

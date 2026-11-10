@@ -248,7 +248,7 @@ public class FlashcardServiceTests
             return Progresses;
         }
 
-        public FlashcardProgress ReviewFlashcard(string userId, int questionId, bool remembered, DateTime reviewedAtUtc)
+        public FlashcardProgress ReviewFlashcard(string userId, int questionId, bool remembered, DateTime reviewedAtUtc, Guid? reviewId = null)
         {
             ReviewCalls++;
             LastReview = (userId, questionId, remembered, reviewedAtUtc);

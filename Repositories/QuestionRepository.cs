@@ -23,13 +23,15 @@ namespace Repositories
             string userId,
             int questionId,
             bool remembered,
-            DateTime reviewedAtUtc)
+            DateTime reviewedAtUtc,
+            Guid? reviewId = null)
             => QuestionDAO.Instance.ReviewFlashcard(
                 _context,
                 userId,
                 questionId,
                 remembered,
-                reviewedAtUtc);
+                reviewedAtUtc,
+                reviewId);
 
         public Question? GetQuestionById(int id, string userId, bool allowAll = false)
             => QuestionDAO.Instance.GetQuestionById(_context, id, userId, allowAll);

@@ -1,8 +1,12 @@
+using System.Net;
+using System.Net.Http.Json;
 using System.Security.Claims;
 using BusinessObjects;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using QuizManagement.Controllers;
+using QuizManagement.Tests.ApiTests;
 using QuizManagement.ViewModels.Statistics;
 using Services;
 using Xunit;
@@ -11,6 +15,45 @@ namespace QuizManagement.Tests.ControllerTests;
 
 public class StatisticsControllerTests
 {
+    [Fact]
+    public async Task StatisticsApi_UsesSignedInUserAndReturnsWebStatistics()
+    {
+        var service = new QuizServiceFake
+        {
+            UserStatistics = new UserStatisticsReadModel
+            {
+                TotalAttempts = 3,
+                PassedAttempts = 2,
+                AveragePercentage = 67.24,
+                BestPercentage = 90,
+                RecentScores = [new() { CreatedAt = new DateTime(2026, 11, 9, 18, 0, 0, DateTimeKind.Utc), Percentage = 90 }],
+                DeckStats = [new() { Name = "Bộ đề", ParentName = "Môn học", Attempts = 3 }]
+            }
+        };
+        using var host = new ApiTestHost
+        {
+            ConfigureServices = services => services.AddSingleton<IQuizService>(service)
+        };
+        var user = host.AddUser();
+        using var client = host.CreateClient(new() { AllowAutoRedirect = false });
+        const string path = "/api/history/statistics?userId=someone-else";
+        using var unauthorized = await client.GetAsync(path);
+        Assert.Equal(HttpStatusCode.Unauthorized, unauthorized.StatusCode);
+        Assert.Null(service.StatisticsUserId);
+
+        ApiTestHost.UseToken(client, await host.LoginAsync(client));
+        var result = await client.GetFromJsonAsync<StatisticsViewModel>(path);
+
+        Assert.NotNull(result);
+        Assert.Equal(user.Id, service.StatisticsUserId);
+        Assert.Equal(3, result.TotalAttempts);
+        Assert.Equal(67.2, result.AveragePercentage);
+        Assert.Equal(90, result.BestPercentage);
+        Assert.Equal(66.7, result.PassRate);
+        Assert.Equal("10/11", Assert.Single(result.RecentScores).Label);
+        Assert.Equal("Môn học / Bộ đề", Assert.Single(result.DeckStats).Name);
+    }
+
     [Fact]
     public async Task Index_MapsDistinctEntityGroupsWithTheSameDisplayName()
     {
@@ -89,8 +132,13 @@ public class StatisticsControllerTests
     {
         public UserStatisticsReadModel UserStatistics { get; init; } = new();
         public MentorStatisticsReadModel MentorStatistics { get; init; } = new();
+        public string? StatisticsUserId { get; private set; }
 
-        public Task<UserStatisticsReadModel> GetUserStatisticsAsync(string userId) => Task.FromResult(UserStatistics);
+        public Task<UserStatisticsReadModel> GetUserStatisticsAsync(string userId)
+        {
+            StatisticsUserId = userId;
+            return Task.FromResult(UserStatistics);
+        }
         public Task<MentorStatisticsReadModel> GetMentorStatisticsAsync(string ownerUserId, bool isAdmin) => Task.FromResult(MentorStatistics);
         public Task<TestHistoryPage> GetTestHistoryPageAsync(string userId, int page, int pageSize) => throw new NotSupportedException();
         public Task<List<LeaderboardEntryReadModel>> GetLeaderboardAsync(int deckId, int count) => throw new NotSupportedException();

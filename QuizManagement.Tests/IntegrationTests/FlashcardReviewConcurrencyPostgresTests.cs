@@ -10,9 +10,11 @@ namespace QuizManagement.Tests.IntegrationTests;
 
 public class FlashcardReviewConcurrencyPostgresTests
 {
-    [Fact]
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     [Trait("Category", "PostgresIntegration")]
-    public async Task ConcurrentFirstReviews_BothSucceedAndKeepOneProgressRow()
+    public async Task ConcurrentFirstReviews_KeepOneProgressRowAndApplyEachIdOnce(bool replay)
     {
         var databaseName = $"QuizManagementTests_{Guid.NewGuid():N}";
         var setupOptions = CreateOptions(databaseName);
@@ -56,19 +58,31 @@ public class FlashcardReviewConcurrencyPostgresTests
             var interceptor = new InsertBarrierInterceptor(barrier, "INSERT INTO \"FlashcardProgresses\"");
             var workerOptions = CreateOptions(databaseName, interceptor);
 
-            FlashcardProgress Review()
+            var firstId = Guid.NewGuid();
+            var secondId = replay ? firstId : Guid.NewGuid();
+            FlashcardProgress Review(Guid reviewId)
             {
                 using var context = new QuizManagementDbContext(workerOptions);
-                return new QuestionRepository(context).ReviewFlashcard("user", questionId, true, now);
+                return new QuestionRepository(context).ReviewFlashcard("user", questionId, true, now, reviewId);
             }
 
-            var results = await Task.WhenAll(Task.Run(Review), Task.Run(Review));
+            var results = await Task.WhenAll(Task.Run(() => Review(firstId)), Task.Run(() => Review(secondId)));
 
             Assert.Equal(2, interceptor.InsertCount);
             Assert.All(results, progress => Assert.Equal(questionId, progress.QuestionId));
             using var verificationContext = new QuizManagementDbContext(setupOptions);
             var saved = Assert.Single(verificationContext.FlashcardProgresses);
             Assert.Equal("user", saved.UserId);
+            var expectedReviews = replay ? 1 : 2;
+            Assert.Equal(expectedReviews, saved.Repetition);
+            Assert.Equal(expectedReviews, verificationContext.FlashcardReviewReceipts.Count());
+
+            // Replay the earlier id after a later successful review.
+            using var retryContext = new QuizManagementDbContext(setupOptions);
+            var retried = new QuestionRepository(retryContext)
+                .ReviewFlashcard("user", questionId, true, now.AddDays(1), firstId);
+            Assert.Equal(saved.NextReviewAtUtc, retried.NextReviewAtUtc);
+            Assert.Equal(expectedReviews, retried.Repetition);
             Assert.Equal(results.Max(progress => progress.Id), results.Min(progress => progress.Id));
             Assert.Equal(saved.Id, results[0].Id);
         }

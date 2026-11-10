@@ -2,7 +2,6 @@ using BusinessObjects;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using QuizManagement.ViewModels.Statistics;
-using QuizManagement.Helpers;
 using Services;
 using System.Security.Claims;
 
@@ -23,37 +22,7 @@ namespace QuizManagement.Controllers
         public async Task<IActionResult> Index()
         {
             var statistics = await _quizService.GetUserStatisticsAsync(CurrentUserId());
-            var total = statistics.TotalAttempts;
-            var model = new StatisticsViewModel
-            {
-                TotalAttempts = total,
-                AveragePercentage = Math.Round(statistics.AveragePercentage, 1),
-                BestPercentage = Math.Round(statistics.BestPercentage, 1),
-                LowestPercentage = Math.Round(statistics.LowestPercentage, 1),
-                PassedAttempts = statistics.PassedAttempts,
-                FailedAttempts = total - statistics.PassedAttempts
-            };
-
-            model.PassRate = total > 0 ? Math.Round((double)model.PassedAttempts / total * 100, 1) : 0;
-            model.RecentScores = statistics.RecentScores
-                .Select(score => new ScoreTrendPointViewModel
-                {
-                    Label = VietnamTime.FromUtc(score.CreatedAt).ToString("dd/MM"),
-                    Percentage = score.Percentage
-                })
-                .ToList();
-
-            model.SubjectStats = statistics.SubjectStats
-                .Select(group => BuildGroupPerformance(group.Name, group))
-                .ToList();
-
-            model.DeckStats = statistics.DeckStats
-                .Select(group => BuildGroupPerformance(
-                    $"{group.ParentName} / {group.Name}",
-                    group))
-                .ToList();
-
-            return View(model);
+            return View(StatisticsViewModel.From(statistics));
         }
 
         public async Task<IActionResult> Leaderboard(int deckId)
@@ -136,18 +105,6 @@ namespace QuizManagement.Controllers
                 DeckStats = deckStats
             });
         }
-
-        private static GroupPerformanceViewModel BuildGroupPerformance(
-            string name,
-            AnalyticsGroupReadModel group)
-            => new()
-            {
-                Name = name,
-                Attempts = group.Attempts,
-                AveragePercentage = Math.Round(group.AveragePercentage, 1),
-                BestPercentage = Math.Round(group.BestPercentage, 1),
-                LastAttemptAt = group.LastAttemptAt
-            };
 
         private string CurrentUserId()
         {

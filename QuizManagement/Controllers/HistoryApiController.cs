@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using QuizManagement.Infrastructure;
 using QuizManagement.ViewModels.Quiz;
+using QuizManagement.ViewModels.Statistics;
 using Services;
 using System.Security.Claims;
 
@@ -14,6 +15,10 @@ public sealed class HistoryApiController : ControllerBase
     private readonly IQuizService _quiz;
 
     public HistoryApiController(IQuizService quiz) => _quiz = quiz;
+
+    [HttpGet("statistics")]
+    public async Task<StatisticsViewModel> Statistics()
+        => StatisticsViewModel.From(await _quiz.GetUserStatisticsAsync(UserId()));
 
     [HttpGet("user")]
     public async Task<IActionResult> UserHistory([FromQuery] int page = 1)

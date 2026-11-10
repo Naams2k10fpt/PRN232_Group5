@@ -259,6 +259,12 @@ namespace DataAccessObjects.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("character varying(450)");
 
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("QuestionId");
@@ -276,6 +282,19 @@ namespace DataAccessObjects.Migrations
 
                             t.HasCheckConstraint("CK_FlashcardProgresses_Repetition", "\"Repetition\" >= 0");
                         });
+                });
+
+            modelBuilder.Entity("BusinessObjects.FlashcardReviewReceipt", b =>
+                {
+                    b.Property<int>("ProgressId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ReviewId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ProgressId", "ReviewId");
+
+                    b.ToTable("FlashcardReviewReceipts");
                 });
 
             modelBuilder.Entity("BusinessObjects.GroupMessage", b =>
@@ -1235,6 +1254,17 @@ namespace DataAccessObjects.Migrations
                     b.Navigation("Question");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BusinessObjects.FlashcardReviewReceipt", b =>
+                {
+                    b.HasOne("BusinessObjects.FlashcardProgress", "Progress")
+                        .WithMany()
+                        .HasForeignKey("ProgressId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Progress");
                 });
 
             modelBuilder.Entity("BusinessObjects.GroupMessage", b =>
