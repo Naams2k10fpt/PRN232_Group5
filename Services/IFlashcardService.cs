@@ -6,6 +6,6 @@ namespace Services
         FlashcardSession? GetStudySession(string userId, int deckId, bool includeAll);
 
         // Returns null when the question does not belong to the deck (or was deleted); nothing is saved then.
-        FlashcardReviewResult? Review(string userId, int deckId, int questionId, bool remembered);
+        FlashcardReviewResult? Review(string userId, int deckId, int questionId, bool remembered, Guid? reviewId = null);
     }
 }

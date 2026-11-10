@@ -55,36 +55,48 @@ namespace DataAccessObjects
             string userId,
             int questionId,
             bool remembered,
-            DateTime reviewedAtUtc)
+            DateTime reviewedAtUtc,
+            Guid? reviewId = null)
         {
-            var progress = context.FlashcardProgresses
-                .SingleOrDefault(item => item.UserId == userId && item.QuestionId == questionId);
-            var isFirstReview = progress is null;
-            if (progress is null)
+            for (var attempt = 0; ; attempt++)
             {
-                progress = new FlashcardProgress { UserId = userId, QuestionId = questionId };
-                context.FlashcardProgresses.Add(progress);
-            }
+                var progress = context.FlashcardProgresses
+                    .SingleOrDefault(item => item.UserId == userId && item.QuestionId == questionId);
+                var isFirstReview = progress is null;
+                if (progress is null)
+                {
+                    progress = new FlashcardProgress { UserId = userId, QuestionId = questionId };
+                    context.FlashcardProgresses.Add(progress);
+                }
+                else if (reviewId is Guid id && context.FlashcardReviewReceipts.Any(
+                    receipt => receipt.ProgressId == progress.Id && receipt.ReviewId == id))
+                {
+                    return progress;
+                }
 
-            progress.Review(remembered, reviewedAtUtc);
-
-            try
-            {
-                context.SaveChanges();
-            }
-            catch (DbUpdateException exception)
-                when (isFirstReview && DbExceptionClassifier.IsUniqueViolation(exception))
-            {
-                // Another request (e.g. a double tap) created this user's row for the question first:
-                // drop the duplicate insert and apply the review to the row that won.
-                context.Entry(progress).State = EntityState.Detached;
-                progress = context.FlashcardProgresses
-                    .Single(item => item.UserId == userId && item.QuestionId == questionId);
                 progress.Review(remembered, reviewedAtUtc);
-                context.SaveChanges();
-            }
+                FlashcardReviewReceipt? receipt = null;
+                if (reviewId is Guid key)
+                {
+                    receipt = new FlashcardReviewReceipt { Progress = progress, ReviewId = key };
+                    context.FlashcardReviewReceipts.Add(receipt);
+                }
 
-            return progress;
+                try
+                {
+                    context.SaveChanges();
+                    return progress;
+                }
+                catch (DbUpdateException exception) when (attempt < 2 &&
+                    (exception is DbUpdateConcurrencyException ||
+                     ((isFirstReview || receipt is not null) && DbExceptionClassifier.IsUniqueViolation(exception))))
+                {
+                    // SaveChanges rolls back both writes before retrying against the winning row.
+                    if (receipt is not null)
+                        context.Entry(receipt).State = EntityState.Detached;
+                    context.Entry(progress).State = EntityState.Detached;
+                }
+            }
         }
 
         public Question? GetQuestionById(

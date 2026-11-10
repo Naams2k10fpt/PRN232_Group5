@@ -46,7 +46,7 @@ public class FlashcardsApiController : ControllerBase
     [ProducesResponseType<ApiError>(StatusCodes.Status404NotFound)]
     public ActionResult<ApiFlashcardReviewResponse> Review([FromBody] ApiFlashcardReviewRequest request)
     {
-        var result = _flashcardService.Review(CurrentUserId(), request.DeckId, request.QuestionId, request.Remembered);
+        var result = _flashcardService.Review(CurrentUserId(), request.DeckId, request.QuestionId, request.Remembered, request.ReviewId);
         if (result is null)
         {
             return NotFound(new ApiError("question_not_found", "Không tìm thấy câu hỏi trong bộ đề này."));

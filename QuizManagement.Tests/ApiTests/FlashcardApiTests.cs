@@ -194,7 +194,7 @@ public class FlashcardApiTests : IDisposable
             return Session;
         }
 
-        public FlashcardReviewResult? Review(string userId, int deckId, int questionId, bool remembered)
+        public FlashcardReviewResult? Review(string userId, int deckId, int questionId, bool remembered, Guid? reviewId = null)
         {
             ReviewCalls++;
             LastReview = (userId, deckId, questionId, remembered);

@@ -10,7 +10,8 @@ namespace Repositories
             string userId,
             int questionId,
             bool remembered,
-            DateTime reviewedAtUtc);
+            DateTime reviewedAtUtc,
+            Guid? reviewId = null);
         Question? GetQuestionById(int id, string userId, bool allowAll = false);
         void AddQuestion(Question question);
         void AddQuestions(IEnumerable<Question> questions);
