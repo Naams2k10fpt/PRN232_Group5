@@ -1,3 +1,6 @@
+using BusinessObjects;
+using QuizManagement.Helpers;
+
 namespace QuizManagement.ViewModels.Statistics
 {
     public class StatisticsViewModel
@@ -21,6 +24,38 @@ namespace QuizManagement.ViewModels.Statistics
         public List<GroupPerformanceViewModel> SubjectStats { get; set; } = new();
 
         public List<GroupPerformanceViewModel> DeckStats { get; set; } = new();
+
+        public static StatisticsViewModel From(UserStatisticsReadModel statistics)
+        {
+            var total = statistics.TotalAttempts;
+            return new StatisticsViewModel
+            {
+                TotalAttempts = total,
+                AveragePercentage = Math.Round(statistics.AveragePercentage, 1),
+                BestPercentage = Math.Round(statistics.BestPercentage, 1),
+                LowestPercentage = Math.Round(statistics.LowestPercentage, 1),
+                PassedAttempts = statistics.PassedAttempts,
+                FailedAttempts = total - statistics.PassedAttempts,
+                PassRate = total > 0 ? Math.Round((double)statistics.PassedAttempts / total * 100, 1) : 0,
+                RecentScores = statistics.RecentScores.Select(score => new ScoreTrendPointViewModel
+                {
+                    Label = VietnamTime.FromUtc(score.CreatedAt).ToString("dd/MM"),
+                    Percentage = score.Percentage
+                }).ToList(),
+                SubjectStats = statistics.SubjectStats.Select(group => BuildGroup(group.Name, group)).ToList(),
+                DeckStats = statistics.DeckStats.Select(group => BuildGroup($"{group.ParentName} / {group.Name}", group)).ToList()
+            };
+        }
+
+        private static GroupPerformanceViewModel BuildGroup(string name, AnalyticsGroupReadModel group)
+            => new()
+            {
+                Name = name,
+                Attempts = group.Attempts,
+                AveragePercentage = Math.Round(group.AveragePercentage, 1),
+                BestPercentage = Math.Round(group.BestPercentage, 1),
+                LastAttemptAt = group.LastAttemptAt
+            };
     }
 
     public class ScoreTrendPointViewModel
