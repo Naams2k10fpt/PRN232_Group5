@@ -3,7 +3,12 @@
 @using System.Text.Json
 @{
     ViewData["Title"] = "Flashcard";
-    var json = JsonSerializer.Serialize(Model.Cards, new JsonSerializerOptions { Encoder = JavaScriptEncoder.Default });
+    var json = JsonSerializer.Serialize(new {
+        cards = Model.Cards,
+        userId = Model.UserId,
+        deckId = Model.DeckId,
+        reviewUrl = Url.Action("Review", "Flashcards")
+    }, new JsonSerializerOptions { Encoder = JavaScriptEncoder.Default });
 }
 
 <div class="page-header">
@@ -12,10 +17,22 @@
         <p class="text-muted mb-0">@Model.SubjectName / @Model.DeckName</p>
     </div>
     <div class="page-header-actions">
+        @if (Model.StudyingMissed)
+        {
+            <a asp-action="Study" asp-route-deckId="@Model.DeckId" class="btn btn-outline-secondary" data-needs-sync>Học thẻ đến hạn</a>
+        }
+        else
+        {
+            <a asp-action="Study" asp-route-deckId="@Model.DeckId" asp-route-missed="true" class="btn btn-outline-primary" data-needs-sync>Ôn thẻ chưa thuộc</a>
+        }
         <a asp-controller="Quiz" asp-action="Config" asp-route-deckId="@Model.DeckId" class="btn btn-outline-success">Làm quiz</a>
         <a asp-controller="Questions" asp-action="Index" asp-route-deckId="@Model.DeckId" class="btn btn-outline-secondary">Câu hỏi</a>
     </div>
 </div>
+
+<form id="flashcardReviewToken" class="d-none">@Html.AntiForgeryToken()</form>
+<div id="flashcardSaveError" class="alert alert-danger d-none" role="status" aria-live="polite"></div>
+<button id="retryReviewButton" type="button" class="btn btn-outline-primary mb-3 d-none">Gửi lại lượt ôn</button>
 
 @if (Model.TotalCards == 0)
 {
@@ -24,31 +41,33 @@
 else if (!Model.Cards.Any())
 {
     <div class="alert alert-success">
-        <div class="fw-semibold">Bạn đã hoàn thành các thẻ đến hạn.</div>
-        @if (Model.NextReviewAtUtc is DateTime nextReview)
+        <div class="fw-semibold">@(Model.StudyingMissed ? "Bạn không còn thẻ nào được đánh dấu chưa thuộc." : "Bạn đã ôn hết tất cả các thẻ")</div>
+        @if (!Model.StudyingMissed && Model.NextReviewAtUtc is DateTime nextReview)
         {
             <div class="small mt-1">Lần ôn tiếp theo: @nextReview.ToString("dd/MM/yyyy HH:mm") UTC.</div>
         }
     </div>
-    <a asp-action="Study" asp-route-deckId="@Model.DeckId" asp-route-all="true" class="btn btn-outline-primary">
-        Học lại tất cả @Model.TotalCards thẻ
-    </a>
+    <div class="study-next-actions">
+        <a asp-action="Study" asp-route-deckId="@Model.DeckId" asp-route-all="true" class="btn btn-primary" data-needs-sync>Ôn lại cả bộ (@Model.TotalCards thẻ)</a>
+        @if (!Model.StudyingMissed)
+        {
+            <a asp-action="Study" asp-route-deckId="@Model.DeckId" asp-route-missed="true" class="btn btn-outline-primary" data-needs-sync>Ôn thẻ chưa thuộc</a>
+        }
+    </div>
 }
 else
 {
     <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-3 flashcard-summary">
         <span class="text-muted small">
-            @(Model.StudyingAll ? $"Đang học tất cả {Model.TotalCards} thẻ" : $"{Model.DueCards} thẻ đến hạn")
+            @(Model.StudyingMissed ? $"Ôn {Model.Cards.Count} thẻ chưa thuộc" : Model.StudyingAll ? $"Đang học tất cả {Model.TotalCards} thẻ" : $"{Model.DueCards} thẻ đến hạn")
         </span>
         @if (!Model.StudyingAll && Model.DueCards < Model.TotalCards)
         {
-            <a asp-action="Study" asp-route-deckId="@Model.DeckId" asp-route-all="true" class="btn btn-sm btn-outline-secondary">
+            <a asp-action="Study" asp-route-deckId="@Model.DeckId" asp-route-all="true" class="btn btn-sm btn-outline-secondary" data-needs-sync>
                 Học tất cả
             </a>
         }
     </div>
-    <form id="flashcardReviewToken" class="d-none">@Html.AntiForgeryToken()</form>
-    <div id="flashcardSaveError" class="alert alert-danger d-none" role="alert" aria-live="polite"></div>
     <div id="flashcardApp" class="flashcard-study mx-auto">
         <div class="flashcard-toolbar">
             <button type="button" id="prevCardButton" class="btn btn-outline-secondary">Trước</button>
@@ -60,11 +79,9 @@ else
         </div>
 
         <div class="fc-scene">
-            <div id="flashcardInner" class="fc-card">
+            <div id="flashcardInner" class="fc-card" role="button" tabindex="0" aria-label="Lật thẻ để xem đáp án" aria-pressed="false">
                 <!-- FRONT: Question + Answer Options -->
                 <div class="fc-face fc-face--front">
-                    <div class="fc-stamp-overlay fc-stamp-overlay--known d-none">ĐÃ NHỚ</div>
-                    <div class="fc-stamp-overlay fc-stamp-overlay--again d-none">CẦN HỌC LẠI</div>
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div class="flashcard-side-label mb-0" id="cardTypeFront"></div>
                         <span id="cardStatusBadgeFront" class="badge d-none"></span>
@@ -78,8 +95,6 @@ else
                 </div>
                 <!-- BACK: Correct Answer + Explanation -->
                 <div class="fc-face fc-face--back">
-                    <div class="fc-stamp-overlay fc-stamp-overlay--known d-none">ĐÃ NHỚ</div>
-                    <div class="fc-stamp-overlay fc-stamp-overlay--again d-none">CẦN HỌC LẠI</div>
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div class="flashcard-side-label mb-0">Đáp án</div>
                         <span id="cardStatusBadgeBack" class="badge d-none"></span>
@@ -98,10 +113,10 @@ else
 
         <div class="flashcard-actions">
             <button type="button" id="againButton" class="btn btn-outline-danger d-none">
-                <span class="fc-key-badge">R</span> Cần học lại <span class="badge bg-danger bg-opacity-25 text-danger ms-1 small" title="Chu kỳ lặp lại SM-2: 1 phút">1m</span>
+                <span class="fc-key-badge">R</span> Chưa thuộc
             </button>
             <button type="button" id="knownButton" class="btn btn-outline-success d-none">
-                <span class="fc-key-badge">Enter</span> Đã nhớ <span class="badge bg-success bg-opacity-25 text-success ms-1 small" title="Chu kỳ lặp lại SM-2: 3 ngày">3d</span>
+                <span class="fc-key-badge">Enter</span> Đã thuộc
             </button>
             <button type="button" id="shuffleButton" class="btn btn-outline-secondary">Trộn thẻ</button>
         </div>
@@ -113,385 +128,26 @@ else
                 <div class="fc-shortcut-item"><kbd>←</kbd><span>Thẻ trước</span></div>
                 <div class="fc-shortcut-item"><kbd>→</kbd><span>Thẻ tiếp</span></div>
                 <div class="fc-shortcut-item"><kbd>↑</kbd> <kbd>↓</kbd><span>Lật thẻ</span></div>
-                <div class="fc-shortcut-item"><kbd>Enter</kbd><span>Đã nhớ</span></div>
-                <div class="fc-shortcut-item"><kbd>R</kbd><span>Cần học lại</span></div>
+                <div class="fc-shortcut-item"><kbd>Enter</kbd><span>Đã thuộc</span></div>
+                <div class="fc-shortcut-item"><kbd>R</kbd><span>Chưa thuộc</span></div>
             </div>
         </div>
     </div>
 
-    <script>
-        (() => {
-            const cards = @Html.Raw(json);
-            let currentIndex = 0;
-            let flipped = false;
-            let isAnimating = false;
-            let isNavigating = false;
-            let queuedMove = 0;
+}
 
-            // Per-card status: 'unseen' | 'known' | 'again'
-            const cardStatus = new Map();
-            let knownCount = 0;
-            let againCount = 0;
+<section id="flashcardComplete" class="study-complete mx-auto" hidden aria-live="polite">
+    <h2 class="h3">Hoàn thành!</h2>
+    <p id="reviewResult"></p>
+    <div class="study-next-actions">
+        <a asp-action="Study" asp-route-deckId="@Model.DeckId" asp-route-missed="true" class="btn btn-primary" data-needs-sync>Ôn thẻ chưa thuộc</a>
+        <a asp-action="Study" asp-route-deckId="@Model.DeckId" class="btn btn-outline-primary" data-needs-sync>Học thẻ đến hạn</a>
+        <a asp-controller="Decks" asp-action="Index" asp-route-subjectId="@Model.SubjectId" class="btn btn-outline-secondary">Về danh sách bộ đề</a>
+    </div>
+</section>
 
-            const fcScene = document.querySelector('.fc-scene');
-            const cardInner = document.getElementById('flashcardInner');
-            const questionTextFront = document.getElementById('questionTextFront');
-            const cardTypeFront = document.getElementById('cardTypeFront');
-            const optionsPanel = document.getElementById('optionsPanel');
-            const backAnswerList = document.getElementById('backAnswerList');
-            const backExplanation = document.getElementById('backExplanation');
-            const frontFace = cardInner.querySelector('.fc-face--front');
-            const backFace = cardInner.querySelector('.fc-face--back');
-            const badgeFront = document.getElementById('cardStatusBadgeFront');
-            const badgeBack = document.getElementById('cardStatusBadgeBack');
-            const againButton = document.getElementById('againButton');
-            const knownButton = document.getElementById('knownButton');
-            const shuffleButton = document.getElementById('shuffleButton');
-            const prevCardButton = document.getElementById('prevCardButton');
-            const nextCardButton = document.getElementById('nextCardButton');
-            const cardCounter = document.getElementById('cardCounter');
-            const studyCounter = document.getElementById('studyCounter');
-            const saveError = document.getElementById('flashcardSaveError');
-            const requestVerificationToken = document.querySelector('#flashcardReviewToken input').value;
-            const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-            const labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-
-            function createOption(option, index, onBack) {
-                const element = document.createElement('div');
-                element.className = onBack
-                    ? 'fc-back-option ' + (option.IsCorrect ? 'fc-back-option--correct' : 'fc-back-option--wrong')
-                    : 'fc-option';
-
-                const label = document.createElement('span');
-                label.className = 'fc-option-label';
-                label.textContent = labels[index] || String(index + 1);
-                const content = document.createElement('span');
-                content.className = 'fc-option-text';
-                content.textContent = option.Content || '';
-                element.append(label, content);
-
-                if (onBack && option.IsCorrect) {
-                    const check = document.createElement('span');
-                    check.className = 'fc-check-icon';
-                    check.textContent = '✓';
-                    check.setAttribute('aria-hidden', 'true');
-                    element.appendChild(check);
-                }
-                return element;
-            }
-
-            function renderCard() {
-                const card = cards[currentIndex];
-                flipped = false;
-                cardInner.classList.remove('fc-card--flipped');
-                frontFace.setAttribute('aria-hidden', 'false');
-                backFace.setAttribute('aria-hidden', 'true');
-
-                // Reset stamp overlays
-                cardInner.querySelectorAll('.fc-stamp-overlay').forEach(s => {
-                    s.classList.add('d-none');
-                    s.classList.remove('show');
-                });
-
-                // Front side
-                questionTextFront.textContent = card.Content || '';
-                cardTypeFront.textContent = card.QuestionType === 1 ? 'Một đáp án đúng' : 'Nhiều đáp án đúng';
-
-                // Options on front
-                const frontOptions = document.createDocumentFragment();
-                const backOptions = document.createDocumentFragment();
-                for (let i = 0; i < (card.AllAnswers || []).length; i++) {
-                    const opt = card.AllAnswers[i];
-                    frontOptions.appendChild(createOption(opt, i, false));
-                    backOptions.appendChild(createOption(opt, i, true));
-                }
-                optionsPanel.replaceChildren(frontOptions);
-                backAnswerList.replaceChildren(backOptions);
-
-                if (card.Explanation) {
-                    const title = document.createElement('div');
-                    title.className = 'fc-explanation-title';
-                    title.textContent = 'Giải thích';
-                    const body = document.createElement('div');
-                    body.className = 'fc-explanation-body';
-                    body.textContent = card.Explanation;
-                    backExplanation.replaceChildren(title, body);
-                    backExplanation.classList.remove('d-none');
-                } else {
-                    backExplanation.replaceChildren();
-                    backExplanation.classList.add('d-none');
-                }
-
-                // Status Badges
-                const status = cardStatus.get(card.QuestionId);
-
-                if (status === 'known') {
-                    badgeFront.textContent = 'Đã nhớ';
-                    badgeFront.className = 'badge bg-success-subtle text-success border border-success-subtle';
-                    badgeFront.classList.remove('d-none');
-
-                    badgeBack.textContent = 'Đã nhớ';
-                    badgeBack.className = 'badge bg-success-subtle text-success border border-success-subtle';
-                    badgeBack.classList.remove('d-none');
-                } else if (status === 'again') {
-                    badgeFront.textContent = 'Cần học lại';
-                    badgeFront.className = 'badge bg-danger-subtle text-danger border border-danger-subtle';
-                    badgeFront.classList.remove('d-none');
-
-                    badgeBack.textContent = 'Cần học lại';
-                    badgeBack.className = 'badge bg-danger-subtle text-danger border border-danger-subtle';
-                    badgeBack.classList.remove('d-none');
-                } else {
-                    badgeFront.classList.add('d-none');
-                    badgeBack.classList.add('d-none');
-                }
-
-                // Buttons
-                againButton.classList.add('d-none');
-                knownButton.classList.add('d-none');
-                updateCounters();
-            }
-
-            function updateCounters() {
-                cardCounter.textContent = `Thẻ ${currentIndex + 1}/${cards.length}`;
-                studyCounter.textContent = `${knownCount} đã nhớ · ${againCount} cần học lại`;
-            }
-
-            function changeFace() {
-                flipped = !flipped;
-                cardInner.classList.toggle('fc-card--flipped', flipped);
-                frontFace.setAttribute('aria-hidden', String(flipped));
-                backFace.setAttribute('aria-hidden', String(!flipped));
-
-                if (flipped) {
-                    againButton.classList.remove('d-none');
-                    knownButton.classList.remove('d-none');
-
-                    // Highlight based on current status
-                    const card = cards[currentIndex];
-                    const status = cardStatus.get(card.QuestionId);
-
-                    againButton.className = 'btn btn-outline-danger';
-                    knownButton.className = 'btn btn-outline-success';
-
-                    if (status === 'known') {
-                        knownButton.className = 'btn btn-success';
-                    } else if (status === 'again') {
-                        againButton.className = 'btn btn-danger';
-                    }
-                } else {
-                    againButton.classList.add('d-none');
-                    knownButton.classList.add('d-none');
-                }
-            }
-
-            function flipCard() {
-                if (isAnimating) return;
-                if (reducedMotion.matches) {
-                    changeFace();
-                    return;
-                }
-
-                isAnimating = true;
-                changeFace();
-                setTimeout(() => { isAnimating = false; }, 550);
-            }
-
-            function move(delta) {
-                if (cards.length < 2) return;
-                if (isAnimating) {
-                    if (isNavigating) queuedMove += delta;
-                    return;
-                }
-                if (reducedMotion.matches) {
-                    currentIndex = (currentIndex + delta % cards.length + cards.length) % cards.length;
-                    renderCard();
-                    return;
-                }
-
-                isAnimating = true;
-                isNavigating = true;
-                const exitClass = delta > 0 ? 'fc-swipe-left' : 'fc-swipe-right';
-                const enterClass = delta > 0 ? 'fc-swipe-enter-right' : 'fc-swipe-enter-left';
-                fcScene.classList.add(exitClass);
-                setTimeout(() => {
-                    fcScene.classList.add('no-transition');
-                    fcScene.classList.remove(exitClass);
-                    fcScene.classList.add(enterClass);
-                    currentIndex = (currentIndex + delta % cards.length + cards.length) % cards.length;
-                    renderCard();
-
-                    requestAnimationFrame(() => requestAnimationFrame(() => {
-                        fcScene.classList.remove('no-transition', enterClass);
-                        setTimeout(() => {
-                            isAnimating = false;
-                            isNavigating = false;
-                            if (queuedMove !== 0) {
-                                const nextMove = queuedMove;
-                                queuedMove = 0;
-                                move(nextMove);
-                            }
-                        }, 140);
-                    }));
-                }, 140);
-            }
-
-            async function persistReview(questionId, remembered) {
-                const response = await fetch('@Url.Action("Review", "Flashcards")', {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                        'RequestVerificationToken': requestVerificationToken
-                    },
-                    body: new URLSearchParams({
-                        deckId: '@Model.DeckId',
-                        questionId: String(questionId),
-                        remembered: String(remembered)
-                    })
-                });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            }
-
-            async function markAndMove(isKnown) {
-                if (isAnimating) return;
-                isAnimating = true;
-
-                const cardId = cards[currentIndex].QuestionId;
-                try {
-                    await persistReview(cardId, isKnown);
-                    saveError.classList.add('d-none');
-                } catch {
-                    saveError.textContent = 'Không thể lưu tiến độ. Vui lòng kiểm tra kết nối và thử lại.';
-                    saveError.classList.remove('d-none');
-                    isAnimating = false;
-                    return;
-                }
-                const previousStatus = cardStatus.get(cardId);
-                if (previousStatus === 'known') knownCount--;
-                else if (previousStatus === 'again') againCount--;
-                cardStatus.set(cardId, isKnown ? 'known' : 'again');
-                if (isKnown) knownCount++;
-                else againCount++;
-
-                // Update counters immediately for instant visual feedback
-                updateCounters();
-
-                if (knownCount + againCount === cards.length && knownCount > 0) {
-                    if (window.QuizCelebration) {
-                        setTimeout(() => {
-                            window.QuizCelebration.confetti({ particleCount: 80 });
-                            window.QuizCelebration.playVictoryChime();
-                        }, 400);
-                    }
-                }
-
-                // Show stamp on the currently active face (front or back)
-                const activeFace = flipped 
-                    ? cardInner.querySelector('.fc-face--back') 
-                    : cardInner.querySelector('.fc-face--front');
-                const stamp = activeFace.querySelector(isKnown ? '.fc-stamp-overlay--known' : '.fc-stamp-overlay--again');
-                
-                if (stamp) {
-                    stamp.classList.remove('d-none');
-                    // Force reflow
-                    stamp.offsetHeight;
-                    stamp.classList.add('show');
-                }
-
-                // Keep feedback brief so the next card is ready quickly.
-                setTimeout(() => {
-                    // Slide card out (known goes right, again goes left)
-                    fcScene.classList.add('fc-scene--review');
-                    if (isKnown) {
-                        fcScene.classList.add('fc-swipe-right');
-                    } else {
-                        fcScene.classList.add('fc-swipe-left');
-                    }
-
-                    setTimeout(() => {
-                        currentIndex = (currentIndex + 1) % cards.length;
-
-                        // Instantly place on opposite side without transition
-                        fcScene.classList.add('no-transition');
-                        fcScene.classList.remove('fc-swipe-right', 'fc-swipe-left');
-
-                        if (isKnown) {
-                            fcScene.classList.add('fc-swipe-enter-left');
-                        } else {
-                            fcScene.classList.add('fc-swipe-enter-right');
-                        }
-
-                        renderCard();
-
-                        // Force layout reflow
-                        fcScene.offsetHeight;
-
-                        // Animate back to center
-                        fcScene.classList.remove('no-transition', 'fc-swipe-enter-left', 'fc-swipe-enter-right');
-
-                        setTimeout(() => {
-                            fcScene.classList.remove('fc-scene--review');
-                            isAnimating = false;
-                        }, 180);
-                    }, 180);
-                }, 160);
-            }
-
-            function shuffleCards() {
-                if (isAnimating) return;
-                for (let i = cards.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [cards[i], cards[j]] = [cards[j], cards[i]];
-                }
-                currentIndex = 0;
-                renderCard();
-            }
-
-            // Event listeners
-            cardInner.addEventListener('click', flipCard);
-            document.addEventListener('keydown', event => {
-                const target = event.target instanceof Element ? event.target : null;
-                if (event.altKey || event.ctrlKey || event.metaKey || event.repeat ||
-                    target?.closest('input, textarea, select, [contenteditable="true"]')) return;
-                if ((event.key === ' ' || event.key === 'Enter') &&
-                    target?.closest('button, a, [role="button"]')) return;
-                if (event.key === ' ') {
-                    event.preventDefault();
-                    flipCard();
-                }
-                if (event.key === 'ArrowRight') {
-                    event.preventDefault();
-                    move(1);
-                }
-                if (event.key === 'ArrowLeft') {
-                    event.preventDefault();
-                    move(-1);
-                }
-                if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-                    event.preventDefault();
-                    flipCard();
-                }
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    if (flipped) {
-                        markAndMove(true);
-                    } else {
-                        flipCard();
-                    }
-                }
-                if (flipped && (event.key === 'r' || event.key === 'R')) {
-                    markAndMove(false);
-                }
-            });
-            prevCardButton.addEventListener('click', () => move(-1));
-            nextCardButton.addEventListener('click', () => move(1));
-            againButton.addEventListener('click', () => markAndMove(false));
-            knownButton.addEventListener('click', () => markAndMove(true));
-            shuffleButton.addEventListener('click', shuffleCards);
-
-            renderCard();
-        })();
-    </script>
+@section Scripts {
+    <script id="flashcardConfig" type="application/json">@Html.Raw(json)</script>
+    <script src="~/js/flashcard-reviews.js" asp-append-version="true"></script>
+    <script src="~/js/flashcard-study.js" asp-append-version="true"></script>
 }
