@@ -3,6 +3,7 @@ namespace QuizManagement.ViewModels.Flashcards
     public class FlashcardStudyViewModel
     {
         public int DeckId { get; set; }
+        public int SubjectId { get; set; }
 
         public string DeckName { get; set; } = string.Empty;
 
@@ -13,6 +14,8 @@ namespace QuizManagement.ViewModels.Flashcards
         public int DueCards { get; set; }
 
         public bool StudyingAll { get; set; }
+        public bool StudyingMissed { get; set; }
+        public string UserId { get; set; } = string.Empty;
 
         public DateTime? NextReviewAtUtc { get; set; }
 

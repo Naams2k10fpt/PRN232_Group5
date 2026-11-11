@@ -73,7 +73,7 @@ namespace Services
                     .Where(progress => progress.NextReviewAtUtc > now)
                     .Select(progress => (DateTime?)progress.NextReviewAtUtc)
                     .Min(),
-                cards);
+                cards) { SubjectId = deck.SubjectId };
         }
 
         public FlashcardReviewResult? Review(string userId, int deckId, int questionId, bool remembered, Guid? reviewId = null)

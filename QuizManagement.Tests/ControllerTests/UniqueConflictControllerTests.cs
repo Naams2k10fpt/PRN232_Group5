@@ -82,7 +82,7 @@ public class UniqueConflictControllerTests
     public void CreateDeck_MapsConcurrentUniqueConflictToNameField()
     {
         var deckService = new DeckServiceFake();
-        var controller = new DecksController(new SubjectServiceFake(), deckService)
+        var controller = new DecksController(new SubjectServiceFake(), deckService, null!)
         {
             ControllerContext = new ControllerContext
             {

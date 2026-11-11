@@ -5,6 +5,7 @@
     var canManage = User.IsInRole(AppRoles.Admin) ||
         (User.IsInRole(AppRoles.Mentor) && subject.UserId == currentUserId);
     ViewData["Title"] = "Bộ đề";
+    var favorites = (HashSet<int>)ViewBag.Favorites;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -43,8 +44,11 @@ else
         {
             <div class="item-card" style="animation: fadeUp .35s ease both;">
                 <div class="item-card__body">
-                    <a asp-controller="Questions" asp-action="Index" asp-route-deckId="@deck.Id"
-                       class="item-card__title">@deck.Name</a>
+                    <div class="item-card__heading">
+                        <a asp-controller="Questions" asp-action="Index" asp-route-deckId="@deck.Id"
+                           class="item-card__title">@deck.Name</a>
+                        <partial name="_FavoriteButton" model="@(new QuizManagement.ViewModels.Catalog.FavoriteButtonViewModel("deck", deck.Id, deck.Name, favorites.Contains(deck.Id)))" />
+                    </div>
                     <p class="item-card__meta">Tạo lúc @VietnamTime.FromUtc(deck.CreatedAt).ToString("dd/MM/yyyy")</p>
                 </div>
                 <div class="item-card__actions" style="flex-wrap:wrap;gap:.4rem;">

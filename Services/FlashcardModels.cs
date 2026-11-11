@@ -24,7 +24,10 @@ namespace Services
         int DueCards,
         bool StudyingAll,
         DateTime? NextReviewAtUtc,
-        IReadOnlyList<FlashcardCard> Cards);
+        IReadOnlyList<FlashcardCard> Cards)
+    {
+        public int SubjectId { get; init; }
+    }
 
     public sealed record FlashcardReviewResult(
         int QuestionId,

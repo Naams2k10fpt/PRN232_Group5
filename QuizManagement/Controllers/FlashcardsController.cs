@@ -16,9 +16,9 @@ namespace QuizManagement.Controllers
             _flashcardService = flashcardService;
         }
 
-        public IActionResult Study(int deckId, bool all = false)
+        public IActionResult Study(int deckId, bool all = false, bool missed = false)
         {
-            var session = _flashcardService.GetStudySession(CurrentUserId(), deckId, all);
+            var session = _flashcardService.GetStudySession(CurrentUserId(), deckId, all || missed);
             if (session is null)
             {
                 return NotFound();
@@ -26,14 +26,17 @@ namespace QuizManagement.Controllers
 
             var model = new FlashcardStudyViewModel
             {
+                SubjectId = session.SubjectId,
                 DeckId = session.DeckId,
                 DeckName = session.DeckName,
                 SubjectName = session.SubjectName,
                 TotalCards = session.TotalCards,
                 DueCards = session.DueCards,
                 StudyingAll = session.StudyingAll,
+                StudyingMissed = missed,
+                UserId = CurrentUserId(),
                 NextReviewAtUtc = session.NextReviewAtUtc,
-                Cards = session.Cards.Select(card => new FlashcardViewModel
+                Cards = session.Cards.Where(card => !missed || card.Repetition == 0).Select(card => new FlashcardViewModel
                 {
                     QuestionId = card.QuestionId,
                     Content = card.Content,
@@ -54,9 +57,11 @@ namespace QuizManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Review(int deckId, int questionId, bool remembered)
+        public IActionResult Review(int deckId, int questionId, bool? remembered, Guid? reviewId = null)
         {
-            var result = _flashcardService.Review(CurrentUserId(), deckId, questionId, remembered);
+            if (!ModelState.IsValid || remembered is null || deckId <= 0 || questionId <= 0)
+                return BadRequest();
+            var result = _flashcardService.Review(CurrentUserId(), deckId, questionId, remembered.Value, reviewId);
             if (result is null)
             {
                 return NotFound();
