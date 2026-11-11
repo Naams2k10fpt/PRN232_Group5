@@ -12,14 +12,16 @@ namespace QuizManagement.Controllers
     {
         private readonly ISubjectService _subjectService;
         private readonly IDeckService _deckService;
+        private readonly ICatalogService _catalogService;
 
-        public DecksController(ISubjectService subjectService, IDeckService deckService)
+        public DecksController(ISubjectService subjectService, IDeckService deckService, ICatalogService catalogService)
         {
             _subjectService = subjectService;
             _deckService = deckService;
+            _catalogService = catalogService;
         }
 
-        public IActionResult Index(int subjectId)
+        public async Task<IActionResult> Index(int subjectId, CancellationToken cancellationToken)
         {
             var subject = _subjectService.GetSubjectForStudy(subjectId);
             if (subject is null)
@@ -29,8 +31,10 @@ namespace QuizManagement.Controllers
 
             ViewBag.Subject = subject;
             ViewBag.CurrentUserId = CurrentUserId();
+            var favorites = (await _catalogService.GetFavoritesAsync(CurrentUserId(), FavoriteKind.Deck, cancellationToken)).ToHashSet();
+            ViewBag.Favorites = favorites;
             var decks = _deckService.GetDecksBySubjectForStudy(subjectId);
-            return View(decks);
+            return View(decks.OrderByDescending(deck => favorites.Contains(deck.Id)).ToList());
         }
 
         [Authorize(Policy = "ManageContent")]

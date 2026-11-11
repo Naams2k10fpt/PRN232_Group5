@@ -1,0 +1,13 @@
+@model QuizManagement.ViewModels.Catalog.FavoriteButtonViewModel
+<form asp-controller="CatalogFavorites" asp-action="Set" method="post" class="favorite-form">
+    <input type="hidden" name="kind" value="@Model.Kind" />
+    <input type="hidden" name="id" value="@Model.Id" />
+    <input type="hidden" name="favorite" value="@((!Model.Selected).ToString().ToLowerInvariant())" />
+    <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+    <button type="submit" class="favorite-toggle @(Model.Selected ? "is-selected" : "")"
+            aria-pressed="@Model.Selected.ToString().ToLowerInvariant()"
+            aria-label="@(Model.Selected ? $"Bỏ yêu thích: {Model.Name}" : $"Yêu thích: {Model.Name}")"
+            title="@(Model.Selected ? "Bỏ yêu thích" : "Yêu thích")">
+        <span aria-hidden="true">@(Model.Selected ? "★" : "☆")</span>
+    </button>
+</form>

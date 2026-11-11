@@ -4,6 +4,7 @@
     ViewData["Title"] = "Môn học";
     var currentUserId = (string)ViewBag.CurrentUserId;
     var canCreate = User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Mentor);
+    var favorites = (HashSet<int>)ViewBag.Favorites;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -40,8 +41,11 @@ else
                 (User.IsInRole(AppRoles.Mentor) && subject.UserId == currentUserId);
             <div class="item-card" style="animation: fadeUp .35s ease both;">
                 <div class="item-card__body">
-                    <a asp-controller="Decks" asp-action="Index" asp-route-subjectId="@subject.Id"
-                       class="item-card__title">@subject.Name</a>
+                    <div class="item-card__heading">
+                        <a asp-controller="Decks" asp-action="Index" asp-route-subjectId="@subject.Id"
+                           class="item-card__title">@subject.Name</a>
+                        <partial name="_FavoriteButton" model="@(new QuizManagement.ViewModels.Catalog.FavoriteButtonViewModel("subject", subject.Id, subject.Name, favorites.Contains(subject.Id)))" />
+                    </div>
                     <p class="item-card__meta">Tạo lúc @VietnamTime.FromUtc(subject.CreatedAt).ToString("dd/MM/yyyy")</p>
                 </div>
                 <div class="item-card__actions">

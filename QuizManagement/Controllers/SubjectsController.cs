@@ -11,17 +11,21 @@ namespace QuizManagement.Controllers
     public class SubjectsController : Controller
     {
         private readonly ISubjectService _subjectService;
+        private readonly ICatalogService _catalogService;
 
-        public SubjectsController(ISubjectService subjectService)
+        public SubjectsController(ISubjectService subjectService, ICatalogService catalogService)
         {
             _subjectService = subjectService;
+            _catalogService = catalogService;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index(CancellationToken cancellationToken)
         {
             ViewBag.CurrentUserId = CurrentUserId();
+            var favorites = (await _catalogService.GetFavoritesAsync(CurrentUserId(), FavoriteKind.Subject, cancellationToken)).ToHashSet();
+            ViewBag.Favorites = favorites;
             var subjects = _subjectService.GetAllSubjects();
-            return View(subjects);
+            return View(subjects.OrderByDescending(subject => favorites.Contains(subject.Id)).ToList());
         }
 
         [Authorize(Policy = "ManageContent")]

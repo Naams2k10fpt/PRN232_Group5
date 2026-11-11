@@ -48,7 +48,7 @@ public class SubjectsControllerDeleteTests
             ], "Test"))
         };
 
-        return new SubjectsController(service)
+        return new SubjectsController(service, null!)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
             TempData = new TempDataDictionary(httpContext, new TempDataProviderFake())
