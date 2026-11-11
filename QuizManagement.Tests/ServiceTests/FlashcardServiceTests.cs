@@ -213,6 +213,16 @@ public class FlashcardServiceTests
 
     private sealed class CatalogRepositoryFake : ICatalogRepository
     {
+
+        public Task<int[]> GetFavoritesAsync(string userId, FavoriteKind kind, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<bool> SetFavoriteAsync(string userId, FavoriteKind kind, int id, bool favorite, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task ImportFavoritesAsync(string userId, FavoriteKind kind, int[] ids, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
         public List<Question> Questions { get; init; } = [];
         public bool QuestionInDeck { get; init; }
         public (int DeckId, int QuestionId)? LastMembershipLookup { get; private set; }

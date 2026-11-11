@@ -50,5 +50,15 @@ namespace Services
 
         public DeckSummaryReadModel? GetDeck(int deckId, string userId)
             => _repository.GetDeckSummary(deckId, userId, _timeProvider.GetUtcNow().UtcDateTime);
+
+        public Task<int[]> GetFavoritesAsync(string userId, FavoriteKind kind, CancellationToken cancellationToken)
+            => _repository.GetFavoritesAsync(userId, kind, cancellationToken);
+
+        public Task<bool> SetFavoriteAsync(
+            string userId, FavoriteKind kind, int id, bool favorite, CancellationToken cancellationToken)
+            => _repository.SetFavoriteAsync(userId, kind, id, favorite, cancellationToken);
+
+        public Task ImportFavoritesAsync(string userId, FavoriteKind kind, int[] ids, CancellationToken cancellationToken)
+            => _repository.ImportFavoritesAsync(userId, kind, ids, cancellationToken);
     }
 }

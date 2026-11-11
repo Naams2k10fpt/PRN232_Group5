@@ -13,5 +13,8 @@ namespace Services
         IReadOnlyList<DeckSummaryReadModel>? GetDecks(int subjectId, string userId);
 
         DeckSummaryReadModel? GetDeck(int deckId, string userId);
+        Task<int[]> GetFavoritesAsync(string userId, FavoriteKind kind, CancellationToken cancellationToken);
+        Task<bool> SetFavoriteAsync(string userId, FavoriteKind kind, int id, bool favorite, CancellationToken cancellationToken);
+        Task ImportFavoritesAsync(string userId, FavoriteKind kind, int[] ids, CancellationToken cancellationToken);
     }
 }
