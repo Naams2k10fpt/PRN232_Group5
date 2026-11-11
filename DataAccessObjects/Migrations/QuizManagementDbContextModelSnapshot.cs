@@ -224,6 +224,24 @@ namespace DataAccessObjects.Migrations
                         });
                 });
 
+            modelBuilder.Entity("BusinessObjects.DeckFavorite", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("DeckId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsFavorite")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("UserId", "DeckId");
+
+                    b.HasIndex("DeckId");
+
+                    b.ToTable("DeckFavorites");
+                });
+
             modelBuilder.Entity("BusinessObjects.FlashcardProgress", b =>
                 {
                     b.Property<int>("Id")
@@ -968,6 +986,24 @@ namespace DataAccessObjects.Migrations
                     b.ToTable("Subjects");
                 });
 
+            modelBuilder.Entity("BusinessObjects.SubjectFavorite", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsFavorite")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("UserId", "SubjectId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.ToTable("SubjectFavorites");
+                });
+
             modelBuilder.Entity("BusinessObjects.TestHistory", b =>
                 {
                     b.Property<int>("Id")
@@ -1233,6 +1269,23 @@ namespace DataAccessObjects.Migrations
                         .HasConstraintName("FK_Decks_Subjects");
 
                     b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("BusinessObjects.DeckFavorite", b =>
+                {
+                    b.HasOne("BusinessObjects.Deck", "Deck")
+                        .WithMany()
+                        .HasForeignKey("DeckId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObjects.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Deck");
                 });
 
             modelBuilder.Entity("BusinessObjects.FlashcardProgress", b =>
@@ -1542,6 +1595,23 @@ namespace DataAccessObjects.Migrations
                         .HasConstraintName("FK_Subjects_Users");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BusinessObjects.SubjectFavorite", b =>
+                {
+                    b.HasOne("BusinessObjects.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObjects.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Subject");
                 });
 
             modelBuilder.Entity("BusinessObjects.TestHistory", b =>

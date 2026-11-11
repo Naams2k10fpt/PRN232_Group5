@@ -11,5 +11,8 @@ namespace Repositories
         DeckSummaryReadModel? GetDeckSummary(int deckId, string userId, DateTime nowUtc);
         List<Question> GetFlashcardsByDeck(int deckId);
         bool QuestionBelongsToDeck(int deckId, int questionId);
+        Task<int[]> GetFavoritesAsync(string userId, FavoriteKind kind, CancellationToken cancellationToken);
+        Task<bool> SetFavoriteAsync(string userId, FavoriteKind kind, int id, bool favorite, CancellationToken cancellationToken);
+        Task ImportFavoritesAsync(string userId, FavoriteKind kind, int[] ids, CancellationToken cancellationToken);
     }
 }

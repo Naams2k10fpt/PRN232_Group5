@@ -24,6 +24,8 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
     public virtual DbSet<Question> Questions { get; set; }
 
     public virtual DbSet<Subject> Subjects { get; set; }
+    public DbSet<SubjectFavorite> SubjectFavorites { get; set; }
+    public DbSet<DeckFavorite> DeckFavorites { get; set; }
 
     public virtual DbSet<TestHistory> TestHistories { get; set; }
 
@@ -171,6 +173,22 @@ public partial class QuizManagementDbContext : DbContext, IDataProtectionKeyCont
             entity.HasOne(e => e.Progress).WithMany()
                 .HasForeignKey(e => e.ProgressId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SubjectFavorite>(entity =>
+        {
+            entity.HasKey(e => new { e.UserId, e.SubjectId });
+            entity.HasQueryFilter(e => !e.Subject.IsDeleted);
+            entity.HasOne<User>().WithMany().HasForeignKey(e => e.UserId);
+            entity.HasOne(e => e.Subject).WithMany().HasForeignKey(e => e.SubjectId);
+        });
+
+        modelBuilder.Entity<DeckFavorite>(entity =>
+        {
+            entity.HasKey(e => new { e.UserId, e.DeckId });
+            entity.HasQueryFilter(e => !e.Deck.IsDeleted && !e.Deck.Subject.IsDeleted);
+            entity.HasOne<User>().WithMany().HasForeignKey(e => e.UserId);
+            entity.HasOne(e => e.Deck).WithMany().HasForeignKey(e => e.DeckId);
         });
 
         modelBuilder.Entity<Subject>(entity =>

@@ -32,5 +32,15 @@ namespace Repositories
 
         public bool QuestionBelongsToDeck(int deckId, int questionId)
             => CatalogDAO.Instance.QuestionBelongsToDeck(_context, deckId, questionId);
+
+        public Task<int[]> GetFavoritesAsync(string userId, FavoriteKind kind, CancellationToken cancellationToken)
+            => CatalogFavoritesDAO.ListAsync(_context, userId, kind, cancellationToken);
+
+        public async Task<bool> SetFavoriteAsync(
+            string userId, FavoriteKind kind, int id, bool favorite, CancellationToken cancellationToken)
+            => await CatalogFavoritesDAO.SaveAsync(_context, userId, kind, [id], favorite, import: false, cancellationToken) > 0;
+
+        public Task ImportFavoritesAsync(string userId, FavoriteKind kind, int[] ids, CancellationToken cancellationToken)
+            => CatalogFavoritesDAO.SaveAsync(_context, userId, kind, ids, favorite: true, import: true, cancellationToken);
     }
 }

@@ -88,6 +88,16 @@ public class CatalogServiceTests
 
     private sealed class CatalogRepositoryFake : ICatalogRepository
     {
+
+        public Task<int[]> GetFavoritesAsync(string userId, FavoriteKind kind, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<bool> SetFavoriteAsync(string userId, FavoriteKind kind, int id, bool favorite, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task ImportFavoritesAsync(string userId, FavoriteKind kind, int[] ids, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
         public bool SubjectFound { get; init; }
         public (string? Search, int Page, int PageSize)? LastSubjectQuery { get; private set; }
         public (int SubjectId, string UserId, DateTime NowUtc)? LastDeckListQuery { get; private set; }

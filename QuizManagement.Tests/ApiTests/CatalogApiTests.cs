@@ -223,6 +223,16 @@ public class CatalogApiTests : IDisposable
 
     private sealed class CatalogServiceFake : ICatalogService
     {
+
+        public Task<int[]> GetFavoritesAsync(string userId, FavoriteKind kind, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task<bool> SetFavoriteAsync(string userId, FavoriteKind kind, int id, bool favorite, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        public Task ImportFavoritesAsync(string userId, FavoriteKind kind, int[] ids, CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
         public PagedResult<SubjectSummaryReadModel> Subjects { get; set; } = new() { Page = 1, PageSize = 20 };
         public SubjectSummaryReadModel? Subject { get; set; }
         public IReadOnlyList<DeckSummaryReadModel>? Decks { get; set; } = [];
